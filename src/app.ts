@@ -10,15 +10,14 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-dbConnector().then(() => {
-  app.use(tokenChecker);
-  app.use('/', plusRouter);
+await dbConnector();
+app.use(tokenChecker);
+app.use('/', plusRouter);
 
-  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    return res.status(500).json({ message: err.message });
-  });
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  return res.status(500).json({ message: err.message });
+});
 
-  app.listen(process.env.SECRET_PORT, () => {
-    console.log('server is listening');
-  });
+app.listen(process.env.SECRET_PORT, () => {
+  console.log('server is listening');
 });
