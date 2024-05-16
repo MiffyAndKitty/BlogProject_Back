@@ -1,8 +1,8 @@
 import { Strategy as LocalStrategy } from 'passport-local';
 import { PassportStatic } from 'passport';
-import { conn } from '../loaders/mariadb';
+import { conn } from '../../loaders/mariadb';
 import bcrypt from 'bcrypt';
-import { getHashed } from '../utils/getHashed';
+import { getHashed } from '../../utils/getHashed';
 
 export const local = (passport: PassportStatic) => {
   passport.use('local', new LocalStrategy(passportConfig, passportVerify));
@@ -19,7 +19,7 @@ const passportVerify = async (
   done: Function
 ) => {
   try {
-    const sql = 'SELECT * FROM User WHERE email = ? LIMIT 1';
+    const sql = 'SELECT * FROM User WHERE user_email = ? LIMIT 1';
     const exUser = await conn.query(sql, email);
 
     if (!exUser[0]) {
@@ -27,8 +27,9 @@ const passportVerify = async (
       return;
     }
 
-    const hashed = await getHashed(exUser[0].password);
-    const compareResult = await bcrypt.compare(exUser[0].password, hashed);
+    const hashed = await getHashed(password);
+    console.log(hashed);
+    const compareResult = await bcrypt.compare(exUser[0].user_password, hashed);
 
     if (compareResult) {
       done(null, exUser[0]);
