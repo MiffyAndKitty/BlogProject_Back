@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { ExtractJwt, Strategy as JWTStrategy } from 'passport-jwt';
 import { PassportStatic } from 'passport';
-import { isPayload } from '../utils/typegard/isPayload';
+import { isPayload } from '../utils/typegard';
 import { ensureError } from '../errors/ensureError';
 
 export const jwtAuth = (passport: PassportStatic) => {

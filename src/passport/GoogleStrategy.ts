@@ -3,7 +3,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PassportStatic } from 'passport';
 import { conn } from '../loaders/mariadb';
 import { OAuthUserDto } from '../dtos';
-import { isGoogleProfile } from '../utils/typegard/isGoogleProfile';
+import { isGoogleProfile } from '../utils/typegard';
 
 export const google = (passport: PassportStatic) => {
   passport.use('google', new GoogleStrategy(passportConfig, passportVerify));
