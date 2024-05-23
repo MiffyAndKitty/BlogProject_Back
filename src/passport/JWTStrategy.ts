@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { ExtractJwt, Strategy as JWTStrategy } from 'passport-jwt';
 import { PassportStatic } from 'passport';
 import { isPayload } from '../utils/typegard/isPayload';
+import { ensureError } from '../errors/ensureError';
 
 export const jwtAuth = (passport: PassportStatic) => {
   passport.use('jwt', new JWTStrategy(JWTConfig, JWTVerify));
@@ -21,8 +22,9 @@ const JWTVerify = async (jwtPayload: object | undefined, done: Function) => {
     }
     console.log(1, jwtPayload);
     done(null, false, { reason: '올바르지 않은 payload 형식의 access 토큰' });
-  } catch (err: unknown) {
-    console.log(err);
-    done(err);
+  } catch (err) {
+    const error = ensureError(err);
+    console.log('refresh토큰 발급 오류 : ', error.message);
+    return { result: false, message: error.message };
   }
 };
