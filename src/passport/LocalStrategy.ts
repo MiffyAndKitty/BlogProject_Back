@@ -1,8 +1,7 @@
 import { Strategy as LocalStrategy } from 'passport-local';
 import { PassportStatic } from 'passport';
-import { conn } from '../../loaders/mariadb';
+import { conn } from '../loaders/mariadb';
 import bcrypt from 'bcrypt';
-import { getHashed } from '../../utils/getHashed';
 
 export const local = (passport: PassportStatic) => {
   passport.use('local', new LocalStrategy(passportConfig, passportVerify));
@@ -27,20 +26,21 @@ const passportVerify = async (
       return;
     }
 
-    const hashed = await getHashed(password);
-    console.log(hashed);
-    const compareResult = await bcrypt.compare(exUser[0].user_password, hashed);
+    const compareResult = await bcrypt.compare(
+      password,
+      exUser[0].user_password
+    );
 
     if (compareResult) {
       done(null, exUser[0]);
       return;
     }
 
-    done(null, false, { reason: '올바르지 않은 비밀번호 입니다.' });
+    done(null, false, {
+      reason: '올바르지 않은 아이디/비밀번호가 입력되었습니다.'
+    });
   } catch (err: unknown) {
     console.log(err);
-    if (err instanceof Error) {
-      done(err);
-    }
+    done(err);
   }
 };
