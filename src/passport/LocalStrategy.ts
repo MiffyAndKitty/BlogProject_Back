@@ -1,6 +1,6 @@
 import { Strategy as LocalStrategy } from 'passport-local';
 import { PassportStatic } from 'passport';
-import { conn } from '../loaders/mariadb';
+import { db } from '../loaders/mariadb';
 import bcrypt from 'bcrypt';
 
 export const local = (passport: PassportStatic) => {
@@ -19,7 +19,7 @@ const passportVerify = async (
 ) => {
   try {
     const sql = 'SELECT * FROM User WHERE user_email = ? LIMIT 1';
-    const exUser = await conn.query(sql, email);
+    const exUser = await db.query(sql, email);
 
     if (!exUser[0]) {
       done(null, false, { reason: '존재하지 않는 사용자 입니다.' });

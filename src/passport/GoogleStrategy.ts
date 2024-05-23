@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PassportStatic } from 'passport';
-import { conn } from '../loaders/mariadb';
+import { db } from '../loaders/mariadb';
 import { OAuthUserDto } from '../dtos';
 import { isGoogleProfile } from '../utils/typegard';
 
@@ -35,7 +35,7 @@ const passportVerify = async (
       new: false
     };
 
-    const exUser = await conn.query(
+    const exUser = await db.query(
       // DB에서 구글 유저 존재 유무 확인
       'SELECT * FROM User WHERE user_provider = ? AND user_email = ? LIMIT 1;',
       ['google', userDto.email]
@@ -50,13 +50,13 @@ const passportVerify = async (
 
     // 사용자가 데이터 베이스에 없으면 저장
     console.log(exUser, '구글전략- 유저 없음');
-    const saveNewUser = await conn.query(
+    const saveNewUser = await db.query(
       'INSERT INTO User (user_email, user_nickname, user_provider) VALUES (?, ?, ?)',
       [userDto.email, userDto.nickname, 'google']
     );
 
     // 저장된 유저 확인 (id를 가져오기 위해)
-    const newUser = await conn.query(
+    const newUser = await db.query(
       'SELECT * FROM User WHERE user_provider = ? AND user_email = ? LIMIT 1;',
       ['google', userDto.email]
     );

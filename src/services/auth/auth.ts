@@ -1,4 +1,4 @@
-import { conn } from '../../loaders/mariadb';
+import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
 import { UserDto } from '../../dtos';
 import { ensureError } from '../../errors/ensureError';
@@ -6,7 +6,7 @@ import { ensureError } from '../../errors/ensureError';
 export class AuthService {
   static deleteToken = async (userid: string) => {
     try {
-      const deleted = await conn.query(
+      const deleted = await db.query(
         'DELETE FROM RefreshToken WHERE token_userid=?;',
         userid
       );
@@ -33,7 +33,7 @@ export class AuthService {
     try {
       const hashed = await getHashed(userDto.password);
 
-      const saved = await conn.query(
+      const saved = await db.query(
         'INSERT INTO User (user_email, user_password, user_nickname) VALUES (?, ?, ?)',
         [userDto.email, hashed, userDto.nickname]
       );

@@ -1,5 +1,5 @@
 import { newToken } from '../../utils/token/newToken';
-import { conn } from '../../loaders/mariadb';
+import { db } from '../../loaders/mariadb';
 import { OAuthUserDto } from '../../dtos';
 import { DataReturnType } from '../../interfaces';
 
@@ -25,7 +25,7 @@ export const googleAuthService = async (
         ? 'UPDATE RefreshToken SET token = ? WHERE token_userid = ?'
         : 'INSERT INTO RefreshToken (token, token_userid) VALUES (?, ?)';
 
-    const savedRefresh = await conn.query(query, [refreshToken, user.id]);
+    const savedRefresh = await db.query(query, [refreshToken, user.id]);
 
     return savedRefresh.affectedRows === 1
       ? { result: true, data: accessToken, message: '구글 로그인 성공' }

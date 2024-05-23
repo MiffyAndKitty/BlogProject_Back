@@ -1,4 +1,4 @@
-import { conn } from '../loaders/mariadb';
+import { db } from '../loaders/mariadb';
 import { DbColumnDto } from '../dtos';
 import { ensureError } from '../errors/ensureError';
 
@@ -7,7 +7,7 @@ export class UsersService {
     try {
       const query = `SELECT * FROM User WHERE ${existDto.column} = ? ;`;
       const values = [existDto.data];
-      const rows = await conn.query(query, values);
+      const rows = await db.query(query, values);
 
       if (rows.length === 0) {
         return { result: true, message: '사용 가능한 데이터' };

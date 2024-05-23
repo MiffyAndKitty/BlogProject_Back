@@ -1,5 +1,5 @@
 import { newToken } from '../../utils/token/newToken';
-import { conn } from '../../loaders/mariadb';
+import { db } from '../../loaders/mariadb';
 import { DataReturnType } from '../../interfaces';
 
 export const localAuthService = async (
@@ -17,13 +17,13 @@ export const localAuthService = async (
       };
     }
 
-    let savedRefresh = await conn.query(
+    let savedRefresh = await db.query(
       'UPDATE RefreshToken SET token = ? WHERE token_userid = ?;',
       [refreshToken, userid]
     );
 
     if (savedRefresh.affectedRows === 0) {
-      savedRefresh = await conn.query(
+      savedRefresh = await db.query(
         'INSERT INTO RefreshToken (token, token_userid) VALUES (?, ?)',
         [refreshToken, userid]
       );

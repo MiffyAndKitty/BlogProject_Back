@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import jwt from 'jsonwebtoken';
 import { newToken } from './newToken';
-import { conn } from '../../loaders/mariadb';
+import { db } from '../../loaders/mariadb';
 import { verifyToken } from './verifyToken';
 import { isPayload } from '../typegard/isPayload';
 import { ensureError } from '../../errors/ensureError';
@@ -18,7 +18,7 @@ export async function reissueToken(
       return { result: false, message: '토큰 decode 실패' };
 
     // access토큰은 유효x -> refresh토큰이 유효->재발급
-    const refreshToken = await conn.query(
+    const refreshToken = await db.query(
       'SELECT * FROM RefreshToken WHERE token_userid = ? LIMIT 1',
       decodedToken.id
     );
