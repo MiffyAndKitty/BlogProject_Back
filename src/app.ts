@@ -6,6 +6,7 @@ import passport from 'passport';
 import { passportLoader } from './passport';
 import { authRouter } from './routes/auth/auth';
 import { usersRouter } from './routes/users';
+import { redisConnector } from './loaders/redis';
 const app = express();
 
 app.use(
@@ -17,6 +18,7 @@ app.use(
 );
 app.use(express.json());
 
+redisConnector;
 await dbConnector();
 
 app.use(passport.initialize());
