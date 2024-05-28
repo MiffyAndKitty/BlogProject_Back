@@ -13,7 +13,4 @@ export class OAuthUserDto {
 
   @IsIn(['google'])
   provider!: string;
-
-  @IsBoolean()
-  new!: boolean;
 }
