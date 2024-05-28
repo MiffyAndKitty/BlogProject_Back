@@ -1,36 +1,30 @@
 import 'dotenv/config';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { newToken } from './newToken';
-import { db } from '../../loaders/mariadb';
-import { verifyToken } from './verifyToken';
-import { isPayload } from '../typegard/isPayload';
 import { ensureError } from '../../errors/ensureError';
 import { BasicReturnType, DatasReturnType } from '../../interfaces';
+import { getRefreshToken } from '../redis/refreshToken';
 
 // 토큰 유효성 검증 후 재발급
 export async function reissueToken(
   accessToken: string
 ): Promise<BasicReturnType | DatasReturnType<string>> {
   try {
-    const decodedToken = jwt.decode(accessToken); // 디코드된 값 혹은 null을 반환
+    const decodedId = (jwt.decode(accessToken) as JwtPayload)?.id || null;
 
-    if (!isPayload(decodedToken))
-      return { result: false, message: '토큰 decode 실패' };
+    if (!decodedId)
+      return { result: false, message: 'access 토큰 decode 실패' };
 
-    // access토큰은 유효x -> refresh토큰이 유효->재발급
-    const refreshToken = await db.query(
-      'SELECT * FROM RefreshToken WHERE token_userid = ? LIMIT 1',
-      decodedToken.id
-    );
-    const refreshPayload = verifyToken.refresh(refreshToken);
+    // access토큰은 유효x -> refresh토큰이 유효-> 재발급
+    const refreshToken = await getRefreshToken(decodedId);
 
     // access토큰은 유효x -> refresh토큰이 유효x
-    if (!isPayload(refreshPayload))
-      return { result: false, message: 'refresh 토큰 유효하지 않음' };
+    if (!refreshToken)
+      return { result: false, message: '유효하지 않은 refresh 토큰' };
 
     // access토큰은 유효x-> refresh토큰이 유효-> 재발급
-    const userId: string = decodedToken.id;
-    const newAccessToken = newToken.access(decodedToken.id);
+    const userId: string = decodedId;
+    const newAccessToken = newToken.access(decodedId);
 
     if (typeof newAccessToken === 'string') {
       return {

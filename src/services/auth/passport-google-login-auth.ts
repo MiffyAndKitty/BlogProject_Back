@@ -1,7 +1,7 @@
 import { newToken } from '../../utils/token/newToken';
-import { db } from '../../loaders/mariadb';
 import { OAuthUserDto } from '../../dtos';
 import { DataReturnType } from '../../interfaces';
+import { setRefreshToken } from '../../utils/redis/refreshToken';
 
 export const googleAuthService = async (
   user: OAuthUserDto
@@ -18,21 +18,15 @@ export const googleAuthService = async (
       };
     }
 
-    // new칼럼이 false이면 RefreshToken 테이블에 유저 데이터가 존재 O
-    // new칼럼이 true이면 RefreshToken 테이블에 유저 데이터가 존재 X
-    const query =
-      user.new === false
-        ? 'UPDATE RefreshToken SET token = ? WHERE token_userid = ?'
-        : 'INSERT INTO RefreshToken (token, token_userid) VALUES (?, ?)';
+    // 유저의 refresh 토큰이 저장되어있다면 update, 아니라면 저장
+    const savedRefresh = await setRefreshToken(user.id, refreshToken);
 
-    const savedRefresh = await db.query(query, [refreshToken, user.id]);
-
-    return savedRefresh.affectedRows === 1
+    return savedRefresh === 'OK' // savedRefresh에서 OK 혹은 err.name반환
       ? { result: true, data: accessToken, message: '구글 로그인 성공' }
       : {
           result: false,
           data: '',
-          message: 'refresh 토큰 저장 실패'
+          message: savedRefresh || 'refresh토큰 저장 실패'
         };
   } catch (err: unknown) {
     console.log(err);

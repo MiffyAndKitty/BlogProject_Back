@@ -2,25 +2,16 @@ import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
 import { UserDto } from '../../dtos';
 import { ensureError } from '../../errors/ensureError';
+import { redis } from '../../loaders/redis';
 
 export class AuthService {
-  static deleteToken = async (userid: string) => {
+  static deleteToken = async (userId: string) => {
     try {
-      const deleted = await db.query(
-        'DELETE FROM RefreshToken WHERE token_userid=?;',
-        userid
-      );
-      if (deleted.affectedRows === 1) {
+      const deleted = await redis.del(`refreshToken:${userId}`);
+      if (deleted === 1) {
         return { result: true, message: '로그아웃 성공' };
       } else {
-        const message =
-          deleted.affectedRows === 0
-            ? '유효한 access 토큰, 존재하지 않는 refresh 토큰'
-            : '비정상적으로 많은 갯수의 refresh 토큰을 삭제';
-        return {
-          result: false,
-          message: message
-        };
+        return { result: false, message: 'refresh 토큰 삭제 실패' };
       }
     } catch (err) {
       const error = ensureError(err);

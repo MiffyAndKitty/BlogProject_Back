@@ -1,6 +1,6 @@
 import { newToken } from '../../utils/token/newToken';
-import { db } from '../../loaders/mariadb';
 import { DataReturnType } from '../../interfaces';
+import { setRefreshToken } from '../../utils/redis/refreshToken';
 
 export const localAuthService = async (
   userid: string
@@ -17,21 +17,15 @@ export const localAuthService = async (
       };
     }
 
-    let savedRefresh = await db.query(
-      'UPDATE RefreshToken SET token = ? WHERE token_userid = ?;',
-      [refreshToken, userid]
-    );
+    const savedRefresh = await setRefreshToken(userid, refreshToken);
 
-    if (savedRefresh.affectedRows === 0) {
-      savedRefresh = await db.query(
-        'INSERT INTO RefreshToken (token, token_userid) VALUES (?, ?)',
-        [refreshToken, userid]
-      );
-    }
-
-    return savedRefresh.affectedRows === 1
+    return savedRefresh === 'OK' // savedRefresh에서 OK 혹은 err.name반환
       ? { result: true, data: accessToken, message: '로그인 성공' }
-      : { result: false, data: '', message: 'refresh 토큰 저장 실패' };
+      : {
+          result: false,
+          data: '',
+          message: savedRefresh || 'refresh 토큰 저장 실패'
+        };
   } catch (err) {
     console.log(err);
     return {
