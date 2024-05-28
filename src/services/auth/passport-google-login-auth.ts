@@ -2,6 +2,7 @@ import { newToken } from '../../utils/token/newToken';
 import { OAuthUserDto } from '../../dtos';
 import { DataReturnType } from '../../interfaces';
 import { setRefreshToken } from '../../utils/redis/refreshToken';
+import { ensureError } from '../../errors/ensureError';
 
 export const googleAuthService = async (
   user: OAuthUserDto
@@ -28,12 +29,13 @@ export const googleAuthService = async (
           data: '',
           message: savedRefresh || 'refresh토큰 저장 실패'
         };
-  } catch (err: unknown) {
-    console.log(err);
+  } catch (err) {
+    const error = ensureError(err);
+    console.log('구글 서비스 함수 오류 : ', error.message);
     return {
       result: false,
       data: '',
-      message: '구글 로그인 실패, 서버 오류가 발생했습니다.'
+      message: '구글 로그인 중 서버 오류 ' + error
     };
   }
 };

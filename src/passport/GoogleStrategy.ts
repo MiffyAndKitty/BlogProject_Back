@@ -4,7 +4,7 @@ import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
 import { OAuthUserDto } from '../dtos';
 import { isGoogleProfile } from '../utils/typegard';
-
+import { ensureError } from '../errors/ensureError';
 export const google = (passport: PassportStatic) => {
   passport.use('google', new GoogleStrategy(passportConfig, passportVerify));
 };
@@ -63,8 +63,9 @@ const passportVerify = async (
     newUser[0]
       ? ((userDto.id = newUser[0].user_id), done(null, userDto))
       : done(null, false);
-  } catch (err: unknown) {
-    console.log(err);
-    done(err);
+  } catch (err) {
+    const error = ensureError(err);
+    console.log('구글 전략 오류 : ', error.message);
+    done(error);
   }
 };

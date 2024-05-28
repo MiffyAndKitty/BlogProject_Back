@@ -1,6 +1,7 @@
 import { newToken } from '../../utils/token/newToken';
 import { DataReturnType } from '../../interfaces';
 import { setRefreshToken } from '../../utils/redis/refreshToken';
+import { ensureError } from '../../errors/ensureError';
 
 export const localAuthService = async (
   userid: string
@@ -27,11 +28,12 @@ export const localAuthService = async (
           message: savedRefresh || 'refresh 토큰 저장 실패'
         };
   } catch (err) {
-    console.log(err);
+    const error = ensureError(err);
+    console.log('로컬 서비스 함수 오류 : ', error.message);
     return {
       result: false,
       data: '',
-      message: '로그인 실패, 서버 오류가 발생했습니다.'
+      message: '로컬 로그인 중 서버 오류 ' + error
     };
   }
 };

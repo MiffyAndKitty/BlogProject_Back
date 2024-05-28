@@ -24,7 +24,7 @@ const JWTVerify = async (jwtPayload: object | undefined, done: Function) => {
     done(null, false, { reason: '올바르지 않은 payload 형식의 access 토큰' });
   } catch (err) {
     const error = ensureError(err);
-    console.log('refresh토큰 발급 오류 : ', error.message);
-    return { result: false, message: error.message };
+    console.log('jwt 전략 오류 : ', error.message);
+    done(error);
   }
 };
