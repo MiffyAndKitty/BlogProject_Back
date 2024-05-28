@@ -21,7 +21,7 @@ usersRouter.post(
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return { result: false, message: error.message };
+      return res.status(500).send({ result: false, message: error.message });
     }
   }
 );

@@ -35,20 +35,24 @@ authRouter.post(
             return err;
           }
           const result: DataReturnType = await localAuthService(user.user_id);
-
           if (result.result === true) {
-            return res
+            res
               .status(200)
               .set('Authorization', `Bearer ${result.data}`)
-              .send(result);
+              .send({ result: result.result, message: result.message });
+            console.log(res.getHeaders());
+            return;
           } else {
-            return res.status(500).set('Authorization', '').send(result);
+            return res
+              .status(500)
+              .set('Authorization', '')
+              .send({ result: result.result, message: result.message });
           }
         });
       } catch (err) {
         const error = ensureError(err);
         console.log(error.message);
-        return { result: false, message: error.message };
+        return res.send({ result: false, message: error.message });
       }
     })(req, res, next);
   }
@@ -72,20 +76,25 @@ authRouter.get(
     try {
       console.log('req.user', req.user);
 
-      const result = await googleAuthService(req.user as OAuthUserDto);
+      const result: DataReturnType = await googleAuthService(
+        req.user as OAuthUserDto
+      );
 
       if (result.result === true) {
         return res
           .status(200)
           .set('Authorization', `Bearer ${result.data}`)
-          .send(result);
+          .send({ result: result.result, message: result.message });
       } else {
-        return res.status(500).set('Authorization', '').send(result);
+        return res
+          .status(500)
+          .set('Authorization', '')
+          .send({ result: result.result, message: result.message });
       }
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return { result: false, message: error.message };
+      return res.send({ result: false, message: error.message });
     }
   }
 );
@@ -109,7 +118,7 @@ authRouter.get('/logout', jwtAuth, async (req: Request, res: Response) => {
   } catch (err) {
     const error = ensureError(err);
     console.log(error.message);
-    return { result: false, message: error.message };
+    return res.send({ result: false, message: error.message });
   }
 });
 
@@ -129,7 +138,7 @@ authRouter.post(
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return { result: false, message: error.message };
+      return res.send({ result: false, message: error.message });
     }
   }
 );
