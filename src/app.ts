@@ -8,8 +8,14 @@ import { authRouter } from './routes/auth/auth';
 import { usersRouter } from './routes/users';
 const app = express();
 
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN,
+    credentials: true,
+    exposedHeaders: ['Authorization']
+  })
+);
 app.use(express.json());
-app.use(cors());
 
 await dbConnector();
 
