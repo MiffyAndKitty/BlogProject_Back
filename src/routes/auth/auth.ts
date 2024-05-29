@@ -106,7 +106,10 @@ authRouter.get('/logout', jwtAuth, async (req: Request, res: Response) => {
       return res
         .set('Authorization', '')
         .status(401)
-        .send({ result: false, message: '로그인 상태가 아닙니다.' });
+        .send({
+          result: false,
+          message: req.tokenMessage || '로그인 상태가 아닙니다.'
+        });
 
     const result: BasicReturnType = await AuthService.deleteToken(req.id);
 

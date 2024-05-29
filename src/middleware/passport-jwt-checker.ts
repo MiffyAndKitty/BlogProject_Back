@@ -17,13 +17,13 @@ export async function jwtAuth(req: Request, res: Response, next: NextFunction) {
         return next();
       }
 
-      console.log('유효하지 않은 access토큰 :', info);
       const accessToken = req.header('Authorization')?.split('Bearer ')[1];
 
       !accessToken
         ? next()
         : (async () => {
             const reissued = await reissueToken(accessToken); // refresh 토큰의 유효성을 따져서 재발급
+            req.tokenMessage = '[만료된 access토큰]' + reissued.message;
 
             if (!reissued.result) return next();
 
