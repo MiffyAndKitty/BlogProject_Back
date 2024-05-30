@@ -1,9 +1,8 @@
 import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
-import { UserDto } from '../../dtos';
+import { UserDto } from '../../interfaces/user';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis';
-
 export class AuthService {
   static deleteToken = async (userId: string) => {
     try {

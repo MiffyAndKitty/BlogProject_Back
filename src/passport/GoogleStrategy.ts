@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
-import { isGoogleProfile } from '../utils/typegard';
+import { isGoogleProfile } from '../utils/typegard/isGoogleProfile';
 import { ensureError } from '../errors/ensureError';
 export const google = (passport: PassportStatic) => {
   passport.use('google', new GoogleStrategy(passportConfig, passportVerify));

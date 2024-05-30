@@ -1,5 +1,5 @@
 import { db } from '../loaders/mariadb';
-import { DbColumnDto } from '../dtos';
+import { DbColumnDto } from '../interfaces/dbColumn';
 import { ensureError } from '../errors/ensureError';
 
 export class UsersService {
