@@ -26,7 +26,7 @@ const passportVerify = async (
     }
     console.log(profile.emails[0].value, profile.name.familyName);
 
-    const userDto = {
+    const googleUser = {
       id: '',
       email: profile.emails[0].value,
       nickname: profile.name.familyName,
@@ -36,18 +36,17 @@ const passportVerify = async (
     const exUser = await db.query(
       // DB에서 구글 유저 존재 유무 확인
       'SELECT * FROM User WHERE user_provider = ? AND user_email = ? LIMIT 1;',
-      ['google', userDto.email]
+      ['google', googleUser.email]
     );
     if (exUser[0] && exUser[0].user_id) {
-      userDto.id = exUser[0].user_id;
-      done(null, userDto);
+      done(null, exUser[0].user_id);
       return;
     }
 
     // 사용자가 데이터 베이스에 없으면 저장
     const saveNewUser = await db.query(
       'INSERT INTO User (user_email, user_nickname, user_provider) VALUES (?, ?, ?)',
-      [userDto.email, userDto.nickname, 'google']
+      [googleUser.email, googleUser.nickname, 'google']
     );
 
     // 저장된 유저 확인 (id를 가져오기 위해)
@@ -55,13 +54,11 @@ const passportVerify = async (
       saveNewUser.affectedRows === 1
         ? await db.query(
             'SELECT * FROM User WHERE user_provider = ? AND user_email = ? LIMIT 1;',
-            ['google', userDto.email]
+            ['google', googleUser.email]
           )
         : done(null, false);
 
-    newUser[0]
-      ? ((userDto.id = newUser[0].user_id), done(null, userDto))
-      : done(null, false);
+    newUser[0] ? done(null, newUser[0].user_id) : done(null, false);
   } catch (err) {
     const error = ensureError(err);
     console.log('구글 전략 오류 : ', error.message);

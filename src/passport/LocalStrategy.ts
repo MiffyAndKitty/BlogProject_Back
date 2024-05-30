@@ -21,20 +21,15 @@ const passportVerify = async (
     const sql = 'SELECT * FROM User WHERE user_email = ? LIMIT 1';
     const exUser = await db.query(sql, email);
 
-    if (!exUser[0]) {
+    if (!exUser[0])
       done(null, false, { reason: '존재하지 않는 사용자 입니다.' });
-      return;
-    }
 
     const compareResult = await bcrypt.compare(
       password,
       exUser[0].user_password
     );
 
-    if (compareResult) {
-      done(null, exUser[0]);
-      return;
-    }
+    if (compareResult) done(null, exUser[0].user_id);
 
     done(null, false, {
       reason: '올바르지 않은 아이디/비밀번호가 입력되었습니다.'
