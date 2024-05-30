@@ -1,11 +1,11 @@
 import { newToken } from '../../utils/token/newToken';
-import { DataReturnType } from '../../interfaces';
+import { SingleDataResponse } from '../../interfaces/response';
 import { setRefreshToken } from '../../utils/redis/refreshToken';
 import { ensureError } from '../../errors/ensureError';
 
 export const localAuthService = async (
   userid: string
-): Promise<DataReturnType> => {
+): Promise<SingleDataResponse> => {
   try {
     const accessToken = newToken.access(userid);
     const refreshToken = newToken.refresh();

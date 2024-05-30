@@ -2,13 +2,13 @@ import 'dotenv/config';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { newToken } from './newToken';
 import { ensureError } from '../../errors/ensureError';
-import { BasicReturnType, DatasReturnType } from '../../interfaces';
+import { BasicResponse, MultipleDataResponse } from '../../interfaces/response';
 import { getRefreshToken } from '../redis/refreshToken';
 
 // 토큰 유효성 검증 후 재발급
 export async function reissueToken(
   accessToken: string
-): Promise<BasicReturnType | DatasReturnType<string>> {
+): Promise<BasicResponse | MultipleDataResponse<string>> {
   try {
     const decodedId = (jwt.decode(accessToken) as JwtPayload)?.id || null;
 
@@ -36,7 +36,7 @@ export async function reissueToken(
     return { result: false, message: 'access 토큰 재발급 실패' };
   } catch (err) {
     const error = ensureError(err);
-    console.log(error.message);
+    console.log('토큰 재발급 함수 오류 :', error.message);
     return { result: false, message: error.message };
   }
 }

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ensureError } from '../errors/ensureError';
-import { BasicReturnType } from '../interfaces';
+import { BasicResponse } from '../interfaces/response';
 import { UsersService } from '../services/users';
 import { body } from 'express-validator';
 import { validate } from '../middleware/express-validation';
@@ -16,7 +16,7 @@ usersRouter.post(
   async (req: Request, res: Response) => {
     try {
       const data: DbColumnDto = req.body;
-      const result: BasicReturnType = await UsersService.isDuplicated(data);
+      const result: BasicResponse = await UsersService.isDuplicated(data);
 
       if (result.result === true) {
         return res.status(200).send(result);

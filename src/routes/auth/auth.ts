@@ -5,7 +5,7 @@ import { localAuthService } from '../../services/auth/passport-local-login';
 import { jwtAuth } from '../../middleware/passport-jwt-checker';
 import { AuthService } from '../../services/auth/auth';
 import { ensureError } from '../../errors/ensureError';
-import { BasicReturnType, DataReturnType } from '../../interfaces';
+import { BasicResponse, SingleDataResponse } from '../../interfaces/response';
 import { UserDto } from '../../interfaces/user';
 import { validate } from '../../middleware/express-validation';
 import { body, header } from 'express-validator';
@@ -39,7 +39,7 @@ authRouter.post(
         req.login(user, { session: false }, async (err) => {
           if (err) return err;
 
-          const result: DataReturnType = await localAuthService(user); //userid
+          const result: SingleDataResponse = await localAuthService(user); //userid
           if (result.result === true) {
             res
               .status(200)
@@ -79,7 +79,7 @@ authRouter.get(
     try {
       console.log('req.user', req.user);
 
-      const result: DataReturnType =
+      const result: SingleDataResponse =
         typeof req.user !== 'string'
           ? { result: false, data: '', message: '유저 정보 확인 실패' }
           : await googleAuthService(req.user);
@@ -115,7 +115,7 @@ authRouter.get(
           message: req.tokenMessage || '로그인 상태가 아닙니다.'
         });
 
-      const result: BasicReturnType = await AuthService.deleteToken(req.id);
+      const result: BasicResponse = await AuthService.deleteToken(req.id);
 
       if (result.result === true) {
         return res.set('Authorization', '').status(200).send(result);
@@ -143,7 +143,7 @@ authRouter.post(
   async (req: Request, res: Response) => {
     try {
       const newUser: UserDto = req.body;
-      const result: BasicReturnType = await AuthService.saveUser(newUser);
+      const result: BasicResponse = await AuthService.saveUser(newUser);
 
       if (result.result === true) {
         return res.status(200).send(result);

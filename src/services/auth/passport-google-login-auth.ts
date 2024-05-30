@@ -1,13 +1,13 @@
 import { newToken } from '../../utils/token/newToken';
-import { DataReturnType } from '../../interfaces';
+import { SingleDataResponse } from '../../interfaces/response';
 import { setRefreshToken } from '../../utils/redis/refreshToken';
 import { ensureError } from '../../errors/ensureError';
 
 export const googleAuthService = async (
-  user: string
-): Promise<DataReturnType> => {
+  userId: string
+): Promise<SingleDataResponse> => {
   try {
-    const accessToken = newToken.access(user.id);
+    const accessToken = newToken.access(userId);
     const refreshToken = newToken.refresh();
 
     if (typeof accessToken !== 'string' || typeof refreshToken !== 'string') {
@@ -19,7 +19,7 @@ export const googleAuthService = async (
     }
 
     // 유저의 refresh 토큰이 저장되어있다면 update, 아니라면 저장
-    const savedRefresh = await setRefreshToken(user.id, refreshToken);
+    const savedRefresh = await setRefreshToken(userId, refreshToken);
 
     return savedRefresh === 'OK' // savedRefresh에서 OK 혹은 err.name반환
       ? { result: true, data: accessToken, message: '구글 로그인 성공' }
