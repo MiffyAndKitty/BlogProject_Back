@@ -1,11 +1,10 @@
 import { newToken } from '../../utils/token/newToken';
-import { OAuthUserDto } from '../../dtos';
 import { DataReturnType } from '../../interfaces';
 import { setRefreshToken } from '../../utils/redis/refreshToken';
 import { ensureError } from '../../errors/ensureError';
 
 export const googleAuthService = async (
-  user: OAuthUserDto
+  user: string
 ): Promise<DataReturnType> => {
   try {
     const accessToken = newToken.access(user.id);

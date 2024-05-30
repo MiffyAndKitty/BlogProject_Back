@@ -6,15 +6,12 @@ import { jwtAuth } from '../../middleware/passport-jwt-checker';
 import { AuthService } from '../../services/auth/auth';
 import { ensureError } from '../../errors/ensureError';
 import { BasicReturnType, DataReturnType } from '../../interfaces';
-import { validateDto } from '../../middleware/validateDto';
-import { UserDto, OAuthUserDto } from '../../dtos';
 
 export const authRouter = Router();
 
 // 로컬 로그인
 authRouter.post(
   '/login',
-  await validateDto(UserDto),
   async (req: Request, res: Response, next: NextFunction) => {
     passport.authenticate('local', (err?: any, user?: any, info?: any) => {
       try {
@@ -71,14 +68,11 @@ authRouter.get(
     failureRedirect: '/auth/login',
     session: false
   }),
-  await validateDto(OAuthUserDto, 'user'),
   async (req: Request, res: Response) => {
     try {
       console.log('req.user', req.user);
 
-      const result: DataReturnType = await googleAuthService(
-        req.user as OAuthUserDto
-      );
+      const result: DataReturnType = await googleAuthService(req.user);
 
       if (result.result === true) {
         return res
@@ -126,22 +120,18 @@ authRouter.get('/logout', jwtAuth, async (req: Request, res: Response) => {
 });
 
 // 회원가입
-authRouter.post(
-  '/sign',
-  await validateDto(UserDto),
-  async (req: Request, res: Response) => {
-    try {
-      const result: BasicReturnType = await AuthService.saveUser(req.body);
+authRouter.post('/sign', async (req: Request, res: Response) => {
+  try {
+    const result: BasicReturnType = await AuthService.saveUser(req.body);
 
-      if (result.result === true) {
-        return res.status(200).send(result);
-      } else {
-        return res.status(400).send(result);
-      }
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.send({ result: false, message: error.message });
+    if (result.result === true) {
+      return res.status(200).send(result);
+    } else {
+      return res.status(400).send(result);
     }
+  } catch (err) {
+    const error = ensureError(err);
+    console.log(error.message);
+    return res.send({ result: false, message: error.message });
   }
-);
+});

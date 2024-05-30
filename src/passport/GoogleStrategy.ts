@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
-import { OAuthUserDto } from '../dtos';
 import { isGoogleProfile } from '../utils/typegard';
 import { ensureError } from '../errors/ensureError';
 export const google = (passport: PassportStatic) => {
@@ -27,7 +26,7 @@ const passportVerify = async (
     }
     console.log(profile.emails[0].value, profile.name.familyName);
 
-    const userDto: OAuthUserDto = {
+    const userDto = {
       id: '',
       email: profile.emails[0].value,
       nickname: profile.name.familyName,
