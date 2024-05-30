@@ -4,7 +4,7 @@ import cors from 'cors';
 import { dbConnector } from './loaders/mariadb';
 import passport from 'passport';
 import { passportLoader } from './passport';
-import { authRouter } from './routes/auth/auth';
+import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
 import { redisConnector } from './loaders/redis';
 const app = express();

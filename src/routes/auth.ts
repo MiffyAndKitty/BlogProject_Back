@@ -1,13 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
-import { googleAuthService } from '../../services/auth/passport-google-login-auth';
-import { localAuthService } from '../../services/auth/passport-local-login';
-import { jwtAuth } from '../../middleware/passport-jwt-checker';
-import { AuthService } from '../../services/auth/auth';
-import { ensureError } from '../../errors/ensureError';
-import { BasicResponse, SingleDataResponse } from '../../interfaces/response';
-import { UserDto } from '../../interfaces/user';
-import { validate } from '../../middleware/express-validation';
+import { googleAuthService } from '../services/auth/passport-google-login-auth';
+import { localAuthService } from '../services/auth/passport-local-login';
+import { jwtAuth } from '../middleware/passport-jwt-checker';
+import { AuthService } from '../services/auth/auth';
+import { ensureError } from '../errors/ensureError';
+import { BasicResponse, SingleDataResponse } from '../interfaces/response';
+import { UserDto } from '../interfaces/user';
+import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 
 export const authRouter = Router();
