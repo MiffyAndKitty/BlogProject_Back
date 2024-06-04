@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Router, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { googleAuthService } from '../services/auth/passport-google-login-auth';
@@ -81,19 +82,22 @@ authRouter.get(
           : await googleAuthService(req.user);
 
       if (result.result === true) {
-        return res
-          .status(200)
-          .set('Authorization', `Bearer ${result.data}`)
-          .send({ result: result.result, message: result.message });
+        // 프론트엔드로 리다이렉트하고 JWT 토큰 전달
+        return res.redirect(
+          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/callback?token=Bearer%20` +
+            result.data
+        );
       } else {
-        return res
-          .status(500)
-          .send({ result: result.result, message: result.message });
+        return res.redirect(
+          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/login?error=${result.message}`
+        );
       }
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      return res.redirect(
+        `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/login?error=${error.message}`
+      );
     }
   }
 );
