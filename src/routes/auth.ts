@@ -24,9 +24,8 @@ authRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     passport.authenticate('local', (err?: any, user?: any, info?: any) => {
       try {
-        console.log(user);
         if (err) {
-          return err;
+          return res.status(500).send({ result: false, message: err.message });
         }
 
         if (!user) {
@@ -41,22 +40,21 @@ authRouter.post(
 
           const result: SingleDataResponse = await localAuthService(user); //userid
           if (result.result === true) {
-            res
-              .status(200)
-              .set('Authorization', `Bearer ${result.data}`)
-              .send({ result: result.result, message: result.message });
-            console.log(res.getHeaders());
-            return;
-          } else {
             return res
-              .status(500)
+              .set('Authorization', `Bearer ${result.data}`)
+              .status(200)
               .send({ result: result.result, message: result.message });
+          } else {
+            return res.status(500).set('Authorization', '').send({
+              result: result.result,
+              message: result.message
+            });
           }
         });
       } catch (err) {
         const error = ensureError(err);
         console.log(error.message);
-        return res.send({ result: false, message: error.message });
+        return res.status(500).send({ result: false, message: error.message });
       }
     })(req, res, next);
   }
@@ -77,8 +75,6 @@ authRouter.get(
   }),
   async (req: Request, res: Response) => {
     try {
-      console.log('req.user', req.user);
-
       const result: SingleDataResponse =
         typeof req.user !== 'string'
           ? { result: false, data: '', message: '유저 정보 확인 실패' }
@@ -97,7 +93,7 @@ authRouter.get(
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return res.send({ result: false, message: error.message });
+      return res.status(500).send({ result: false, message: error.message });
     }
   }
 );
@@ -153,7 +149,7 @@ authRouter.post(
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return res.send({ result: false, message: error.message });
+      return res.status(500).send({ result: false, message: error.message });
     }
   }
 );
