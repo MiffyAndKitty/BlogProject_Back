@@ -1,8 +1,8 @@
 import { pool } from '../config/mariadb';
 
-export async function dbConnector(): Promise<void> {
-  await pool.getConnection();
+export const db = await pool.getConnection();
 
-  const rows = await pool.query('SELECT NOW()');
+export async function dbConnector() {
+  const rows = await db.query('SELECT NOW()');
   console.log('데이터 베이스 연결 완료 :', rows[0]['NOW()']);
 }
