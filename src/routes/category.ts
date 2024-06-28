@@ -1,20 +1,25 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
-import { header, body } from 'express-validator';
+import { header, body, query } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
-import { UserIdDto } from '../interfaces/userId';
 import { CategoryDto } from '../interfaces/category';
 import { categoryService } from '../services/category';
+
 export const categoryRouter = Router();
 
-// 카테고리 리스트 조회
+// 특정 유저의 카테고리 리스트 조회 ( GET : /category/list?level=&topcategory_id=)
 categoryRouter.get(
-  '/',
+  '/list',
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
-      .withMessage('토큰이 없습니다.')
+      .withMessage('토큰이 없습니다.'),
+    query('level').optional(),
+    query('topcategory_id')
+      .optional()
+      .matches(/^[0-9a-f]{36}$/i)
+      .withMessage('topcategory_id는 36자의 문자열이어야 합니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -25,8 +30,12 @@ categoryRouter.get(
         });
       }
 
-      const userIdDto: UserIdDto = { userId: req.id };
-      const result = await categoryService.getList(userIdDto);
+      const categoryDto: CategoryDto = {
+        userId: req.id,
+        level: Number(req.query.level) || 0, // 기본으로 최상위 카테고리 조회
+        topcategoryId: req.query.topcategory_id as string
+      };
+      const result = await categoryService.getList(categoryDto);
 
       return res
         .status(result.result ? 200 : 500)
@@ -46,7 +55,15 @@ categoryRouter.post(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
-    body('categoryName').notEmpty()
+    body('categoryName').notEmpty(),
+    body('level')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('level은 0 이상의 정수여야 합니다.'),
+    body('topcategory_id')
+      .optional()
+      .matches(/^[0-9a-f]{36}$/i)
+      .withMessage('topcategory_id는 36자의 문자열이어야 합니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -59,6 +76,8 @@ categoryRouter.post(
 
       const categoryDto: CategoryDto = {
         userId: req.id,
+        level: req.body.level,
+        topcategoryId: req.body.topcategoryId,
         categoryName: req.body.categoryName
       };
       const result = await categoryService.create(categoryDto);
@@ -82,9 +101,13 @@ categoryRouter.put(
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
     body('categoryId')
-      .matches(/^[0-9a-f]{32}$/i)
+      .matches(/^[0-9a-f]{36}$/i)
       .withMessage('올바른 카테고리 id 형식이 아닙니다.'),
-    body('categoryName').notEmpty()
+    body('categoryName').notEmpty().withMessage('categoryName은 필수입니다.'),
+    body('level')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('level은 0 이상의 정수여야 합니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -96,7 +119,7 @@ categoryRouter.put(
       }
 
       const categoryDto: CategoryDto = {
-        userId: req.id,
+        level: req.body.level,
         categoryId: req.body.categoryId,
         categoryName: req.body.categoryName
       };
@@ -122,8 +145,12 @@ categoryRouter.delete(
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
     body('categoryId')
-      .matches(/^[0-9a-f]{32}$/i)
-      .withMessage('올바른 카테고리 id 형식이 아닙니다.')
+      .matches(/^[0-9a-f]{36}$/i)
+      .withMessage('카테고리 id는 36자의 문자열이어야 합니다.'),
+    body('level')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('level은 0 이상의 정수여야 합니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -135,7 +162,7 @@ categoryRouter.delete(
       }
 
       const categoryDto: CategoryDto = {
-        userId: req.id,
+        level: req.body.level,
         categoryId: req.body.categoryId
       };
       const result = await categoryService.delete(categoryDto);
