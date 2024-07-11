@@ -6,12 +6,9 @@ import { localAuthService } from '../services/auth/passport-local-login';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AuthService } from '../services/auth/auth';
 import { ensureError } from '../errors/ensureError';
-import {
-  BasicResponse,
-  SingleDataResponse,
-  MultipleDataResponse
-} from '../interfaces/response';
+import { BasicResponse, MultipleDataResponse } from '../interfaces/response';
 import { UserDto } from '../interfaces/user';
+import { GoogleLoginUserDto } from '../interfaces/GoogleLoginUser';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 
@@ -86,20 +83,42 @@ authRouter.get(
   }),
   async (req: Request, res: Response) => {
     try {
-      const result: SingleDataResponse =
-        typeof req.user !== 'string'
-          ? { result: false, data: '', message: '유저 정보 확인 실패' }
-          : await googleAuthService(req.user);
-
+      let result: MultipleDataResponse<string | null> = {
+        result: false,
+        data: [],
+        message: '유저 정보 확인 실패'
+      };
+      if (
+        req.user &&
+        'id' in req.user &&
+        'nickname' in req.user &&
+        typeof req.user.id === 'string' &&
+        typeof req.user.nickname === 'string'
+      ) {
+        result = await googleAuthService(req.user as GoogleLoginUserDto);
+      } else if (
+        req.user &&
+        'email' in req.user &&
+        typeof req.user.email === 'string'
+      ) {
+        result = {
+          result: true,
+          data: [req.user.email],
+          message: '회원가입 되지 않은 구글 유저'
+        };
+      }
+      console.log(result);
+      console.log(
+        `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
+      );
       if (result.result === true) {
         // 프론트엔드로 리다이렉트하고 JWT 토큰 전달
         return res.redirect(
-          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/callback?token=Bearer%20` +
-            result.data
+          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
         );
       } else {
         return res.redirect(
-          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/login?error=${result.message}`
+          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/login?error=${encodeURIComponent(result.message)}`
         );
       }
     } catch (err) {
