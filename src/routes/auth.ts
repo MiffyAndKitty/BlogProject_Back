@@ -165,9 +165,11 @@ authRouter.post(
   validate([
     body('email').isEmail(),
     body('password')
+      .if(body('provider').not().equals('google')) // 'provider'가 'google'이 아닌 경우에만 비밀번호 검증
       .isLength({ min: 8 })
       .matches(/(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])/),
-    body('nickname').notEmpty()
+    body('nickname').notEmpty(),
+    body('provider').if(body('provider').exists()).isIn(['google']) // 'provider'가 존재하면 'google'인지 확인
   ]),
   async (req: Request, res: Response) => {
     try {
