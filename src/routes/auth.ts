@@ -6,7 +6,11 @@ import { localAuthService } from '../services/auth/passport-local-login';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AuthService } from '../services/auth/auth';
 import { ensureError } from '../errors/ensureError';
-import { BasicResponse, SingleDataResponse } from '../interfaces/response';
+import {
+  BasicResponse,
+  SingleDataResponse,
+  MultipleDataResponse
+} from '../interfaces/response';
 import { UserDto } from '../interfaces/user';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
@@ -39,15 +43,21 @@ authRouter.post(
         req.login(user, { session: false }, async (err) => {
           if (err) return err;
 
-          const result: SingleDataResponse = await localAuthService(user); //userid
+          const result: MultipleDataResponse<string> =
+            await localAuthService(user); //userid, usernickname
           if (result.result === true) {
             return res
-              .set('Authorization', `Bearer ${result.data}`)
+              .set('Authorization', `Bearer ${result.data[0]}`)
               .status(200)
-              .send({ result: result.result, message: result.message });
+              .send({
+                result: result.result,
+                data: result.data[1],
+                message: result.message
+              });
           } else {
             return res.status(500).set('Authorization', '').send({
               result: result.result,
+              data: [],
               message: result.message
             });
           }
