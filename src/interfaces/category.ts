@@ -1,5 +1,15 @@
+import { categoryRouter } from '../routes/category';
+
 export interface CategoryDto {
+  userId?: string;
   categoryId?: string;
-  userId: string;
-  categoryName?: string;
+  topcategoryId?: string;
+}
+
+export interface CategoryListDto extends CategoryDto {
+  nickname: string;
+}
+
+export interface CategorySaveDto extends CategoryDto {
+  categoryName: string;
 }
