@@ -6,6 +6,8 @@ export declare global {
       id: string | undefined;
       tokenMessage: string | undefined;
       newAccessToken?: string;
+      fileURL?: string | Array<string>;
+      isWriter: boolean;
     }
   }
 }
