@@ -7,8 +7,8 @@ import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AuthService } from '../services/auth/auth';
 import { ensureError } from '../errors/ensureError';
 import { BasicResponse, MultipleDataResponse } from '../interfaces/response';
-import { UserDto } from '../interfaces/user';
-import { GoogleLoginUserDto } from '../interfaces/GoogleLoginUser';
+import { UserDto } from '../interfaces/user/user';
+import { GoogleLoginUserDto } from '../interfaces/user/GoogleLoginUser';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 

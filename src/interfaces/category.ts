@@ -1,5 +1,3 @@
-import { categoryRouter } from '../routes/category';
-
 export interface CategoryDto {
   userId?: string;
   categoryId?: string;

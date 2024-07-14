@@ -1,6 +1,6 @@
 import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
-import { UserDto } from '../../interfaces/user';
+import { UserDto } from '../../interfaces/user/user';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis';
 export class AuthService {
