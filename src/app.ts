@@ -8,6 +8,7 @@ import { passportLoader } from './passport';
 import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
 import { redisConnector } from './loaders/redis';
+import { boardRouter } from './routes/board';
 import { categoryRouter } from './routes/category';
 
 const app = express();
@@ -29,9 +30,11 @@ app.use(passport.initialize());
 await passportLoader();
 app.use('/auth', authRouter);
 app.use('/users', usersRouter);
+app.use('/board', boardRouter);
 app.use('/category', categoryRouter);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.log('[ 에러 핸들러 입니다! ]', err);
   return res
     .status(500)
     .send({ result: false, message: `서버 오류 발생 : ${err.message}` });
