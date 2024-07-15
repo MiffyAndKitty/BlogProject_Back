@@ -15,7 +15,7 @@ import { checkWriter } from '../middleware/checkWriter';
 export const boardRouter = Router();
 
 // 게시글 리스트 조회
-// GET : /board/list?sort=&tag=&cursor=&pageSize=
+// GET : /board/list?sort=&tag=&cursor=&pageSize=&isBefore=
 boardRouter.get(
   '/list',
   validate([
@@ -33,7 +33,11 @@ boardRouter.get(
       .isInt({ min: 1 })
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
-      )
+      ),
+    query('isBefore')
+      .optional({ checkFalsy: true })
+      .isBoolean()
+      .withMessage('ture이면 커서 기준으로 이전 페이지를 조회합니다.')
   ]),
   async (req: Request, res: Response) => {
     try {
@@ -41,7 +45,8 @@ boardRouter.get(
         sort: req.query.sort as string,
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
-        pageSize: req.query.pageSize as unknown as number
+        pageSize: req.query.pageSize as unknown as number,
+        isBefore: Boolean(req.query.isBefore)
       };
       const result = await BoardListService.getList(listDto);
       return res.status(result.result ? 200 : 500).send({
@@ -59,7 +64,7 @@ boardRouter.get(
 
 // 유저의 유니크한 값인 닉네임을 이용하여 특정 유저의 게시글 리스트 반환
 // 자기 자신의 게시글을 조회할 경우에만 비공개된 글까지 조회 가능
-// GET : /board/list/:{nickname}?sort=&tag=&cursor=&pageSize=&categoryId=
+// GET : /board/list/:{nickname}?sort=&tag=&cursor=&pageSize=&categoryId=&isBefore=
 boardRouter.get(
   '/list/:nickname',
   validate([
@@ -79,7 +84,11 @@ boardRouter.get(
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
       ),
-    query('categoryId').optional({ checkFalsy: true }).isString()
+    query('categoryId').optional({ checkFalsy: true }).isString(),
+    query('isBefore')
+      .optional({ checkFalsy: true })
+      .isBoolean()
+      .withMessage('ture이면 커서 기준으로 이전 페이지를 조회합니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -91,7 +100,8 @@ boardRouter.get(
         pageSize: req.query.pageSize as unknown as number,
         nickname: req.params.nickname.split(':')[1],
         userId: req.id,
-        categoryId: req.query.categoryId as string
+        categoryId: req.query.categoryId as string,
+        isBefore: Boolean(req.query.isBefore)
       };
 
       const result = await BoardListService.getUserList(userListDto);

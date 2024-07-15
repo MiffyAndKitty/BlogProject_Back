@@ -3,6 +3,7 @@ export interface ListDto {
   tag?: string;
   cursor?: string;
   pageSize?: number;
+  isBefore?: boolean;
 }
 
 export interface UserListDto extends ListDto {
