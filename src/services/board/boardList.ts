@@ -119,10 +119,12 @@ export class BoardListService {
         isWriter = false;
       }
 
-      // listDto.categoryId가 존재하고, 앞자리가 '0', '1', '2' 중 하나인 경우 해당 문자를 반환, 그렇지 않으면 기본값 '-1' 반환
-      const level = listDto.categoryId?.charAt(0) || -1;
+      const categoryLevel: string | undefined = listDto.categoryId?.charAt(0);
 
-      if (Number(level) >= 0) {
+      const level =
+        typeof categoryLevel === 'string' ? parseInt(categoryLevel) : NaN;
+
+      if (!isNaN(level) && level >= 0 && level <= 2) {
         const [category] = await db.query(
           `SELECT category_id FROM Board_Category${Number(level)} WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
           [listDto.categoryId, writer.user_id]
@@ -130,7 +132,7 @@ export class BoardListService {
 
         if (!category) {
           throw new Error(
-            '해당 닉네임을 소유한 유저가 생성한 카테고리가 아닙니다.'
+            '해당 닉네임을 소유한 유저가 생성한 카테고리가 아니거나 삭제된 카테고리입니다.'
           );
         }
 

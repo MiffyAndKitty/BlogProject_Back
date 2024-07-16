@@ -19,17 +19,22 @@ export class categoryService {
       );
 
       if (!user) {
-        return {
-          result: false,
-          data: null,
-          owner: false,
-          message: '존재하지 않는 카테고리 사용자'
-        };
+        throw new Error(
+          '해당 닉네임을 소유한 유저가 생성한 카테고리가 아니거나 삭제된 카테고리입니다.'
+        );
       }
-      const level = Number(categoryDto.topcategoryId?.charAt(0)) || -1;
+      const topCategoryLevel: string | undefined =
+        categoryDto.topcategoryId?.charAt(0);
+      const level =
+        typeof topCategoryLevel === 'string' ? parseInt(topCategoryLevel) : NaN;
 
+      if (!isNaN(level) && level !== 0 && level !== 1) {
+        throw new Error(
+          '상위 카테고리 레벨이 존재한다면 0,1 중 하나여야 합니다.'
+        );
+      }
       const list =
-        level >= 0
+        !isNaN(level) && (level === 0 || level === 1)
           ? await db.query(
               `SELECT category_id, category_name FROM Board_Category${level + 1} WHERE user_id = ? AND topcategory_id = ? AND deleted_at IS NULL`,
               [user.user_id, categoryDto.topcategoryId]
