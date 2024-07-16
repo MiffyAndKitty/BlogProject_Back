@@ -12,6 +12,38 @@ import { categoryService } from '../services/category';
 
 export const categoryRouter = Router();
 
+// 특정 유저의 전체 카테고리 리스트 조회 ( GET : /category/list/:nickname/all)
+categoryRouter.get(
+  '/list/:nickname/all',
+  validate([
+    header('Authorization')
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('토큰이 없습니다.'),
+    param('nickname').notEmpty()
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const categoryDto: CategoryListDto = {
+        nickname: encodeURIComponent(req.params.nickname.split(':')[1]),
+        userId: req.id
+      };
+
+      const result = await categoryService.getAllList(categoryDto);
+
+      return res.status(result.result ? 200 : 500).send({
+        data: result.data,
+        owner: result.owner,
+        message: result.message
+      });
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ message: error.message });
+    }
+  }
+);
+
 // 특정 유저의 카테고리 리스트 조회 ( GET : /category/list?topcategoryId=)
 categoryRouter.get(
   '/list/:nickname',
@@ -38,6 +70,7 @@ categoryRouter.get(
 
       return res.status(result.result ? 200 : 500).send({
         data: result.data,
+        owner: result.owner,
         message: result.message
       });
     } catch (err) {

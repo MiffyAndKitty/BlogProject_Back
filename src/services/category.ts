@@ -8,6 +8,76 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 export class categoryService {
+  static getAllList = async (categoryDto: CategoryListDto) => {
+    try {
+      const decodedNickname = decodeURIComponent(categoryDto.nickname);
+
+      const [user] = await db.query(
+        `SELECT user_id FROM User WHERE user_nickname= ? AND deleted_at IS NULL LIMIT 1;`,
+        [decodedNickname]
+      );
+
+      if (!user) {
+        throw new Error(
+          '사용자가 생성한 카테고리가 존재하지 않아 전체 카테고리 리스트를 조회할 수 없습니다.'
+        );
+      }
+
+      const userId = user.user_id;
+
+      const categories = await categoryService._getAllCategories(userId, 0);
+      const owner = userId === categoryDto.userId;
+
+      return categories.length >= 0
+        ? {
+            result: true,
+            data: categories,
+            owner: owner,
+            message: '사용자의 전체 게시글 카테고리 리스트 조회 성공'
+          }
+        : {
+            result: false,
+            data: null,
+            owner: false,
+            message: '사용자의 전체 게시글 카테고리 리스트 조회 실패'
+          };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return {
+        result: false,
+        data: null,
+        owner: false,
+        message: error.message
+      };
+    }
+  };
+
+  private static _getAllCategories = async (
+    userId: string,
+    level: number,
+    topCategoryId?: string
+  ) => {
+    const levelTable = `Board_Category${level}`;
+    const query = topCategoryId
+      ? `SELECT category_id, category_name FROM ${levelTable} WHERE user_id = ? AND topcategory_id = ? AND deleted_at IS NULL`
+      : `SELECT category_id, category_name FROM ${levelTable} WHERE user_id = ? AND deleted_at IS NULL`;
+
+    const params = topCategoryId ? [userId, topCategoryId] : [userId];
+    const categories = await db.query(query, params);
+
+    for (const category of categories) {
+      if (!(level >= 0 && level < 2)) break;
+      category.subcategories = await categoryService._getAllCategories(
+        userId,
+        level + 1,
+        category.category_id
+      );
+    }
+
+    return categories;
+  };
+
   static getList = async (categoryDto: CategoryListDto) => {
     try {
       const decodedNickname = decodeURIComponent(categoryDto.nickname);
