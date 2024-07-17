@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../config/env';
 import { Router, Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { googleAuthService } from '../services/auth/passport-google-login-auth';
@@ -26,6 +26,7 @@ authRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     passport.authenticate('local', (err?: any, user?: any, info?: any) => {
       try {
+        console.log('process.env.A', process.env.A);
         if (err) {
           return res.status(500).send({ result: false, message: err.message });
         }

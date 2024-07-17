@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../../config/env';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { newToken } from './newToken';
 import { ensureError } from '../../errors/ensureError';

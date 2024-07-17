@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../config/env';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';

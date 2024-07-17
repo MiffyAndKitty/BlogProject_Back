@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../../config/env';
 import jwt from 'jsonwebtoken';
 import { verifyTokenError } from '../../errors/verifyTokenError';
 export class verifyToken {

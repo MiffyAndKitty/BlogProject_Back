@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../config/env';
 import { s3 } from '../config/s3';
 import multer from 'multer';
 import multerS3 from 'multer-s3';

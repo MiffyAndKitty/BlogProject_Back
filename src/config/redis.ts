@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env';
 import { createClient } from 'redis';
 
 export const client = createClient({
