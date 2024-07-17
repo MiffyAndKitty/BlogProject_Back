@@ -15,7 +15,7 @@ import { checkWriter } from '../middleware/checkWriter';
 export const boardRouter = Router();
 
 // 게시글 리스트 조회
-// GET : /board/list?sort=&tag=&cursor=&pageSize=&isBefore=
+// GET : /board/list?sort=&tag=&cursor=&page-size=&is-before=
 boardRouter.get(
   '/list',
   validate([
@@ -27,14 +27,14 @@ boardRouter.get(
       ),
     query('tag').optional({ checkFalsy: true }).isString(),
     query('cursor').optional({ checkFalsy: true }).isString(),
-    query('pageSize')
+    query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
       .isInt({ min: 1 })
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
       ),
-    query('isBefore')
+    query('is-before')
       .optional({ checkFalsy: true })
       .isBoolean()
       .withMessage('ture이면 커서 기준으로 이전 페이지를 조회합니다.')
@@ -45,8 +45,8 @@ boardRouter.get(
         sort: req.query.sort as string,
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
-        pageSize: req.query.pageSize as unknown as number,
-        isBefore: Boolean(req.query.isBefore)
+        pageSize: req.query['page-size'] as unknown as number,
+        isBefore: Boolean(req.query['is-before'])
       };
       const result = await BoardListService.getList(listDto);
       return res.status(result.result ? 200 : 500).send({
@@ -77,15 +77,15 @@ boardRouter.get(
       ),
     query('tag').optional({ checkFalsy: true }).isString(),
     query('cursor').optional({ checkFalsy: true }).isString(),
-    query('pageSize')
+    query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
       .isInt({ min: 1 })
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
       ),
-    query('categoryId').optional({ checkFalsy: true }).isString(),
-    query('isBefore')
+    query('category-id').optional({ checkFalsy: true }).isString(),
+    query('is-before')
       .optional({ checkFalsy: true })
       .isBoolean()
       .withMessage('ture이면 커서 기준으로 이전 페이지를 조회합니다.')
@@ -97,11 +97,11 @@ boardRouter.get(
         sort: req.query.sort as string,
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
-        pageSize: req.query.pageSize as unknown as number,
+        pageSize: req.query['page-size'] as unknown as number,
         nickname: req.params.nickname.split(':')[1],
         userId: req.id,
-        categoryId: req.query.categoryId as string,
-        isBefore: Boolean(req.query.isBefore)
+        categoryId: req.query['category-id'] as string,
+        isBefore: Boolean(req.query['is-before'])
       };
 
       const result = await BoardListService.getUserList(userListDto);
