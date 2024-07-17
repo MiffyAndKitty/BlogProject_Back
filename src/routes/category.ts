@@ -17,6 +17,7 @@ categoryRouter.get(
   '/list/:nickname/all',
   validate([
     header('Authorization')
+      .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
     param('nickname').notEmpty()
@@ -49,6 +50,7 @@ categoryRouter.get(
   '/list/:nickname',
   validate([
     header('Authorization')
+      .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
     query('topcategoryId')
