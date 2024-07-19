@@ -5,7 +5,7 @@ import { ListDto, UserListDto } from '../../interfaces/board/listDto';
 export class BoardListService {
   static getList = async (listDto: ListDto) => {
     try {
-      let query = `SELECT DISTINCT Board.* FROM Board`;
+      let query = ``;
       const params: (string | string[] | number)[] = [];
 
       if (listDto.tag) {
@@ -15,7 +15,13 @@ export class BoardListService {
       }
 
       query += ' WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'; // 공개 게시글이면서 삭제되지 않은 글
-      const pageSize = listDto.pageSize || 10;
+
+      const [countResult] = await db.query(
+        `  SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
+          query +
+          ` ) AS distinctBoards`,
+        params
+      );
 
       if (listDto.cursor) {
         const [boardByCursor] = await db.query(
@@ -41,9 +47,13 @@ export class BoardListService {
             ? ` ORDER BY Board.board_${listDto.sort} DESC, Board.created_at DESC, Board.board_order DESC  LIMIT ?`
             : ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
       }
+      const pageSize = listDto.pageSize || 10;
       params.push(pageSize);
 
-      let data = await db.query(query, params);
+      let data = await db.query(
+        `SELECT DISTINCT Board.* FROM Board` + query,
+        params
+      );
 
       if (listDto.cursor && listDto.isBefore === true) {
         //커서가 있고, 이전 페이지를 조회하는 경우
@@ -54,10 +64,7 @@ export class BoardListService {
       console.log('게시글 리스트 params :', params);
 
       // 총 글의 개수 계산
-      const [countResult] = await db.query(
-        `SELECT COUNT(*) AS total_count FROM Board WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE;`
-      );
-      const totalCount = Number(countResult.total_count.toString());
+      const totalCount = Number(countResult.totalCount.toString());
 
       // 총 페이지 수
       const totalPageCount = Math.ceil(totalCount / pageSize);
@@ -94,7 +101,7 @@ export class BoardListService {
 
   static getUserList = async (listDto: UserListDto) => {
     try {
-      let query = `SELECT DISTINCT Board.* FROM Board`;
+      let query = ``;
       const params: (string | string[] | number)[] = [];
 
       if (listDto.tag) {
@@ -141,6 +148,13 @@ export class BoardListService {
         params.push(category.category_id);
       }
 
+      const [countResult] = await db.query(
+        `  SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
+          query +
+          ` ) AS distinctBoards`,
+        params
+      );
+
       // cursor(boardId)가 존재한다면
       // 이전 페이지의 마지막 board_id를 기준으로 다음 페이지 가져오기
       if (listDto.cursor) {
@@ -171,7 +185,10 @@ export class BoardListService {
       const pageSize = listDto.pageSize || 10;
       params.push(pageSize);
 
-      let data = await db.query(query, params);
+      let data = await db.query(
+        `SELECT DISTINCT Board.* FROM Board` + query,
+        params
+      );
 
       if (listDto.cursor && listDto.isBefore === true) {
         //커서가 있고, 이전 페이지를 조회하는 경우
@@ -187,19 +204,10 @@ export class BoardListService {
       console.log('특정 유저의 게시글 리스트 query :', query);
       console.log('특정 유저의 게시글 리스트 params :', params);
 
-      // 총 글의 개수 계산
-      const [countResult] = isWriter
-        ? await db.query(
-            `SELECT COUNT(*) AS total_count FROM Board WHERE Board.deleted_at IS NULL AND Board.user_id = '${writer.user_id}';`
-          )
-        : await db.query(
-            `SELECT COUNT(*) AS total_count FROM Board WHERE Board.deleted_at IS NULL AND Board.user_id = '${writer.user_id}' AND Board.board_public = TRUE ;`
-          );
-      const totalCount = Number(countResult.total_count.toString());
+      const totalCount = Number(countResult.totalCount.toString());
 
       // 총 페이지 수
       const totalPageCount = Math.ceil(totalCount / pageSize);
-
       if (data.length >= 0) {
         return {
           result: true,
@@ -268,7 +276,7 @@ export class BoardListService {
           cursor.board_order
         ];
         // 이전 페이지의 마지막 board_id를 기준으로 다음 페이지 가져오기
-        query += ` ORDER BY Board.board_${sort} DESC, Board.created_at DESC, Board.board_order DESC  LIMIT ?`;
+        query += ` ORDER BY Board.board_${sort} DESC, Board.created_at DESC, Board.board_order DESC`;
       } else {
         // 이전페이지
         // 좋아요순 정렬일 경우 : 동일한 갯수의 좋아요 이면서 동일한 시간대이면 order가 더 큰 값(최신) 선택 -> 더 큰 좋아요 갯수
@@ -280,7 +288,7 @@ export class BoardListService {
           cursor.board_order,
           cursor[`board_${sort}`]
         ];
-        query += ` ORDER BY Board.board_${sort} ASC, Board.created_at ASC, Board.board_order ASC LIMIT ?`;
+        query += ` ORDER BY Board.board_${sort} ASC, Board.created_at ASC, Board.board_order ASC`;
       }
     } else {
       let inequalitySign = '<',
@@ -292,7 +300,7 @@ export class BoardListService {
       }
       query = ` AND (Board.created_at ${inequalitySign} ? OR (Board.created_at = ? AND Board.board_order ${inequalitySign} ?))`;
       params = [cursor.created_at, cursor.created_at, cursor.board_order];
-      query += ` ORDER BY Board.board_order ${order}, Board.created_at ${order} LIMIT ?`;
+      query += ` ORDER BY Board.board_order ${order}, Board.created_at ${order}`;
     }
     return { query, params };
   }
