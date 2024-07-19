@@ -18,10 +18,11 @@ export class BoardService {
       );
       data.tags = tagData.map((row: any) => row.tag_name);
 
+      const liked = await BoardService._isLiked(boardIdInfoDto);
+      data.isLike = boardIdInfoDto.userId ? liked.isLike : false;
+      data.board_like += liked.likeCount;
+
       data.isWriter = Boolean(data.user_id === boardIdInfoDto.userId);
-      data.isLike = boardIdInfoDto.userId
-        ? await BoardService._isLiked(boardIdInfoDto)
-        : false;
       data.board_view += await BoardService._addView(boardIdInfoDto);
 
       return {
@@ -62,10 +63,10 @@ export class BoardService {
   // 사용자의 좋아요 여부 확인
   private static _isLiked = async (boardIdInfoDto: BoardIdInfoDto) => {
     let isLike = false;
-
+    const redisKey = `boardLike:${boardIdInfoDto.boardId}`;
     // redis에서 사용자가 좋아요를 눌렀는지 확인
     const isLikedInRedis = await redis.SISMEMBER(
-      `boardLike:${boardIdInfoDto.boardId}`,
+      redisKey,
       boardIdInfoDto.userId
     );
 
@@ -78,7 +79,9 @@ export class BoardService {
       isLike = isLikedInDB.length > 0;
     }
     if (isLike == false) isLike = isLikedInRedis;
-    return isLike;
+    const likeCount = await redis.SCARD(redisKey);
+
+    return { isLike: isLike, likeCount: likeCount };
   };
 
   // resid의 sets 자료형을 이용하여 boardId(key)에 userId(value)들을 저장
