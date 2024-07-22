@@ -16,6 +16,11 @@ export class BoardListService {
 
       query += ' WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'; // 공개 게시글이면서 삭제되지 않은 글
 
+      if (listDto.query) {
+        const queryValue = decodeURIComponent(listDto.query);
+        query += ` AND (board_title LIKE '%${queryValue}%' OR board_content LIKE '%${queryValue}%')`;
+      }
+
       const [countResult] = await db.query(
         `  SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
           query +
@@ -146,6 +151,11 @@ export class BoardListService {
         // 검색 대상 유저가 생성한 카테고리인 경우에만
         query += ` AND category_id = ?`;
         params.push(category.category_id);
+      }
+
+      if (listDto.query) {
+        const queryValue = decodeURIComponent(listDto.query);
+        query += ` AND (board_title LIKE '%${queryValue}%' OR board_content LIKE '%${queryValue}%')`;
       }
 
       const [countResult] = await db.query(

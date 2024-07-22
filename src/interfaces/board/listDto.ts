@@ -1,4 +1,5 @@
 export interface ListDto {
+  query?: string;
   sort?: string;
   tag?: string;
   cursor?: string;

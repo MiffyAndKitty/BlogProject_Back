@@ -25,6 +25,7 @@ boardRouter.get(
       .withMessage(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
+    query('query').optional({ checkFalsy: true }).isString(),
     query('tag').optional({ checkFalsy: true }).isString(),
     query('cursor').optional({ checkFalsy: true }).isString(),
     query('page-size')
@@ -42,6 +43,7 @@ boardRouter.get(
   async (req: Request, res: Response) => {
     try {
       const listDto: ListDto = {
+        query: req.query.query as string,
         sort: req.query.sort as string,
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
@@ -69,6 +71,7 @@ boardRouter.get(
   '/list/:nickname',
   validate([
     param('nickname').isString(),
+    query('query').optional({ checkFalsy: true }).isString(),
     query('sort')
       .optional({ checkFalsy: true })
       .isIn(['like', 'view'])
@@ -94,6 +97,7 @@ boardRouter.get(
   async (req: Request, res: Response) => {
     try {
       const userListDto: UserListDto = {
+        query: req.query.query as string,
         sort: req.query.sort as string,
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
