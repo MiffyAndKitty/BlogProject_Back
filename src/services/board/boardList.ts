@@ -312,6 +312,7 @@ export class BoardListService {
       params = [cursor.created_at, cursor.created_at, cursor.board_order];
       query += ` ORDER BY Board.board_order ${order}, Board.created_at ${order}`;
     }
+    query += ` LIMIT ?`;
     return { query, params };
   }
 }

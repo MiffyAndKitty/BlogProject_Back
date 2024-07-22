@@ -145,8 +145,8 @@ export class saveBoardService {
           [tag, boardId]
         );
 
-        if (savedTag.affectedRows >= 0 && savedBoardTag.affectedRows !== 1) {
-          return { result: false, message: '게시글 태그 저장 오류' };
+        if (!(savedTag.affectedRows >= 0 && savedBoardTag.affectedRows === 1)) {
+          break; // 게시글 태그 저장 실패
         }
       }
 

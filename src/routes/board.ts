@@ -169,7 +169,15 @@ boardRouter.post(
     body('title').notEmpty(),
     body('content').notEmpty(),
     body('public').isBoolean().withMessage('공개 여부는 불린값이어야합니다'),
-    body('tagNames').optional({ checkFalsy: true }).isArray(),
+    body('tagNames')
+      .optional({ checkFalsy: true })
+      .isArray()
+      .custom((tags) => {
+        if (tags.length > 10) {
+          throw new Error('태그는 최대 10개까지 허용됩니다.');
+        }
+        return true;
+      }),
     body('categoryId')
       .optional({ checkFalsy: true }) //빈 문자열, null, undefined 등)이면 검사를 건너뛴다
       .matches(/^[0-9a-f]{33}$/i)
