@@ -7,7 +7,11 @@ export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
     try {
       const [data] = await db.query(
-        'SELECT * from Board WHERE board_id = ?  AND deleted_at IS NULL LIMIT 1',
+        `SELECT Board.*, User.user_nickname 
+       FROM Board 
+       JOIN User ON Board.user_id = User.user_id
+       WHERE Board.board_id = ? AND Board.deleted_at IS NULL 
+       LIMIT 1`,
         [boardIdInfoDto.boardId]
       );
       if (!data) throw new Error('존재하지 않는 게시글입니다.');
@@ -67,7 +71,7 @@ export class BoardService {
     // redis에서 사용자가 좋아요를 눌렀는지 확인
     const isLikedInRedis = await redis.SISMEMBER(
       redisKey,
-      boardIdInfoDto.userId
+      String(boardIdInfoDto.userId)
     );
 
     // redis에 사용자 정보가 없는 경우, DB에서 사용자가 좋아요 정보를 확인

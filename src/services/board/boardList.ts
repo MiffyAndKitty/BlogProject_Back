@@ -56,7 +56,9 @@ export class BoardListService {
       params.push(pageSize);
 
       let data = await db.query(
-        `SELECT DISTINCT Board.* FROM Board` + query,
+        `SELECT DISTINCT Board.*, User.user_nickname 
+        FROM Board 
+        JOIN User ON Board.user_id = User.user_id` + query,
         params
       );
 
@@ -196,7 +198,9 @@ export class BoardListService {
       params.push(pageSize);
 
       let data = await db.query(
-        `SELECT DISTINCT Board.* FROM Board` + query,
+        `SELECT DISTINCT Board.*, User.user_nickname 
+        FROM Board 
+        JOIN User ON Board.user_id = User.user_id` + query,
         params
       );
 
