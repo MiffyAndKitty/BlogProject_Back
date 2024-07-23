@@ -67,7 +67,7 @@ export class BoardService {
   // 사용자의 좋아요 여부 확인
   private static _isLiked = async (boardIdInfoDto: BoardIdInfoDto) => {
     let isLike = false;
-    const redisKey = `boardLike:${boardIdInfoDto.boardId}`;
+    const redisKey = `board_like:${boardIdInfoDto.boardId}`;
     // redis에서 사용자가 좋아요를 눌렀는지 확인
     const isLikedInRedis = await redis.SISMEMBER(
       redisKey,
@@ -103,6 +103,62 @@ export class BoardService {
 
       const viewCount = await redis.SCARD(redisKey);
       return viewCount;
+    }
+  };
+
+  // 사용자의 좋아요 추가 -> cash -> DB
+  static addLike = async (boardIdInfoDto: BoardIdInfoDto) => {
+    try {
+      const { boardId, userId } = boardIdInfoDto;
+
+      // DB에서 사용자가 이미 좋아요를 눌렀는지 확인
+      const [likedInDB] = await db.query(
+        'SELECT 1 FROM Board_Like WHERE board_id = ? AND user_id = ? AND deleted_at IS NULL',
+        [boardId, userId]
+      );
+
+      if (likedInDB)
+        return { result: true, message: '이미 좋아요한 누른 게시물입니다.' };
+
+      // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
+      const likedInRedis = await redis.sAdd(`board_like:${boardId}`, userId); // 추가될 시 1, 추가되지 않으면 0
+
+      return likedInRedis === 1
+        ? { result: true, message: '좋아요 추가 성공' }
+        : { result: false, message: '좋아요 추가 실패' }; // 캐시 실패
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return { result: false, message: error.message };
+    }
+  };
+
+  // 사용자의 좋아요 취소 -> cash 확인 -> DB 확인
+  static cancelLike = async (boardIdInfoDto: BoardIdInfoDto) => {
+    try {
+      const { boardId, userId } = boardIdInfoDto;
+
+      // Redis에서 좋아요 캐시 삭제
+      const isRemoved = await redis.sRem(`board_like:${boardId}`, userId); // 삭제될 시 1, 삭제되지 않으면 0
+
+      if (isRemoved === 1) {
+        // redis에서 좋아요 삭제된 경우
+        return { result: true, message: '좋아요 취소 성공' };
+      }
+
+      // db에서 좋아요 삭제
+      const deleted = await db.query(
+        'UPDATE Board_Like SET deleted_at = CURRENT_TIMESTAMP WHERE board_id = ? AND user_id = ? AND deleted_at IS NULL',
+        [boardId, userId]
+      );
+
+      return deleted.affectedRows > 0
+        ? { result: true, message: '좋아요 취소 성공' }
+        : { result: false, message: '좋아요 취소 실패' };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return { result: false, message: error.message };
     }
   };
 }

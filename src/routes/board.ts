@@ -329,3 +329,81 @@ boardRouter.delete(
     }
   }
 );
+
+// 게시글 좋아요 추가( post : /board/like/add )
+boardRouter.post(
+  '/like',
+  validate([
+    header('Authorization')
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    body('boardId')
+      .matches(/^[0-9a-f]{32}$/i)
+      .withMessage('올바른 형식의 게시글 id가 아닙니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id) {
+        return res.status(403).send({
+          message:
+            '로그인 하지 않은 유저는 게시글에 좋아요를 추가할 수 없습니다. '
+        });
+      }
+
+      const boardIdInfoDto: BoardIdInfoDto = {
+        userId: req.id,
+        boardId: req.body.boardId
+      };
+
+      const result = await BoardService.addLike(boardIdInfoDto);
+
+      return res
+        .status(result.result ? 200 : 500)
+        .send({ message: result.message });
+    } catch (err) {
+      const error = ensureError(err);
+      console.error(error);
+      return res.status(500).send({ message: error.message });
+    }
+  }
+);
+
+// 게시글 좋아요 취소 ( post : /board/unlike )
+boardRouter.post(
+  '/unlike',
+  validate([
+    header('Authorization')
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    body('boardId')
+      .matches(/^[0-9a-f]{32}$/i)
+      .withMessage('올바른 형식의 게시글 id가 아닙니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id) {
+        return res.status(403).send({
+          message:
+            '로그인 하지 않은 유저는 게시글에 좋아요를 취소할 수 없습니다. '
+        });
+      }
+
+      const boardIdInfoDto: BoardIdInfoDto = {
+        userId: req.id,
+        boardId: req.body.boardId
+      };
+
+      const result = await BoardService.cancelLike(boardIdInfoDto);
+
+      return res
+        .status(result.result ? 200 : 500)
+        .send({ message: result.message });
+    } catch (err) {
+      const error = ensureError(err);
+      console.error(error);
+      return res.status(500).send({ message: error.message });
+    }
+  }
+);
