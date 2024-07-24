@@ -168,7 +168,7 @@ boardRouter.post(
       .withMessage('올바른 토큰 형식이 아닙니다.'),
     body('title').notEmpty(),
     body('content').notEmpty(),
-    body('public').isBoolean().withMessage('공개 여부는 불린값이어야합니다'),
+    body('public').isString(), // 폼 데이터의 필드는 텍스트로 전송
     body('tagNames')
       .optional({ checkFalsy: true })
       .isArray()
@@ -205,7 +205,7 @@ boardRouter.post(
         userId: req.id,
         title: req.body.title,
         content: req.body.content,
-        public: req.body.public,
+        public: req.body.public === 'false' ? false : true,
         tagNames: req.body.tagNames || [],
         categoryId: req.body.categoryId,
         fileUrls: fileUrls
