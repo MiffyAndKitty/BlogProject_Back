@@ -92,7 +92,7 @@ export class BoardService {
   // 캐시된 데이터들은 매일 자정이 지날 때마다 board의 view칼럼에 value들의 숫자를 더하여 저장되도록 업데이트 될 것임
   private static _addView = async (boardIdInfoDto: BoardIdInfoDto) => {
     const { boardId, userId } = boardIdInfoDto;
-    const redisKey = `boardView:${boardId}`;
+    const redisKey = `board_view:${boardId}`;
 
     // Redis에 조회수 +1 캐시
     if (userId) {
