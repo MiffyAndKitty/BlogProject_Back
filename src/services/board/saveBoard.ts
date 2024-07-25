@@ -1,3 +1,4 @@
+import '../../config/env';
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
@@ -164,6 +165,7 @@ export class saveBoardService {
   ) => {
     try {
       const pattern = /(<img[^>]*src=['"])([^'"]+)(['"][^>]*>)/g; // p1, p2, p3
+      const skipUrlPrefix = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com`;
 
       let index = 0;
       let replacedContent = content;
@@ -171,6 +173,9 @@ export class saveBoardService {
       replacedContent = replacedContent.replace(
         pattern,
         (match, p1, p2, p3) => {
+          if (p2.startsWith(skipUrlPrefix)) {
+            return match; // Return the original match without modification
+          }
           const imageUrl = fileUrls[index];
           index++;
           return `${p1}${imageUrl}${p3}`;
