@@ -237,8 +237,16 @@ boardRouter.put(
       .withMessage('올바른 형식의 게시글 id가 아닙니다.'),
     body('title').notEmpty(),
     body('content').notEmpty(),
-    body('public').isBoolean(),
-    body('tagNames').isArray(),
+    body('public').isString(),
+    body('tagNames')
+      .optional({ checkFalsy: true })
+      .isArray()
+      .custom((tags) => {
+        if (tags.length > 10) {
+          throw new Error('태그는 최대 10개까지 허용됩니다.');
+        }
+        return true;
+      }),
     body('categoryId')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{33}$/i)
@@ -269,8 +277,8 @@ boardRouter.put(
         boardId: req.body.boardId,
         title: req.body.title,
         content: req.body.content,
-        public: req.body.public,
-        tagNames: req.body.tagNames,
+        public: req.body.public === 'false' ? false : true,
+        tagNames: req.body.tagNames || [],
         categoryId: req.body.categoryId,
         fileUrls: fileUrls
       };
