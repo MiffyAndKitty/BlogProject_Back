@@ -1,13 +1,12 @@
 export interface CategoryDto {
-  userId?: string;
+  userId: string;
   categoryId?: string;
   topcategoryId?: string;
+  categoryName?: string;
 }
 
-export interface CategoryListDto extends CategoryDto {
+export interface CategoryListDto {
   nickname: string;
-}
-
-export interface CategorySaveDto extends CategoryDto {
-  categoryName: string;
+  userId?: string;
+  topcategoryId?: string;
 }
