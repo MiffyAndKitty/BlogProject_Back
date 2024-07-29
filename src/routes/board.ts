@@ -87,7 +87,10 @@ boardRouter.get(
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
       ),
-    query('category-id').optional({ checkFalsy: true }).isString(),
+    query('category-id')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i)
+      .withMessage('카테고리 id는 32자리의 문자열이어야합니다.'),
     query('is-before')
       .optional({ checkFalsy: true })
       .isBoolean()
@@ -180,8 +183,8 @@ boardRouter.post(
       }),
     body('categoryId')
       .optional({ checkFalsy: true }) //빈 문자열, null, undefined 등)이면 검사를 건너뛴다
-      .matches(/^[0-9a-f]{33}$/i)
-      .withMessage('카테고리 id는 36자리의 문자열이어야합니다.')
+      .matches(/^[0-9a-f]{32}$/i)
+      .withMessage('카테고리 id는 32자리의 문자열이어야합니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -249,8 +252,8 @@ boardRouter.put(
       }),
     body('categoryId')
       .optional({ checkFalsy: true })
-      .matches(/^[0-9a-f]{33}$/i)
-      .withMessage('카테고리 id는 33자리의 문자열이어야합니다.')
+      .matches(/^[0-9a-f]{32}$/i)
+      .withMessage('카테고리 id는 32자리의 문자열이어야합니다.')
   ]),
   jwtAuth,
   checkWriter(),
