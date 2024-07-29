@@ -56,9 +56,11 @@ export class BoardListService {
       params.push(pageSize);
 
       let data = await db.query(
-        `SELECT DISTINCT Board.*, User.user_nickname 
+        `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name 
         FROM Board 
-        JOIN User ON Board.user_id = User.user_id` + query,
+        LEFT JOIN User ON Board.user_id = User.user_id
+        LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
+          query,
         params
       );
 
@@ -67,8 +69,8 @@ export class BoardListService {
         data = data.reverse();
       }
 
-      console.log('게시글 리스트 query :', query);
-      console.log('게시글 리스트 params :', params);
+      // console.log('게시글 리스트 query :', query);
+      // console.log('게시글 리스트 params :', params);
 
       // 총 글의 개수 계산
       const totalCount = Number(countResult.totalCount.toString());
@@ -133,14 +135,9 @@ export class BoardListService {
         isWriter = false;
       }
 
-      const categoryLevel: string | undefined = listDto.categoryId?.charAt(0);
-
-      const level =
-        typeof categoryLevel === 'string' ? parseInt(categoryLevel) : NaN;
-
-      if (!isNaN(level) && level >= 0 && level <= 2) {
+      if (listDto.categoryId) {
         const [category] = await db.query(
-          `SELECT category_id FROM Board_Category${Number(level)} WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
+          `SELECT category_id FROM Board_Category WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
           [listDto.categoryId, writer.user_id]
         );
 
@@ -151,7 +148,7 @@ export class BoardListService {
         }
 
         // 검색 대상 유저가 생성한 카테고리인 경우에만
-        query += ` AND category_id = ?`;
+        query += ` AND Board.category_id = ?`;
         params.push(category.category_id);
       }
 
@@ -198,9 +195,11 @@ export class BoardListService {
       params.push(pageSize);
 
       let data = await db.query(
-        `SELECT DISTINCT Board.*, User.user_nickname 
+        `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name
         FROM Board 
-        JOIN User ON Board.user_id = User.user_id` + query,
+        LEFT JOIN User ON Board.user_id = User.user_id
+        LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
+          query,
         params
       );
 
@@ -215,8 +214,8 @@ export class BoardListService {
         item.isWriter = isWriter; // isWriter는 해당 게시글을 작성한 사용자의 고유 식별자일 것입니다.
       });
 
-      console.log('특정 유저의 게시글 리스트 query :', query);
-      console.log('특정 유저의 게시글 리스트 params :', params);
+      // console.log('특정 유저의 게시글 리스트 query :', query);
+      // console.log('특정 유저의 게시글 리스트 params :', params);
 
       const totalCount = Number(countResult.totalCount.toString());
 
