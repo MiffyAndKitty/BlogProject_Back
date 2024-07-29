@@ -12,10 +12,18 @@ export const upload = (folder: string) =>
       key(req, file, cb) {
         const extention = file.mimetype.split('/')[1];
         if (!['png', 'jpg', 'jpeg', 'gif'].includes(extention)) {
-          return cb(new Error('이미지 파일을 등록해주세요.'));
+          return cb(
+            new Error(
+              "'png', 'jpg', 'jpeg', 'gif' 확장자에 맞는 이미지 파일을 등록해주세요."
+            )
+          );
         }
         cb(null, `${folder}/${file.originalname}_${Date.now()}`);
       }
     }),
-    limits: { fileSize: 5 * 1024 * 1024 } // 용량 제한: 5MB
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 파일 사이즈 용량 제한: 5MB
+      files: 10, //  파일 필드 최대 갯수 :10개
+      fieldSize: 2 * 1024 * 1024 // 필드값 제한 : 2MB (기본 1MB)
+    }
   });
