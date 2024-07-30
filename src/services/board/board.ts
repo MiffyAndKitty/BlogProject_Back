@@ -100,10 +100,9 @@ export class BoardService {
       isAdded === 0
         ? console.log('이미 조회한 유저')
         : console.log('처음 조회한 유저');
-
-      const viewCount = await redis.SCARD(redisKey);
-      return viewCount;
     }
+    const viewCount = await redis.SCARD(redisKey);
+    return viewCount;
   };
 
   // 사용자의 좋아요 추가 -> cash -> DB
