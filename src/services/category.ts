@@ -238,126 +238,31 @@ export class categoryService {
 
   static delete = async (categoryDto: CategoryDto) => {
     try {
+      // 삭제하려는 카테고리를 상위 카테고리로 가지는지 확인
+      const [subcategories] = await db.query(
+        `SELECT COUNT(*) AS subcategoryCount FROM Board_Category WHERE topcategory_id = ? AND user_id= ? AND deleted_at IS NULL`,
+        [categoryDto.categoryId, categoryDto.userId]
+      );
+
+      if (subcategories.subcategoryCount > 0) {
+        return {
+          result: false,
+          message: '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
+        };
+      }
+
       const { affectedRows: deletedCount } = await db.query(
         `UPDATE Board_Category SET deleted_at = CURRENT_TIMESTAMP WHERE category_id = ? AND user_id= ? AND deleted_at IS NULL`,
         [categoryDto.categoryId, categoryDto.userId]
       );
-      if (deletedCount === 0) {
-        return { result: false, message: '카테고리 삭제 실패' };
-      }
 
-      const [deleted] = await db.query(
-        // 삭제한 카테고리
-        `SELECT topcategory_id, category_id, user_id, category_level FROM Board_Category WHERE category_id = ? AND user_id = ? AND deleted_at IS NOT NULL`,
-        [categoryDto.categoryId, categoryDto.userId]
-      );
-
-      const category: CategoryDto = {
-        userId: deleted.user_id,
-        categoryId: deleted.category_id,
-        topcategoryId: deleted.topcategory_id
-      };
-
-      switch (deleted.category_level) {
-        case 2:
-          return { result: true, message: '레벨 2의 카테고리 삭제 성공' };
-        case 1:
-          return await categoryService._delete1Level(category);
-        case 0:
-          return await categoryService._delete0Level(category);
-        default:
-          return { result: false, message: '카테고리 레벨이 미존재' };
-      }
+      return deletedCount === 1
+        ? { result: true, message: '카테고리 삭제 성공' }
+        : { result: false, message: '카테고리 삭제 실패' };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
       return { result: false, message: error.message };
     }
-  };
-
-  private static _delete1Level = async (
-    category: CategoryDto
-  ): Promise<BasicResponse> => {
-    // 하위 카테고리들의 상위 카테고리 값을 category.topcategory_id로 변경 및 category_level -1
-    const updatedSubCategories = await db.query(
-      `UPDATE Board_Category SET topcategory_i = ?, category_level = category_level - 1 WHERE topcategory_id = ? AND user_id = ? AND category_level = ? AND deleted_at IS NULL;`,
-      [category.topcategoryId, category.categoryId, category.userId, 2]
-    );
-
-    return updatedSubCategories.affectedRows > 0
-      ? {
-          result: true,
-          message: '레벨 1의 카테고리 삭제 성공 및 하위 카테고리 삭제 성공'
-        }
-      : {
-          result: true,
-          message:
-            '레벨 1의 카테고리 삭제 성공 및 수정될 하위 카테고리 존재하지 않음'
-        };
-  };
-
-  private static _delete0Level = async (
-    category: CategoryDto
-  ): Promise<BasicResponse> => {
-    // 1. 삭제 대상 id를 상위 카테고리로 가지는 카테고리id들을 불러와서 level1Categories에 저장
-    const level1Categories = await db.query(
-      `SELECT category_id FROM Board_Category WHERE topcategory_id = ? AND user_id = ? AND deleted_at IS NULL`,
-      [category.categoryId, category.userId]
-    );
-    if (level1Categories.length === 0) {
-      return {
-        result: true,
-        message: '카테고리 삭제 성공, 수정할 하위 카테고리가 존재하지 않음'
-      };
-    }
-
-    const level1Ids = level1Categories.map(
-      (category: { category_id: string }) => category.category_id
-    );
-
-    // 2. level1Categories의 카테고리 id를 가지는 카테고리들의 topcategory_id의 값을 NULL로 변경, level을 -1
-    const { affectedRows: updated1evelCount } = await db.query(
-      `UPDATE Board_Category SET topcategory_id = NULL, category_level = category_level - 1 WHERE category_id IN (?) AND user_id = ?`,
-      [level1Ids, category.userId]
-    );
-
-    if (updated1evelCount === 0) {
-      return {
-        result: false,
-        message: '카테고리 삭제 성공, 하위 카테고리 수정 실패'
-      };
-    }
-
-    // 3. level1Categories에 저장된 카테고리 id를 상위 카테고리로 가지는 id가 있다면 level을 1 낮춤
-    const level2Categories = await db.query(
-      `SELECT category_id FROM Board_Category WHERE topcategory_id IN (?) AND user_id = ?`,
-      [level1Ids, category.userId]
-    );
-
-    if (level2Categories.length === 0) {
-      return {
-        result: true,
-        message: '카테고리 삭제 성공, 하위 카테고리 수정 성공'
-      };
-    }
-
-    const level2Ids = level2Categories.map(
-      (category: { category_id: string }) => category.category_id
-    );
-
-    const { affectedRows: level2UpdatedCount } = await db.query(
-      `UPDATE Board_Category SET category_level = category_level - 1 WHERE category_id IN (?) AND user_id = ?`,
-      [level2Ids, category.userId]
-    );
-
-    return level2UpdatedCount === 0
-      ? {
-          result: false,
-          message: '카테고리 삭제 성공, 하위 카테고리 수정 실패'
-        }
-      : {
-          result: true,
-          message: '카테고리 삭제 성공, 하위 카테고리 수정 성공'
-        };
   };
 }
