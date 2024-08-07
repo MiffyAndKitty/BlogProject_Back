@@ -10,6 +10,8 @@ import { usersRouter } from './routes/users';
 import { redisConnector } from './loaders/redis';
 import { boardRouter } from './routes/board';
 import { categoryRouter } from './routes/category';
+import { tagCacheJob } from './loaders/scheduler/tagCacheJob';
+import { boardUpdateJob } from './loaders/scheduler/boardUpdateJob';
 
 const app = express();
 
@@ -25,6 +27,9 @@ app.use(morgan('dev'));
 
 redisConnector;
 await dbConnector();
+
+tagCacheJob(10);
+boardUpdateJob;
 
 app.use(passport.initialize());
 await passportLoader();
