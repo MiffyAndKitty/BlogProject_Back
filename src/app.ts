@@ -3,13 +3,14 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import { dbConnector } from './loaders/mariadb';
+import { redisConnector } from './loaders/redis';
 import passport from 'passport';
 import { passportLoader } from './passport';
 import { authRouter } from './routes/auth';
 import { usersRouter } from './routes/users';
-import { redisConnector } from './loaders/redis';
 import { boardRouter } from './routes/board';
 import { categoryRouter } from './routes/category';
+import { tagRouter } from './routes/tag';
 import { tagCacheJob } from './loaders/scheduler/tagCacheJob';
 import { boardUpdateJob } from './loaders/scheduler/boardUpdateJob';
 
@@ -37,6 +38,7 @@ app.use('/auth', authRouter);
 app.use('/users', usersRouter);
 app.use('/board', boardRouter);
 app.use('/category', categoryRouter);
+app.use('/tag', tagRouter);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.log('[ 에러 핸들러 입니다! ]', err);
