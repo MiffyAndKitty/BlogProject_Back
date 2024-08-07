@@ -1,6 +1,8 @@
 import { db } from '../../loaders/mariadb';
+import { redis } from '../../loaders/redis';
 import { ensureError } from '../../errors/ensureError';
 import { ListDto, UserListDto } from '../../interfaces/board/listDto';
+import { BoardInDBDto } from '../../interfaces/board/boardInDB';
 
 export class BoardListService {
   static getList = async (listDto: ListDto) => {
@@ -63,6 +65,7 @@ export class BoardListService {
           query,
         params
       );
+      data = await BoardListService._reflectCashed(data);
 
       if (listDto.cursor && listDto.isBefore === true) {
         //커서가 있고, 이전 페이지를 조회하는 경우
@@ -202,13 +205,14 @@ export class BoardListService {
           query,
         params
       );
+      data = await BoardListService._reflectCashed(data);
 
       if (listDto.cursor && listDto.isBefore === true) {
         //커서가 있고, 이전 페이지를 조회하는 경우
         data = data.reverse();
       }
-      data.isWriter = isWriter;
 
+      data.isWriter = isWriter;
       // data 배열의 각 객체에 isWriter 속성을 추가
       data.forEach((item: any) => {
         item.isWriter = isWriter; // isWriter는 해당 게시글을 작성한 사용자의 고유 식별자일 것입니다.
@@ -317,5 +321,28 @@ export class BoardListService {
     }
     query += ` LIMIT ?`;
     return { query, params };
+  }
+
+  private static async _reflectCashed(data: BoardInDBDto[]) {
+    // 좋아요순 정렬일 경우 -> 해당 게시글의 좋아요 수 확인 -> 동일한 갯수의 좋아요 이면서 오래된 글이나 더 작은 좋아요 순으로, 좋아요가 0이면 최신순으로 정렬
+    // Redis에서 조회수와 좋아요 수 가져오기
+
+    const viewKeys = data.map(
+      (board: { board_id: string }) => `board_view:${board.board_id}`
+    );
+    const likeKeys = data.map(
+      (board: { board_id: string }) => `board_like:${board.board_id}`
+    );
+
+    for (let i = 0; i < viewKeys.length; i++) {
+      const cashedCount = await redis.scard(viewKeys[i]);
+      data[i].board_view += Number(cashedCount) || 0;
+    }
+    for (let i = 0; i < likeKeys.length; i++) {
+      const cashedCount = await redis.scard(likeKeys[i]);
+      data[i].board_like += Number(cashedCount) || 0;
+    }
+
+    return data;
   }
 }
