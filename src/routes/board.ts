@@ -143,7 +143,7 @@ boardRouter.get(
   async (req: Request, res: Response) => {
     try {
       const boardIdInfo: BoardIdInfoDto = {
-        userId: req.id,
+        userId: req.id || req.signedCookies.user,
         boardId: req.params.boardId.split(':')[1]
       };
 
