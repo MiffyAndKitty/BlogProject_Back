@@ -11,7 +11,7 @@ export const google = (passport: PassportStatic) => {
 const passportConfig = {
   clientID: process.env.GOOGLE_ID!,
   clientSecret: process.env.GOOGLE_SECRET!,
-  callbackURL: '/auth/google/callback' // 구글 로그인 Redirect URI 경로
+  callbackURL: 'https://mk-blogservice.site/api/auth/google/callback' //'/api/auth/google/callback' // 구글 로그인 Redirect URI 경로
 };
 
 const passportVerify = async (

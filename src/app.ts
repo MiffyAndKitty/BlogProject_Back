@@ -38,12 +38,13 @@ boardUpdateJob;
 app.use(passport.initialize());
 await passportLoader();
 
-app.use('/', userIdentifier());
-app.use('/auth', authRouter);
-app.use('/users', usersRouter);
-app.use('/board', boardRouter);
-app.use('/category', categoryRouter);
-app.use('/tag', tagRouter);
+app.use('/api', userIdentifier());
+
+app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/board', boardRouter);
+app.use('/api/category', categoryRouter);
+app.use('/api/tag', tagRouter);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.log('[ 에러 핸들러 입니다! ]', err);

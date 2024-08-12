@@ -110,23 +110,23 @@ authRouter.get(
       }
       console.log(result);
       console.log(
-        `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
+        `https://mk-blogservice.site/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
       );
       if (result.result === true) {
         // 프론트엔드로 리다이렉트하고 JWT 토큰 전달
         return res.redirect(
-          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
+          `https://mk-blogservice.site/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
         );
       } else {
         return res.redirect(
-          `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/login?error=${encodeURIComponent(result.message)}`
+          `https://mk-blogservice.site/auth/login?error=${encodeURIComponent(result.message)}`
         );
       }
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
       return res.redirect(
-        `http://mk-blogservice.site:${process.env.PASSPORT_REDIRECT_PORT}/auth/login?error=${error.message}`
+        `https://mk-blogservice.site/auth/login?error=${error.message}`
       );
     }
   }
