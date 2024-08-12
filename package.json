@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "cross-env NODE_ENV=development nodemon --exec tsx src/app.ts --watch",
+    "pm2-dev": "pm2 start ecosystem.config.cjs --env development",
     "lint": "eslint . --ext .ts",
     "lint-and-fix": "eslint . --ext .ts --fix",
     "prettier": "prettier --config .prettierrc '**/*.ts' --write"
@@ -32,6 +33,7 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "pm2": "^5.4.2",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
