@@ -69,7 +69,7 @@ export class BoardService {
     let isLike = false;
     const redisKey = `board_like:${boardIdInfoDto.boardId}`;
     // redis에서 사용자가 좋아요를 눌렀는지 확인
-    const isLikedInRedis = await redis.SISMEMBER(
+    const isLikedInRedis = await redis.sismember(
       redisKey,
       String(boardIdInfoDto.userId)
     );
@@ -82,8 +82,8 @@ export class BoardService {
       );
       isLike = isLikedInDB.length > 0;
     }
-    if (isLike == false) isLike = isLikedInRedis;
-    const likeCount = await redis.SCARD(redisKey);
+    if (isLike == false) isLike = Boolean(isLikedInRedis);
+    const likeCount = await redis.scard(redisKey);
 
     return { isLike: isLike, likeCount: likeCount };
   };
@@ -96,12 +96,12 @@ export class BoardService {
 
     // Redis에 조회수 +1 캐시
     if (userId) {
-      const isAdded = await redis.sAdd(redisKey, userId);
+      const isAdded = await redis.sadd(redisKey, userId);
       isAdded === 0
         ? console.log('이미 조회한 유저')
         : console.log('처음 조회한 유저');
     }
-    const viewCount = await redis.SCARD(redisKey);
+    const viewCount = await redis.scard(redisKey);
     return viewCount;
   };
 
@@ -120,7 +120,7 @@ export class BoardService {
         return { result: true, message: '이미 좋아요한 누른 게시물입니다.' };
 
       // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
-      const likedInRedis = await redis.sAdd(`board_like:${boardId}`, userId); // 추가될 시 1, 추가되지 않으면 0
+      const likedInRedis = await redis.sadd(`board_like:${boardId}`, userId!); // 추가될 시 1, 추가되지 않으면 0
 
       return likedInRedis === 1
         ? { result: true, message: '좋아요 추가 성공' }
@@ -138,7 +138,7 @@ export class BoardService {
       const { boardId, userId } = boardIdInfoDto;
 
       // Redis에서 좋아요 캐시 삭제
-      const isRemoved = await redis.sRem(`board_like:${boardId}`, userId); // 삭제될 시 1, 삭제되지 않으면 0
+      const isRemoved = await redis.srem(`board_like:${boardId}`, userId!); // 삭제될 시 1, 삭제되지 않으면 0
 
       if (isRemoved === 1) {
         // redis에서 좋아요 삭제된 경우
