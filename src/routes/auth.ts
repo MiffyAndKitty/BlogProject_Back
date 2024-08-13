@@ -7,7 +7,7 @@ import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AuthService } from '../services/auth/auth';
 import { ensureError } from '../errors/ensureError';
 import { BasicResponse, MultipleDataResponse } from '../interfaces/response';
-import { UserDto } from '../interfaces/user/user';
+import { AuthUserDto } from '../interfaces/user/authUser';
 import { GoogleLoginUserDto } from '../interfaces/user/GoogleLoginUser';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
@@ -79,7 +79,7 @@ authRouter.get(
 authRouter.get(
   '/google/callback',
   passport.authenticate('google', {
-    failureRedirect: '/auth/login',
+    failureRedirect: '/api/auth/login',
     session: false
   }),
   async (req: Request, res: Response) => {
@@ -174,7 +174,7 @@ authRouter.post(
   ]),
   async (req: Request, res: Response) => {
     try {
-      const newUser: UserDto = req.body;
+      const newUser: AuthUserDto = req.body;
       const result: BasicResponse = await AuthService.saveUser(newUser);
 
       if (result.result === true) {
