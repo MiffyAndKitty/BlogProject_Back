@@ -16,6 +16,8 @@ export class BoardService {
       );
       if (!data) throw new Error('존재하지 않는 게시글입니다.');
 
+      if (!data.category_id) data.category_name = '기본 카테고리';
+
       const tagData = await db.query(
         'SELECT tag_name FROM Board_Tag WHERE board_id = ? AND deleted_at IS NULL',
         [boardIdInfoDto.boardId]

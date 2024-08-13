@@ -2,6 +2,7 @@ export interface BoardInDBDto {
   board_id: string;
   user_id: string;
   category_id: string;
+  category_name: string;
   board_title: string;
   board_content: string;
   board_view: number;

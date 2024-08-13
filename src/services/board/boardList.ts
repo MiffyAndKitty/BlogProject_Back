@@ -72,6 +72,14 @@ export class BoardListService {
         data = data.reverse();
       }
 
+      // 카테고리 이름이 없을 경우 "기본 카테고리"로 설정
+      data = data.map((boardData: BoardInDBDto) => {
+        if (!boardData.category_name) {
+          boardData.category_name = '기본 카테고리';
+        }
+        return boardData;
+      });
+
       // console.log('게시글 리스트 query :', query);
       // console.log('게시글 리스트 params :', params);
 
@@ -214,8 +222,13 @@ export class BoardListService {
 
       data.isWriter = isWriter;
       // data 배열의 각 객체에 isWriter 속성을 추가
-      data.forEach((item: any) => {
-        item.isWriter = isWriter; // isWriter는 해당 게시글을 작성한 사용자의 고유 식별자일 것입니다.
+      // 카테고리 이름이 없을 경우 "기본 카테고리"로 설정
+      data = data.map((boardData: BoardInDBDto) => {
+        boardData.isWriter = isWriter; // isWriter는 해당 게시글을 작성한 사용자의 고유 식별자일 것
+        if (!boardData.category_name) {
+          boardData.category_name = '기본 카테고리';
+        }
+        return boardData;
       });
 
       // console.log('특정 유저의 게시글 리스트 query :', query);
