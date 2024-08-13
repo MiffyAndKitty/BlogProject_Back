@@ -1,14 +1,16 @@
 import { db } from '../../loaders/mariadb';
 import { DbColumnDto } from '../../interfaces/dbColumn';
 import { ensureError } from '../../errors/ensureError';
-import { UserInfoDto, UserProfileDto } from '../../interfaces/user/userInfo';
+import {
+  UserInfoDto,
+  UserProfileDto,
+  UserPwDto
+} from '../../interfaces/user/userInfo';
 import { getHashed } from '../../utils/getHashed';
+import { comparePw } from '../../utils/comparePassword';
 export class UsersService {
   static isDuplicated = async (existDto: DbColumnDto) => {
     try {
-      if (existDto.column === 'user_password') {
-        existDto.data = await getHashed(existDto.data);
-      }
       const query = `SELECT * FROM User WHERE ${existDto.column} = ? ;`;
       const values = [existDto.data];
       const rows = await db.query(query, values);
@@ -25,10 +27,30 @@ export class UsersService {
     }
   };
 
+  static checkDuplicatePassword = async (userPwDto: UserPwDto) => {
+    try {
+      const query = `SELECT user_password FROM User WHERE user_id = ? AND deleted_at IS NULL;`;
+      const values = [userPwDto.userId];
+      const [user] = await db.query(query, values);
+
+      const isMatch = await comparePw(userPwDto.password, user.user_password);
+
+      if (isMatch === true) {
+        return { result: true, message: '비밀번호 일치' };
+      } else {
+        return { result: false, message: '비밀번호 불일치' };
+      }
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return { result: false, message: error.message };
+    }
+  };
+
   static getUserInfo = async (userInfoDto: UserInfoDto) => {
     try {
-      const query = `SELECT * FROM User WHERE user_nickname = ? AND  deleted_at IS NULL LIMIT 1;`;
-      const values = [decodeURIComponent(userInfoDto.nickname)];
+      const query = `SELECT * FROM User WHERE user_email = ? AND  deleted_at IS NULL LIMIT 1;`;
+      const values = [userInfoDto.email];
       const [userInfo] = await db.query(query, values);
 
       if (!userInfo)

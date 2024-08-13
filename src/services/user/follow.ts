@@ -5,38 +5,38 @@ export class FollowService {
   static getfollowList = async (userInfoDto: UserInfoDto) => {
     try {
       // userId는 현재 이 리스트를 조회하는 사용자의 id
-      // nickname은 follow 리스트 조회 대상
+      // email을 가진 사용자는 follow 리스트 조회 대상
       const [user] = await db.query(
-        // nickname를 팔로우하는 유저들
+        // email을 가진 사용자를 팔로우하는 유저들
         `
         SELECT *
         FROM User
-        WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;
+        WHERE user_email = ? AND deleted_at IS NULL LIMIT 1;
         `,
-        [userInfoDto.nickname]
+        [userInfoDto.email]
       );
 
-      const userIdOfNickname = user.user_id;
+      const userIdOfEmail = user.user_id;
 
       const followingList = await db.query(
-        // nickname이 팔로우하는 유저들
+        // email을 가진 사용자가 팔로우하는 유저들
         `
-        SELECT DISTINCT f.followed_id , u.user_nickname
+        SELECT DISTINCT f.followed_id , u.user_nickname, u.user_email
         FROM Follow f
         JOIN User u ON f.followed_id = u.user_id
         WHERE following_id = ?;
         `,
-        [userIdOfNickname]
+        [userIdOfEmail]
       );
 
       const followedList = await db.query(
         `
-        SELECT DISTINCT f.following_id , u.user_nickname
+        SELECT DISTINCT f.following_id , u.user_nickname, u.user_email
         FROM Follow f
         JOIN User u ON f.following_id = u.user_id
         WHERE followed_id = ?;
         `,
-        [userIdOfNickname]
+        [userIdOfEmail]
       );
 
       return {
@@ -53,17 +53,23 @@ export class FollowService {
 
   static addfollow = async (userInfoDto: UserInfoDto) => {
     try {
-      const query = `
-        INSERT INTO Follow (followed_id, following_id)
-        SELECT ?, u.user_id
-        FROM User u
-        WHERE u.user_id != ? AND u.user_nickname = ? AND deleted_at IS NULL;
-      `;
+      // 먼저 팔로우하려는 사용자가 존재하는지 확인
+      const followeeQuery = `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`;
+
+      const [followee] = await db.query(followeeQuery, [userInfoDto.email]);
+
+      if (!followee) {
+        return { result: false, message: '팔로우할 유저를 찾을 수 없습니다.' };
+      }
+
+      if (followee.user_id === userInfoDto.userId) {
+        return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
+      }
+      const query = `INSERT INTO Follow (followed_id, following_id)VALUES (?, ?)`;
 
       const values = [
-        userInfoDto.userId, // `followed_id`: 현재 사용자가 팔로우하고자 하는 유저의 ID
-        userInfoDto.userId, // 현재 사용자의 ID를 `!=` 조건에 사용하여 자기 자신을 팔로우하지 못하도록 함
-        userInfoDto.nickname // 팔로우할 유저의 닉네임
+        followee.user_id, // 팔로우하려는 사용자의 ID
+        userInfoDto.userId // 팔로우하는 사용자의 ID
       ];
 
       const { affectedRows: addedCount } = await db.query(query, values);
@@ -83,24 +89,21 @@ export class FollowService {
   // 팔로우 취소
   static deletefollow = async (userInfoDto: UserInfoDto) => {
     try {
-      const [following] = await db.query(
-        // nickname를 팔로우하는 유저
+      // following하던 사람이 followed되던 사람을 팔로우 취소
+      const [followed] = await db.query(
+        // 팔로우 하던 사람
         `
         SELECT *
         FROM User
-        WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;
+        WHERE user_email = ? AND deleted_at IS NULL LIMIT 1;
         `,
-        [userInfoDto.nickname]
+        [userInfoDto.email]
       );
 
-      const query = `
-                    UPDATE Follow
-                    SET deleted_at = CURRENT_TIMESTAMP
-                    WHERE followed_id = ? 
-                      AND following_id = ?
-                      AND deleted_at IS NULL;
+      const query = `UPDATE Follow SET deleted_at = CURRENT_TIMESTAMP
+                     WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL;
                   `;
-      const values = [userInfoDto.userId, following.user_id];
+      const values = [followed.user_id, userInfoDto.userId];
 
       const { affectedRows: deletedCount } = await db.query(query, values);
 

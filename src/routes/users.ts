@@ -6,7 +6,11 @@ import { FollowService } from '../services/user/follow';
 import { header, param, body } from 'express-validator';
 import { validate } from '../middleware/express-validation';
 import { DbColumnDto } from '../interfaces/dbColumn';
-import { UserInfoDto, UserProfileDto } from '../interfaces/user/userInfo';
+import {
+  UserInfoDto,
+  UserProfileDto,
+  UserPwDto
+} from '../interfaces/user/userInfo';
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 export const usersRouter = Router();
@@ -14,22 +18,8 @@ export const usersRouter = Router();
 usersRouter.post(
   '/duplication',
   validate([
-    body('column').isIn(['user_email', 'user_nickname', 'user_password']),
-    body('data')
-      .isString()
-      .custom((value, { req }) => {
-        if (
-          req.body.column === 'user_password' &&
-          (value.length < 8 ||
-            !/(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])/.test(value))
-        ) {
-          throw new Error(
-            '비밀번호는 최소 8자 이상이면서 최소 하나의 소문자, 숫자, 특수 문자를 포함해야 합니다.'
-          );
-        }
-
-        return true;
-      })
+    body('column').isIn(['user_email', 'user_nickname']),
+    body('data').isString()
   ]),
   async (req: Request, res: Response) => {
     try {
@@ -49,22 +39,59 @@ usersRouter.post(
   }
 );
 
+usersRouter.post(
+  '/duplication/password',
+  validate([
+    body('password')
+      .isLength({ min: 8 })
+      .matches(/(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])/)
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id)
+        return res
+          .status(401)
+          .send({ message: req.tokenMessage || '사용자 존재하지 않음' });
+
+      const userPwDto: UserPwDto = {
+        userId: req.id,
+        password: req.body.password
+      };
+      const result: BasicResponse =
+        await UsersService.checkDuplicatePassword(userPwDto);
+
+      if (result.result === true) {
+        return res.status(200).send(result);
+      } else {
+        return res.status(400).send(result);
+      }
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ result: false, message: error.message });
+    }
+  }
+);
+
 // 팔로우/팔로워 목록 조회 (GET : /users//follow)
 usersRouter.get(
-  '/:nickname/follow',
+  '/:email/follow',
   validate([
     header('Authorization')
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    param('nickname').isString()
+    param('email')
+      .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+      .withMessage('올바른 이메일 형식이 아닙니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
       const userInfoDto: UserInfoDto = {
         userId: req.id,
-        nickname: req.params.nickname.split(':')[1]
+        email: req.params.email.split(':')[1]
       };
 
       const result: BasicResponse =
@@ -91,17 +118,22 @@ usersRouter.post(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    body('nickname').isString()
+    body('email')
+      .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+      .withMessage('올바른 이메일 형식이 아닙니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
+      if (!req.id)
+        return res
+          .status(401)
+          .send({ message: req.tokenMessage || '현재 사용자 존재하지 않음' });
+
       const userInfoDto: UserInfoDto = {
         userId: req.id,
-        nickname: req.body.nickname
+        email: req.body.email
       };
-      console.log(userInfoDto);
-
       const result: BasicResponse = await FollowService.addfollow(userInfoDto);
 
       if (result.result === true) {
@@ -125,14 +157,21 @@ usersRouter.delete(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    body('nickname').isString()
+    body('email')
+      .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+      .withMessage('올바른 이메일 형식이 아닙니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
+      if (!req.id)
+        return res
+          .status(401)
+          .send({ message: req.tokenMessage || '현재 사용자 존재하지 않음' });
+
       const userInfoDto: UserInfoDto = {
         userId: req.id,
-        nickname: req.body.nickname
+        email: req.body.email
       };
 
       const result: BasicResponse =
@@ -153,20 +192,22 @@ usersRouter.delete(
 
 // 사용자 정보 조회 (GET : /users/:nickname)
 usersRouter.get(
-  '/:nickname',
+  '/:email',
   validate([
     header('Authorization')
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    param('nickname').isString()
+    param('email')
+      .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+      .withMessage('올바른 이메일 형식이 아닙니다.')
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
       const userInfoDto: UserInfoDto = {
         userId: req.id,
-        nickname: req.params.nickname.split(':')[1]
+        email: req.params.email.split(':')[1]
       };
 
       const result: BasicResponse = await UsersService.getUserInfo(userInfoDto);

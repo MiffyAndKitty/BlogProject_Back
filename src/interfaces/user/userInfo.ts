@@ -1,6 +1,7 @@
 export interface UserInfoDto {
   userId?: string;
-  nickname: string;
+  nickname?: string;
+  email: string;
 }
 
 export interface UserProfileDto {
@@ -9,4 +10,9 @@ export interface UserProfileDto {
   password: string;
   profilePicture: string;
   statusMessage: string;
+}
+
+export interface UserPwDto {
+  userId: string;
+  password: string;
 }
