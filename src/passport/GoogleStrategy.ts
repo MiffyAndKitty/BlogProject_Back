@@ -4,6 +4,7 @@ import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
 import { isGoogleProfile } from '../utils/typegard/isGoogleProfile';
 import { ensureError } from '../errors/ensureError';
+import { LoginUserDto } from '../interfaces/user/loginUser';
 export const google = (passport: PassportStatic) => {
   passport.use('google', new GoogleStrategy(passportConfig, passportVerify));
 };
@@ -31,12 +32,29 @@ const passportVerify = async (
       'SELECT * FROM User WHERE user_provider = ? AND user_email = ? LIMIT 1;',
       ['google', googleEmail]
     );
-    if (exUser[0] && exUser[0].user_id) {
-      done(null, { id: exUser[0].user_id, nickname: exUser[0].user_nickname }); // 이미 회원가입 된 유저
+    if (!exUser) {
+      done(null, {
+        userId: undefined,
+        userEmail: googleEmail
+      } as LoginUserDto);
       return;
-    } else {
-      done(null, { email: googleEmail });
     }
+    if (exUser[0].deleted_at) {
+      const { affectedRows: restoredCount } = await db.query(
+        // DB에서 구글 유저 존재 유무 확인
+        `UPDATE User SET deleted_at = NULL WHERE user_id = ? LIMIT 1;`,
+        [exUser[0].user_id]
+      );
+      restoredCount === 1
+        ? console.log('탈퇴했던 구글 사용자 복구 성공')
+        : console.log('탈퇴했던 구글 사용자 복구 실패');
+    }
+
+    done(null, {
+      userId: exUser[0].user_id,
+      userEmail: exUser[0].user_email
+    } as LoginUserDto);
+    return;
   } catch (err) {
     const error = ensureError(err);
     console.log('구글 전략 오류 : ', error.message);

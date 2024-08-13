@@ -31,7 +31,10 @@ const passportVerify = async (
     );
 
     if (compareResult) {
-      return done(null, [exUser[0].user_id, exUser[0].user_nickname]);
+      return done(null, {
+        userId: exUser[0].user_id,
+        userEmail: exUser[0].user_email
+      });
     }
 
     done(null, false, {
