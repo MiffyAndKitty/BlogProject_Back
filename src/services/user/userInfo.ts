@@ -61,6 +61,30 @@ export class UsersService {
         userInfo.isSelf = true;
       }
 
+      const currentUser = userInfoDto.userId;
+      const thisUser = userInfo.user_id;
+
+      const followQuery = `
+        SELECT 
+          EXISTS (
+            SELECT 1 
+            FROM Follow 
+            WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL
+          ) AS IsFollowed,
+          EXISTS (
+            SELECT 1 
+            FROM Follow 
+            WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL
+          ) AS IsFollowing
+      `;
+      const followValues = [currentUser, thisUser, thisUser, currentUser];
+
+      const [confirmedFollow]: [{ isFollowed: 0 | 1; isFollowing: 0 | 1 }] =
+        await db.query(followQuery, followValues);
+
+      userInfo.isFollowed = !!confirmedFollow.isFollowed;
+      userInfo.isFollowing = !!confirmedFollow.isFollowing;
+
       return {
         result: true,
         data: userInfo,

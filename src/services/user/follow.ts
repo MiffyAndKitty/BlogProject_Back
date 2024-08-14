@@ -4,10 +4,7 @@ import { UserInfoDto } from '../../interfaces/user/userInfo';
 export class FollowService {
   static getfollowList = async (userInfoDto: UserInfoDto) => {
     try {
-      // userId는 현재 이 리스트를 조회하는 사용자의 id
-      // email을 가진 사용자는 follow 리스트 조회 대상
       const [user] = await db.query(
-        // email을 가진 사용자를 팔로우하는 유저들
         `
         SELECT *
         FROM User
@@ -16,33 +13,81 @@ export class FollowService {
         [userInfoDto.email]
       );
 
-      const userIdOfEmail = user.user_id;
+      if (!user) {
+        return {
+          result: false,
+          data: [],
+          message: '해당 이메일을 가진 유저가 존재하지 않습니다.'
+        };
+      }
 
-      const followingList = await db.query(
-        // email을 가진 사용자가 팔로우하는 유저들
+      const thisUser = user.user_id;
+      const currentUser = userInfoDto.userId;
+
+      const followingList: FollowingListUser[] = await db.query(
         `
-        SELECT DISTINCT f.followed_id , u.user_nickname, u.user_email
+        SELECT DISTINCT f.followed_id, u.user_nickname, u.user_email, u.user_image, 
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
+            ) THEN true
+            ELSE false
+          END AS IsFollowingThisUser,
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM Follow WHERE following_id = f.following_id AND followed_id = ? AND deleted_at IS NULL
+            ) THEN true 
+            ELSE false
+          END AS IsFollowedMe
         FROM Follow f
         JOIN User u ON f.followed_id = u.user_id
-        WHERE following_id = ?;
+        WHERE f.following_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
         `,
-        [userIdOfEmail]
+        [currentUser, currentUser, thisUser]
       );
 
-      const followedList = await db.query(
+      const followedList: FollowedListUser[] = await db.query(
         `
-        SELECT DISTINCT f.following_id , u.user_nickname, u.user_email
+        SELECT DISTINCT f.following_id, u.user_nickname, u.user_email, u.user_image, 
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
+            ) THEN true
+            ELSE false
+          END AS IsFollowingThisUser,
+          CASE 
+            WHEN EXISTS (
+              SELECT 1 FROM Follow WHERE following_id = f.following_id AND followed_id = ? AND deleted_at IS NULL
+            ) THEN true 
+            ELSE false
+          END AS IsFollowedMe
         FROM Follow f
         JOIN User u ON f.following_id = u.user_id
-        WHERE followed_id = ?;
+        WHERE f.followed_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
         `,
-        [userIdOfEmail]
+        [currentUser, currentUser, thisUser]
       );
+
+      const mutualFollowList = followingList
+        .filter((followingUser: FollowingListUser) =>
+          followedList.some(
+            (followedUser: FollowedListUser) =>
+              followingUser.followed_id === followedUser.following_id
+          )
+        )
+        .map((user: FollowingListUser) => ({
+          mutual_id: user.followed_id, // followed_id를 mutual_id로 변경
+          ...user
+        }));
 
       return {
         result: true,
-        data: { followingList: followingList, followedList: followedList },
-        message: '사용 가능한 데이터'
+        data: {
+          followingList: followingList, // 유저가 팔로우하는(following) 유저, followed_id를 속성으로 가짐
+          followedList: followedList, // 유저가 팔로우되는(followed) 유저, following_id를 속성으로 가짐
+          mutualFollowList: mutualFollowList
+        },
+        message: '유저의 팔로우/팔로워 목록 조회 성공'
       };
     } catch (err) {
       const error = ensureError(err);
