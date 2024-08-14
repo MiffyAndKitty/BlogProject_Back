@@ -58,7 +58,7 @@ export class BoardListService {
       params.push(pageSize);
 
       let data = await db.query(
-        `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name 
+        `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name 
         FROM Board 
         LEFT JOIN User ON Board.user_id = User.user_id
         LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
@@ -146,7 +146,9 @@ export class BoardListService {
         isWriter = false;
       }
 
-      if (listDto.categoryId) {
+      if (listDto.categoryId === 'default') {
+        query += ` AND (Board.category_id IS NULL OR Board.category_id = '') `;
+      } else if (listDto.categoryId) {
         const [category] = await db.query(
           `SELECT category_id FROM Board_Category WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
           [listDto.categoryId, writer.user_id]
@@ -206,7 +208,7 @@ export class BoardListService {
       params.push(pageSize);
 
       let data = await db.query(
-        `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name
+        `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name
         FROM Board 
         LEFT JOIN User ON Board.user_id = User.user_id
         LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
