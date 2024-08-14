@@ -54,22 +54,25 @@ export class FollowService {
   static addfollow = async (userInfoDto: UserInfoDto) => {
     try {
       // 먼저 팔로우하려는 사용자가 존재하는지 확인
-      const followeeQuery = `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`;
+      const followedQuery = `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`;
 
-      const [followee] = await db.query(followeeQuery, [userInfoDto.email]);
+      const [followedUser] = await db.query(followedQuery, [userInfoDto.email]);
 
-      if (!followee) {
+      if (!followedUser) {
         return { result: false, message: '팔로우할 유저를 찾을 수 없습니다.' };
       }
 
-      if (followee.user_id === userInfoDto.userId) {
+      const followed = followedUser.user_id!;
+      const currentUser = userInfoDto.userId;
+
+      if (followed === currentUser) {
         return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
       }
-      const query = `INSERT INTO Follow (followed_id, following_id)VALUES (?, ?)`;
+      const query = `INSERT INTO Follow (followed_id, following_id) VALUES (?, ?)`;
 
       const values = [
-        followee.user_id, // 팔로우하려는 사용자의 ID
-        userInfoDto.userId // 팔로우하는 사용자의 ID
+        followed, // 팔로우하려는 사용자의 ID
+        currentUser // 팔로우하는 사용자의 ID
       ];
 
       const { affectedRows: addedCount } = await db.query(query, values);
@@ -90,7 +93,7 @@ export class FollowService {
   static deletefollow = async (userInfoDto: UserInfoDto) => {
     try {
       // following하던 사람이 followed되던 사람을 팔로우 취소
-      const [followed] = await db.query(
+      const [followedUser] = await db.query(
         // 팔로우 하던 사람
         `
         SELECT *
@@ -100,10 +103,17 @@ export class FollowService {
         [userInfoDto.email]
       );
 
+      if (!followedUser) {
+        return { result: false, message: '팔로우할 유저를 찾을 수 없습니다.' };
+      }
+
+      const followed = followedUser.user_id!;
+      const currentUser = userInfoDto.userId; // following하던 사람
+
       const query = `UPDATE Follow SET deleted_at = CURRENT_TIMESTAMP
                      WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL;
                   `;
-      const values = [followed.user_id, userInfoDto.userId];
+      const values = [followed, currentUser];
 
       const { affectedRows: deletedCount } = await db.query(query, values);
 
