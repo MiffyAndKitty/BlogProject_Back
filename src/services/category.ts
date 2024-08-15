@@ -6,16 +6,13 @@ import {
   HierarchicalCategoryDto
 } from '../interfaces/category';
 import { v4 as uuidv4 } from 'uuid';
-import { BasicResponse } from '../interfaces/response';
 
 export class categoryService {
   static getAllList = async (categoryDto: CategoryListDto) => {
     try {
-      const decodedNickname = decodeURIComponent(categoryDto.nickname);
-
       const [user] = await db.query(
-        `SELECT user_id FROM User WHERE user_nickname= ? AND deleted_at IS NULL LIMIT 1;`,
-        [decodedNickname]
+        `SELECT user_id FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`,
+        [categoryDto.nickname]
       );
 
       if (!user) {

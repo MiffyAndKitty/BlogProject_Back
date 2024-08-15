@@ -8,7 +8,7 @@ import { categoryService } from '../services/category';
 
 export const categoryRouter = Router();
 
-// 특정 유저의 전체 카테고리 리스트 조회 ( GET : /category/list/:nickname/all)
+// 특정 유저의 카테고리 리스트 조회 ( GET : /category/list/:nickname)
 categoryRouter.get(
   '/list/:nickname',
   validate([
@@ -26,7 +26,7 @@ categoryRouter.get(
   async (req: Request, res: Response) => {
     try {
       const categoryDto: CategoryListDto = {
-        nickname: encodeURIComponent(req.params.nickname.split(':')[1]),
+        nickname: decodeURIComponent(req.params.nickname.split(':')[1]),
         userId: req.id,
         topcategoryId: req.query['topcategory-id'] as string
       };
