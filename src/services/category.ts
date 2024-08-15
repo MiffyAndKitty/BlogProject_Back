@@ -22,14 +22,36 @@ export class categoryService {
       }
 
       const categories = await db.query(
-        `SELECT * FROM Board_Category WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
-        [user.user_id]
+        `SELECT 
+          C.topcategory_id, C.category_id, C.category_name, CAST(COUNT(B.board_id) AS CHAR) AS board_count
+        FROM 
+          Board_Category C
+        LEFT JOIN
+          Board B ON B.category_id = C.category_id AND B.user_id = ? AND B.deleted_at IS NULL
+        WHERE 
+          C.user_id = ? AND C.deleted_at IS NULL 
+        GROUP BY 
+          C.category_id, C.category_name 
+        ORDER BY 
+          C.created_at ASC;`,
+        [user.user_id, user.user_id]
+      );
+
+      const parsedCategories = categories.map(
+        (row: {
+          category_id: string;
+          category_name: string;
+          board_count: string;
+        }) => ({
+          ...row,
+          board_count: parseInt(row.board_count, 10)
+        })
       );
 
       // 상위 카테고리와 그 하위 카테고리들을 포함하여 조회
       const hierarchicalCategory =
         await categoryService._getHierarchicalCategory(
-          categories,
+          parsedCategories,
           categoryDto.topcategoryId
         );
       const owner = user.user_id === categoryDto.userId; // 카테고리 소유자 여부
@@ -80,6 +102,7 @@ export class categoryService {
         return {
           category_id: category.category_id,
           category_name: category.category_name,
+          board_count: category.board_count,
           ...(subcategories.length > 0 && { subcategories }) // subcategories가 비어있지 않으면 포함
         };
       });
