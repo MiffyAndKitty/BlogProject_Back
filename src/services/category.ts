@@ -3,6 +3,7 @@ import { ensureError } from '../errors/ensureError';
 import {
   CategoryDto,
   CategoryListDto,
+  CategoryOwnerDto,
   HierarchicalCategoryDto
 } from '../interfaces/category';
 import { v4 as uuidv4 } from 'uuid';
@@ -114,6 +115,57 @@ export class categoryService {
     }
 
     return buildCategoryTree('root');
+  };
+
+  static countPostsInCategory = async (categoryDto: CategoryOwnerDto) => {
+    try {
+      const countList = await db.query(
+        `
+          SELECT 
+              C.category_id,
+              C.category_name, 
+              CAST(COUNT(B.board_id) AS CHAR) AS board_count
+          FROM 
+              Board_Category C
+          JOIN 
+              User U ON C.user_id = U.user_id
+          LEFT JOIN 
+              Board B ON B.category_id = C.category_id AND B.user_id = U.user_id AND B.deleted_at IS NULL
+          WHERE 
+              U.user_nickname = ? AND C.deleted_at IS NULL 
+          GROUP BY 
+              C.category_name
+          ORDER BY
+              C.created_at;
+          `,
+        [categoryDto.nickname]
+      );
+
+      if (countList.length === 0) {
+        return {
+          result: false,
+          data: [],
+          message: '각 카테고리 별 게시글 개수 데이터가 존재하지 않음'
+        };
+      }
+
+      const parsedList = countList.map(
+        (row: { category_name: string; board_count: string }) => ({
+          ...row,
+          board_count: parseInt(row.board_count, 10)
+        })
+      );
+
+      return {
+        result: true,
+        data: parsedList,
+        message: '각 카테고리 별 게시글 개수를 반환 성공'
+      };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return { result: false, message: error.message };
+    }
   };
 
   static create = async (categoryDto: CategoryDto) => {

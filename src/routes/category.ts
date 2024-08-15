@@ -3,7 +3,11 @@ import { validate } from '../middleware/express-validation';
 import { header, body, query, param } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
-import { CategoryDto, CategoryListDto } from '../interfaces/category';
+import {
+  CategoryDto,
+  CategoryListDto,
+  CategoryOwnerDto
+} from '../interfaces/category';
 import { categoryService } from '../services/category';
 
 export const categoryRouter = Router();
@@ -38,6 +42,27 @@ categoryRouter.get(
         owner: result.owner,
         message: result.message
       });
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ message: error.message });
+    }
+  }
+);
+
+// 각 카테고리 별 게시글 개수를 반환 ( GET : /category/board-count/:nickname)
+categoryRouter.get(
+  '/board-count/:nickname',
+  validate([param('nickname').notEmpty()]),
+  async (req: Request, res: Response) => {
+    try {
+      const categoryDto: CategoryOwnerDto = {
+        nickname: decodeURIComponent(req.params.nickname.split(':')[1])
+      };
+
+      const result = await categoryService.countPostsInCategory(categoryDto);
+
+      return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
