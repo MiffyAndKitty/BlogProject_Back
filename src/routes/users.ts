@@ -3,10 +3,11 @@ import { ensureError } from '../errors/ensureError';
 import { BasicResponse } from '../interfaces/response';
 import { UsersService } from '../services/user/userInfo';
 import { FollowService } from '../services/user/follow';
-import { header, param, body } from 'express-validator';
+import { header, param, query, body } from 'express-validator';
 import { validate } from '../middleware/express-validation';
 import { DbColumnDto } from '../interfaces/dbColumn';
 import {
+  FollowListDto,
   UserInfoDto,
   UserProfileDto,
   UserPwDto
@@ -74,7 +75,7 @@ usersRouter.post(
   }
 );
 
-// 팔로우/팔로워 목록 조회 (GET : /users//follow)
+// 팔로우/팔로워 목록 조회 (GET : /users/follow)
 usersRouter.get(
   '/:email/follow',
   validate([
@@ -82,6 +83,20 @@ usersRouter.get(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
+    query('page')
+      .optional({ checkFalsy: true })
+      .toInt() // 숫자로 전환
+      .isInt({ min: 1 })
+      .withMessage(
+        'page의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
+    query('page-size')
+      .optional({ checkFalsy: true })
+      .toInt() // 숫자로 전환
+      .isInt({ min: 1 })
+      .withMessage(
+        'page-size의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
     param('email')
       .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
       .withMessage('올바른 이메일 형식이 아닙니다.')
@@ -89,13 +104,15 @@ usersRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      const userInfoDto: UserInfoDto = {
+      const followListDto: FollowListDto = {
         userId: req.id,
-        email: req.params.email.split(':')[1]
+        email: req.params.email.split(':')[1],
+        page: req.query.page as unknown as number,
+        pageSize: req.query['page-size'] as unknown as number
       };
 
       const result: BasicResponse =
-        await FollowService.getfollowList(userInfoDto);
+        await FollowService.getFollowList(followListDto);
 
       if (result.result === true) {
         return res.status(200).send(result);

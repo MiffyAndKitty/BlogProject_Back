@@ -1,16 +1,18 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
+import { FollowListDto } from '../../interfaces/user/userInfo';
+
 export class FollowService {
-  static getfollowList = async (userInfoDto: UserInfoDto) => {
+  static getFollowList = async (followListDto: FollowListDto) => {
     try {
       const [user] = await db.query(
         `
-        SELECT *
-        FROM User
-        WHERE user_email = ? AND deleted_at IS NULL LIMIT 1;
-        `,
-        [userInfoDto.email]
+      SELECT *
+      FROM User
+      WHERE user_email = ? AND deleted_at IS NULL LIMIT 1;
+      `,
+        [followListDto.email]
       );
 
       if (!user) {
@@ -22,70 +24,78 @@ export class FollowService {
       }
 
       const thisUser = user.user_id;
-      const currentUser = userInfoDto.userId;
+      const currentUser = followListDto.userId;
+      const pageSize = followListDto.pageSize || 10;
+      const offset = (followListDto.page - 1) * pageSize;
 
-      const followingList: FollowingListUser[] = await db.query(
+      const followingsList: FollowingListUser[] = await db.query(
         `
-        SELECT DISTINCT f.followed_id, u.user_nickname, u.user_email, u.user_image, 
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
-            ) THEN true
-            ELSE false
-          END AS IsFollowingThisUser,
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = f.following_id AND followed_id = ? AND deleted_at IS NULL
-            ) THEN true 
-            ELSE false
-          END AS IsFollowedMe
-        FROM Follow f
-        JOIN User u ON f.followed_id = u.user_id
-        WHERE f.following_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
-        `,
-        [currentUser, currentUser, thisUser]
+      SELECT DISTINCT f.followed_id, u.user_nickname, u.user_email, u.user_image, 
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.followed_id AND deleted_at IS NULL
+          ) THEN true
+          ELSE false
+        END AS areYouFollowing,
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.followed_id AND deleted_at IS NULL
+          ) THEN true 
+          ELSE false
+        END AS areYouFollowed
+      FROM Follow f
+      JOIN User u ON f.followed_id = u.user_id
+      WHERE f.following_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL
+      LIMIT ? OFFSET ?;
+      `,
+        [currentUser, currentUser, thisUser, pageSize, offset]
       );
 
-      const followedList: FollowedListUser[] = await db.query(
+      const followersList: FollowedListUser[] = await db.query(
         `
-        SELECT DISTINCT f.following_id, u.user_nickname, u.user_email, u.user_image, 
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
-            ) THEN true
-            ELSE false
-          END AS IsFollowingThisUser,
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = f.following_id AND followed_id = ? AND deleted_at IS NULL
-            ) THEN true 
-            ELSE false
-          END AS IsFollowedMe
-        FROM Follow f
-        JOIN User u ON f.following_id = u.user_id
-        WHERE f.followed_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
-        `,
-        [currentUser, currentUser, thisUser]
+      SELECT DISTINCT f.following_id, u.user_nickname, u.user_email, u.user_image, 
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
+          ) THEN true
+          ELSE false
+        END AS areYouFollowing, 
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.following_id AND deleted_at IS NULL
+          ) THEN true 
+          ELSE false
+        END AS areYouFollowed
+      FROM Follow f
+      JOIN User u ON f.following_id = u.user_id
+      WHERE f.followed_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL
+      LIMIT ? OFFSET ?;
+      `,
+        [currentUser, currentUser, thisUser, pageSize, offset]
       );
 
-      const mutualFollowList = followingList
+      // 상호 팔로우 목록 생성
+      const mutualFollowList = followingsList
         .filter((followingUser: FollowingListUser) =>
-          followedList.some(
+          followersList.some(
             (followedUser: FollowedListUser) =>
               followingUser.followed_id === followedUser.following_id
           )
         )
-        .map((user: FollowingListUser) => ({
-          mutual_id: user.followed_id, // followed_id를 mutual_id로 변경
-          ...user
-        }));
+        .map((user: FollowingListUser) => {
+          const { followed_id, ...rest } = user;
+          return {
+            mutual_id: followed_id,
+            ...rest
+          };
+        });
 
       return {
         result: true,
         data: {
-          followingList: followingList, // 유저가 팔로우하는(following) 유저, followed_id를 속성으로 가짐
-          followedList: followedList, // 유저가 팔로우되는(followed) 유저, following_id를 속성으로 가짐
-          mutualFollowList: mutualFollowList
+          followingsList: followingsList, // 유저가 팔로우하는 유저 목록
+          followersList: followersList, // 유저를 팔로우하는 팔로워 유저 목록
+          mutualFollowList: mutualFollowList // 상호 팔로우 목록
         },
         message: '유저의 팔로우/팔로워 목록 조회 성공'
       };

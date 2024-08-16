@@ -16,3 +16,10 @@ export interface UserPwDto {
   userId: string;
   password: string;
 }
+
+export interface FollowListDto {
+  userId?: string;
+  email: string;
+  page: number;
+  pageSize: number;
+}
