@@ -70,20 +70,21 @@ export class UsersService {
             SELECT 1 
             FROM Follow 
             WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL
-          ) AS IsFollowed,
+          ) AS areYouFollowed,
           EXISTS (
             SELECT 1 
             FROM Follow 
             WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL
-          ) AS IsFollowing
+          ) AS areYouFollowing
       `;
       const followValues = [currentUser, thisUser, thisUser, currentUser];
 
-      const [confirmedFollow]: [{ isFollowed: 0 | 1; isFollowing: 0 | 1 }] =
-        await db.query(followQuery, followValues);
+      const [confirmedFollow]: [
+        { areYouFollowed: 0 | 1; areYouFollowing: 0 | 1 }
+      ] = await db.query(followQuery, followValues);
 
-      userInfo.isFollowed = !!confirmedFollow.isFollowed;
-      userInfo.isFollowing = !!confirmedFollow.isFollowing;
+      userInfo.areYouFollowed = !!confirmedFollow.areYouFollowed;
+      userInfo.areYouFollowing = !!confirmedFollow.areYouFollowing;
 
       return {
         result: true,
