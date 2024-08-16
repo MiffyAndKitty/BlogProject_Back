@@ -50,27 +50,6 @@ categoryRouter.get(
   }
 );
 
-// 각 카테고리 별 게시글 개수를 반환 ( GET : /category/board-count/:nickname)
-categoryRouter.get(
-  '/board-count/:nickname',
-  validate([param('nickname').notEmpty()]),
-  async (req: Request, res: Response) => {
-    try {
-      const categoryDto: CategoryOwnerDto = {
-        nickname: decodeURIComponent(req.params.nickname.split(':')[1])
-      };
-
-      const result = await categoryService.countPostsInCategory(categoryDto);
-
-      return res.status(result.result ? 200 : 500).send(result);
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
-    }
-  }
-);
-
 // 카테고리 생성
 categoryRouter.post(
   '/',
