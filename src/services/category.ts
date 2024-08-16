@@ -22,6 +22,26 @@ export class categoryService {
         );
       }
 
+      // 카테고리 ID가 없는 게시글의 개수 조회
+      const [uncategorizedCountResult] = await db.query(
+        `SELECT CAST(COUNT(board_id) AS CHAR) AS uncategorized_count
+       FROM Board
+       WHERE (category_id IS NULL OR category_id = '') AND user_id = ? AND deleted_at IS NULL;`,
+        [user.user_id]
+      );
+      const uncategorizedCount = parseInt(
+        uncategorizedCountResult.uncategorized_count
+      );
+
+      // 유저가 작성한 전체 게시글의 개수 조회
+      const [totalPostCountResult] = await db.query(
+        `SELECT CAST(COUNT(board_id) AS CHAR) AS total_post_count
+       FROM Board
+       WHERE user_id = ? AND deleted_at IS NULL;`,
+        [user.user_id]
+      );
+      const totalPostCount = parseInt(totalPostCountResult.total_post_count);
+
       const categories = await db.query(
         `SELECT 
           C.topcategory_id, C.category_id, C.category_name, CAST(COUNT(B.board_id) AS CHAR) AS board_count
@@ -59,7 +79,11 @@ export class categoryService {
 
       return {
         result: true,
-        data: hierarchicalCategory,
+        data: {
+          totalPostCount, // 유저가 작성한 전체 게시글의 개수 추가
+          uncategorizedCount, // 카테고리 ID가 없는 게시글의 개수 추가
+          hierarchicalCategory
+        },
         owner: owner,
         message: '사용자의 전체 게시글 카테고리 리스트 조회 성공'
       };
