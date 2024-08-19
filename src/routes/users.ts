@@ -14,7 +14,7 @@ import {
 } from '../interfaces/user/userInfo';
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
-import { NotificationService } from '../services/notifications';
+import { saveNotificationService } from '../services/Notification/saveNotifications';
 export const usersRouter = Router();
 
 usersRouter.post(
@@ -157,7 +157,7 @@ usersRouter.post(
         await FollowService.addfollow(userInfoDto);
 
       if (result.result === true && result.notifications) {
-        const notified = await NotificationService.createNotification(
+        const notified = await saveNotificationService.createNotification(
           result.notifications
         );
         return notified.result

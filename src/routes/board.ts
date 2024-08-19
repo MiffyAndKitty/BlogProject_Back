@@ -11,6 +11,8 @@ import { boardDto, modifiedBoardDto } from '../interfaces/board/board';
 import { ListDto, UserListDto } from '../interfaces/board/listDto';
 import { upload } from '../middleware/multer';
 import { checkWriter } from '../middleware/checkWriter';
+import { saveNotificationService } from '../services/Notification/saveNotifications';
+import { NotificationResponse } from '../interfaces/response';
 
 export const boardRouter = Router();
 
@@ -217,7 +219,17 @@ boardRouter.post(
         fileUrls: fileUrls
       };
 
-      const result = await saveBoardService.createBoard(boardDto);
+      const result: NotificationResponse =
+        await saveBoardService.createBoard(boardDto);
+
+      if (result.result === true && result.notifications) {
+        const notified = await saveNotificationService.createNotification(
+          result.notifications
+        );
+        return notified.result
+          ? res.status(200).send(notified)
+          : res.status(500).send(notified);
+      }
 
       return res.status(result.result ? 200 : 500).send({
         message: result.message
