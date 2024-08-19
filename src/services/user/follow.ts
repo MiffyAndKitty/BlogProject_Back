@@ -2,6 +2,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
 import { FollowListDto } from '../../interfaces/user/userInfo';
+import { NotificationResponse } from '../../interfaces/response';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -106,7 +107,9 @@ export class FollowService {
     }
   };
 
-  static addfollow = async (userInfoDto: UserInfoDto) => {
+  static addfollow = async (
+    userInfoDto: UserInfoDto
+  ): Promise<NotificationResponse> => {
     let followed: string = '';
     const currentUser = userInfoDto.userId!;
     try {
@@ -116,7 +119,10 @@ export class FollowService {
       const [followedUser] = await db.query(followedQuery, [userInfoDto.email]);
 
       if (!followedUser) {
-        return { result: false, message: '팔로우할 유저를 찾을 수 없습니다.' };
+        return {
+          result: false,
+          message: '팔로우할 유저를 찾을 수 없습니다.'
+        };
       }
 
       followed = followedUser.user_id!;
@@ -134,9 +140,18 @@ export class FollowService {
       const { affectedRows: addedCount } = await db.query(query, values);
 
       if (addedCount === 1) {
-        return { result: true, message: '팔로우 추가 성공' };
+        // 팔로우 성공 후 알림 생성
+        return {
+          result: true,
+          message: '팔로우 추가 성공',
+          notifications: {
+            recipient: followed,
+            trigger: currentUser,
+            type: 'new-follower'
+          }
+        };
       } else {
-        return { result: false, message: '팔로우 추가 실패' };
+        return { result: false, message: '데이터베이스에 팔로우 저장 실패' };
       }
     } catch (err) {
       const error = ensureError(err);
@@ -151,7 +166,7 @@ export class FollowService {
   private static _restoreFollow = async (
     followedId: string,
     followingId: string
-  ) => {
+  ): Promise<NotificationResponse> => {
     try {
       const query = `UPDATE Follow 
                SET deleted_at = NULL 
@@ -165,7 +180,15 @@ export class FollowService {
       const { affectedRows: restoredCount } = await db.query(query, values);
 
       if (restoredCount === 1) {
-        return { result: true, message: '삭제했던 팔로우 복구 성공' };
+        return {
+          result: true,
+          notifications: {
+            recipient: followedId,
+            trigger: followingId,
+            type: 'new-follower'
+          },
+          message: '삭제했던 팔로우 복구 성공'
+        };
       }
 
       const [alreadyFollowed] = await db.query(

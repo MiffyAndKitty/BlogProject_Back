@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { ensureError } from '../errors/ensureError';
-import { BasicResponse } from '../interfaces/response';
+import { BasicResponse, NotificationResponse } from '../interfaces/response';
 import { UsersService } from '../services/user/userInfo';
 import { FollowService } from '../services/user/follow';
 import { header, param, query, body } from 'express-validator';
@@ -14,6 +14,7 @@ import {
 } from '../interfaces/user/userInfo';
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
+import { NotificationService } from '../services/notifications';
 export const usersRouter = Router();
 
 usersRouter.post(
@@ -151,10 +152,17 @@ usersRouter.post(
         userId: req.id,
         email: req.body.email
       };
-      const result: BasicResponse = await FollowService.addfollow(userInfoDto);
 
-      if (result.result === true) {
-        return res.status(200).send(result);
+      const result: NotificationResponse =
+        await FollowService.addfollow(userInfoDto);
+
+      if (result.result === true && result.notifications) {
+        const notified = await NotificationService.createNotification(
+          result.notifications
+        );
+        return notified.result
+          ? res.status(200).send(notified)
+          : res.status(500).send(notified);
       } else {
         return res.status(500).send(result);
       }
