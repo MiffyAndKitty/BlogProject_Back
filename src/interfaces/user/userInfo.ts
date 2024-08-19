@@ -4,17 +4,18 @@ export interface UserInfoDto {
   email: string;
 }
 
-export interface UserProfileDto {
+export interface UserIdDto {
   userId: string;
-  nickname: string;
-  password: string;
-  profilePicture: string;
-  statusMessage: string;
 }
 
-export interface UserPwDto {
-  userId: string;
+export interface UserPwDto extends UserIdDto {
   password: string;
+}
+
+export interface UserProfileDto extends UserPwDto {
+  nickname: string;
+  profilePicture: string;
+  statusMessage: string;
 }
 
 export interface FollowListDto {

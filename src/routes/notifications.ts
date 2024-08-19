@@ -1,18 +1,30 @@
 import { Router, Request, Response } from 'express';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { redis } from '../loaders/redis';
+import { validate } from '../middleware/express-validation';
+import { header, param } from 'express-validator';
 import { clientsService } from '../utils/notification/clients';
 import { ensureError } from '../errors/ensureError';
+import { UserIdDto } from '../interfaces/user/userInfo';
+import { NotificationService } from '../services/Notification/notification';
+import { UserNotificationDto } from '../interfaces/notification';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
   '/stream',
+  validate([
+    header('Authorization')
+      .optional({ checkFalsy: true })
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.')
+  ]),
   jwtAuth,
   async (req: Request, res: Response) => {
     if (!req.id) {
-      return res
-        .status(401)
-        .send({ result: false, message: '유효하지 않은 토큰' });
+      return res.status(401).send({
+        result: false,
+        message: req.tokenMessage || '유효하지 않은 토큰'
+      });
     }
 
     // SSE 헤더 설정
@@ -58,7 +70,7 @@ notificationsRouter.get(
 
       if (isExistCached) {
         // 캐시된 알림이 있다면 클라이언트로 전송
-        const cachedNotifications = await redis.zrevrange(key, -1, 0);
+        const cachedNotifications = await redis.lrange(key, 0, -1); // Redis 리스트 사용
 
         // 클라이언트로 캐시된 알림 전송
         cachedNotifications.forEach((notification, index) => {
@@ -76,7 +88,77 @@ notificationsRouter.get(
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      if (!res.headersSent) {
+        return res.status(500).send({ result: false, message: error.message });
+      }
+    }
+  }
+);
+
+notificationsRouter.get(
+  '/list',
+  validate([
+    header('Authorization')
+      .optional({ checkFalsy: true })
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id) {
+        return res.status(401).send({
+          result: false,
+          message: req.tokenMessage || '유효하지 않은 토큰'
+        });
+      }
+
+      const userIdDto: UserIdDto = {
+        userId: req.id
+      };
+
+      const result = await NotificationService.getAll(userIdDto);
+
+      return res.status(result.result ? 200 : 500).send(result);
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ message: error.message });
+    }
+  }
+);
+
+notificationsRouter.get(
+  '/:notificationId',
+  validate([
+    header('Authorization')
+      .optional({ checkFalsy: true })
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    param('notificationId').isString()
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id) {
+        return res.status(401).send({
+          result: false,
+          message: req.tokenMessage || '유효하지 않은 토큰'
+        });
+      }
+
+      const userNotificationDto: UserNotificationDto = {
+        userId: req.id,
+        notificationId: req.params.notificationId.split(':')[1]
+      };
+
+      const result = await NotificationService.get(userNotificationDto);
+
+      return res.status(result.result ? 200 : 500).send(result);
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ message: error.message });
     }
   }
 );
