@@ -3,9 +3,12 @@ import { ensureError } from '../../errors/ensureError';
 
 export async function setRefreshToken(userId: string, refreshToken: string) {
   try {
-    return await redis.set(`refreshToken:${userId}`, refreshToken, {
-      EX: 7 * 24 * 60 * 60 // 7주일 뒤 만료
-    });
+    return await redis.set(
+      `refreshToken:${userId}`,
+      refreshToken,
+      'EX',
+      7 * 24 * 60 * 60 // 7주일 뒤 만료
+    );
   } catch (err) {
     const error = ensureError(err);
     console.log('refresh 토큰 저장 오류 : ', error.message);

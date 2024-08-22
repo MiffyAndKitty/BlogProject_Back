@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../config/env';
 import { ExtractJwt, Strategy as JWTStrategy } from 'passport-jwt';
 import { PassportStatic } from 'passport';
 import { isPayload } from '../utils/typegard/isPayload';

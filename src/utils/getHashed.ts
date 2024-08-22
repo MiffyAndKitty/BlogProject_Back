@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import '../config/env';
 import bcrypt from 'bcrypt';
 
 export async function getHashed(userpwd: string) {
