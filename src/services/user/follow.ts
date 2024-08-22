@@ -113,95 +113,54 @@ export class FollowService {
   static addfollow = async (
     userInfoDto: UserInfoDto
   ): Promise<NotificationResponse> => {
-    let followed: string = '';
-    const currentUser = userInfoDto.userId!;
     try {
       // 먼저 팔로우하려는 사용자가 존재하는지 확인
-      const followedQuery = `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`;
+      const [followedUser] = await db.query(
+        `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`,
+        [userInfoDto.email]
+      );
 
-      const [followedUser] = await db.query(followedQuery, [userInfoDto.email]);
-
-      if (!followedUser) {
+      if (!followedUser)
         return {
           result: false,
           message: '팔로우할 유저를 찾을 수 없습니다.'
         };
-      }
 
-      followed = followedUser.user_id!;
+      const currentUser = userInfoDto.userId!;
+      const followed = followedUser.user_id!;
 
-      if (followed === currentUser) {
+      if (followed === currentUser)
         return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
-      }
-      const query = `INSERT INTO Follow (followed_id, following_id) VALUES (?, ?)`;
 
       const values = [
         followed, // 팔로우하려는 사용자의 ID
         currentUser // 팔로우하는 사용자의 ID
       ];
 
-      const { affectedRows: addedCount } = await db.query(query, values);
+      const { affectedRows: addedCount } = await db.query(
+        `INSERT INTO Follow (followed_id, following_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE deleted_at = NULL;`,
+        values
+      );
 
-      if (addedCount === 1) {
-        // 팔로우 성공 후 알림 생성
+      if (addedCount > 0) {
         return {
           result: true,
-          message: '팔로우 추가 성공',
+          message:
+            addedCount === 1
+              ? '팔로우 추가 성공'
+              : 'soft delete한 팔로우 복구 성공',
           notifications: {
             recipient: followed,
             trigger: currentUser,
             type: 'new-follower'
           }
         };
-      } else {
-        return { result: false, message: '데이터베이스에 팔로우 저장 실패' };
-      }
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      if ('errno' in error && error.errno === 1062) {
-        return await FollowService._restoreFollow(followed, currentUser);
-      }
-      return { result: false, message: error.message };
-    }
-  };
-
-  private static _restoreFollow = async (
-    followedId: string,
-    followingId: string
-  ): Promise<NotificationResponse> => {
-    try {
-      const query = `UPDATE Follow 
-               SET deleted_at = NULL 
-               WHERE followed_id = ? AND following_id = ? AND deleted_at IS NOT NULL;`;
-
-      const values = [
-        followedId, // 팔로우하려는 사용자의 ID
-        followingId // 팔로우하는 사용자의 ID
-      ];
-
-      const { affectedRows: restoredCount } = await db.query(query, values);
-
-      if (restoredCount === 1) {
-        return {
-          result: true,
-          notifications: {
-            recipient: followedId,
-            trigger: followingId,
-            type: 'new-follower'
-          },
-          message: '삭제했던 팔로우 복구 성공'
-        };
       }
 
-      const [alreadyFollowed] = await db.query(
-        `SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL;`,
-        values
-      );
-
-      return alreadyFollowed
-        ? { result: false, message: '이미 팔로우된 유저' }
-        : { result: false, message: '팔로우 실패' };
+      return {
+        result: false,
+        message: '팔로우 추가 실패 (ex. 이미 팔로우된 유저)'
+      };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);

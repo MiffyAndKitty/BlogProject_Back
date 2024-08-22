@@ -86,7 +86,8 @@ export class commentService {
   // 댓글 좋아요 또는 싫어요 추가
   static like = async (commentLikeDto: CommentLikeDto) => {
     try {
-      const query = `INSERT INTO Comment_Like (comment_id, user_id, comment_like) VALUES (?,?,?) ON DUPLICATE KEY UPDATE comment_like = ?`;
+      const query = `INSERT INTO Comment_Like (comment_id, user_id, comment_like) VALUES (?,?,?) 
+                     ON DUPLICATE KEY UPDATE comment_like = ?, deleted_at = NULL`;
       const params = [
         commentLikeDto.commentId,
         commentLikeDto.userId,
