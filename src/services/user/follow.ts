@@ -25,20 +25,23 @@ export class FollowService {
       const currentUser = userInfoDto.userId;
 
       const followingList: FollowingListUser[] = await db.query(
+        // 유저가 팔로우하는(following) 유저, followed_id를 속성으로 가짐
+        // following : 팔로우 되는 사람
+        // followed : 팔로우 하는 사람
         `
         SELECT DISTINCT f.followed_id, u.user_nickname, u.user_email, u.user_image, 
           CASE 
             WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
+              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.followed_id AND deleted_at IS NULL
             ) THEN true
             ELSE false
-          END AS IsFollowingThisUser,
+          END AS areYouFollowing,
           CASE 
             WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = f.following_id AND followed_id = ? AND deleted_at IS NULL
+              SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.followed_id AND deleted_at IS NULL
             ) THEN true 
             ELSE false
-          END AS IsFollowedMe
+          END AS areYouFollowed
         FROM Follow f
         JOIN User u ON f.followed_id = u.user_id
         WHERE f.following_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
@@ -47,6 +50,7 @@ export class FollowService {
       );
 
       const followedList: FollowedListUser[] = await db.query(
+        // 유저가 팔로우되는(followed) 유저, following_id를 속성으로 가짐
         `
         SELECT DISTINCT f.following_id, u.user_nickname, u.user_email, u.user_image, 
           CASE 
@@ -54,13 +58,13 @@ export class FollowService {
               SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
             ) THEN true
             ELSE false
-          END AS IsFollowingThisUser,
+          END AS areYouFollowing, 
           CASE 
             WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = f.following_id AND followed_id = ? AND deleted_at IS NULL
+              SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.following_id AND deleted_at IS NULL
             ) THEN true 
             ELSE false
-          END AS IsFollowedMe
+          END AS areYouFollowed
         FROM Follow f
         JOIN User u ON f.following_id = u.user_id
         WHERE f.followed_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
@@ -75,16 +79,19 @@ export class FollowService {
               followingUser.followed_id === followedUser.following_id
           )
         )
-        .map((user: FollowingListUser) => ({
-          mutual_id: user.followed_id, // followed_id를 mutual_id로 변경
-          ...user
-        }));
+        .map((user: FollowingListUser) => {
+          const { followed_id, ...rest } = user; // followed_id를 rest에서 제거
+          return {
+            mutual_id: followed_id, // mutual_id로 설정
+            ...rest // 나머지 속성 복사
+          };
+        });
 
       return {
         result: true,
         data: {
-          followingList: followingList, // 유저가 팔로우하는(following) 유저, followed_id를 속성으로 가짐
-          followedList: followedList, // 유저가 팔로우되는(followed) 유저, following_id를 속성으로 가짐
+          followingsList: followingList, // 유저가 팔로우하는(following) 유저, followed_id를 속성으로 가짐
+          followersList: followedList, // 유저가 팔로우되는(followed) 유저, following_id를 속성으로 가짐
           mutualFollowList: mutualFollowList
         },
         message: '유저의 팔로우/팔로워 목록 조회 성공'
