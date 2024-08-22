@@ -4,11 +4,21 @@ export interface ListDto {
   tag?: string;
   cursor?: string;
   pageSize?: number;
-  isBefore?: boolean;
+  isBefore: boolean;
 }
 
 export interface UserListDto extends ListDto {
   nickname: string;
   userId?: string;
   categoryId?: string;
+}
+
+export interface SortOptions {
+  pageSize: number;
+  cursor?: string;
+  isBefore?: boolean;
+}
+
+export interface ViewOrLikeSortOptions extends SortOptions {
+  sort: 'view' | 'like';
 }
