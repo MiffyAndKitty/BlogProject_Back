@@ -7,30 +7,18 @@ import { BoardInDBDto } from '../../interfaces/board/boardInDB';
 export class BoardListService {
   static getList = async (listDto: ListDto) => {
     try {
-      let query = ``;
-      const params: (string | string[] | number)[] = [];
-
-      if (listDto.tag) {
-        const tag = this._AddTagCondition(listDto.tag);
-        query += tag.query;
-        params.push(...tag.params);
-      }
-
-      query += ' WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'; // 공개 게시글이면서 삭제되지 않은 글
-
-      if (listDto.query) {
-        const queryValue = decodeURIComponent(listDto.query);
-        query += ` AND (board_title LIKE '%${queryValue}%' OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE '%${queryValue}%')`;
-      }
+      const { query, params } = this._buildQueryConditions(
+        listDto.query,
+        listDto.tag
+      );
 
       const [countResult] = await db.query(
-        `  SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
+        `SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
           query +
           ` ) AS distinctBoards`,
         params
       );
-      // sort pageSize cursor isBefore
-      // pageSize cursor isBefore
+
       const pageSize = listDto.pageSize || 10;
       const sortedList =
         listDto.sort === 'view' || listDto.sort === 'like'
@@ -81,9 +69,6 @@ export class BoardListService {
 
   static getUserList = async (listDto: UserListDto) => {
     try {
-      let query = ``;
-      const params: (string | string[] | number)[] = [];
-
       const [writer] = await db.query(
         // 검색 대상인 유저를 찾음
         'SELECT user_id FROM User WHERE user_nickname = ? LIMIT 1;',
@@ -99,17 +84,15 @@ export class BoardListService {
         };
       }
 
-      if (listDto.tag) {
-        const tag = this._AddTagCondition(listDto.tag);
-        query += tag.query;
-        params.push(...tag.params);
-      }
+      let { query, params } = this._buildQueryConditions(
+        listDto.query,
+        listDto.tag
+      );
 
-      // 특정 user의 게시글이면서 삭제되지 않은 글
-      query += ` WHERE Board.deleted_at IS NULL AND Board.user_id = ?`;
+      query += ` AND Board.user_id = ?`;
       params.push(writer.user_id);
 
-      const isWriter = writer.user_id === listDto.userId ? true : false;
+      const isWriter = writer.user_id === listDto.userId;
 
       // 작성자와 동일하지 않은 경우 공개 게시글만 보여주도록 제한
       if (!isWriter) query += ' AND Board.board_public = TRUE';
@@ -131,13 +114,8 @@ export class BoardListService {
         params.push(category.category_id);
       }
 
-      if (listDto.query) {
-        const queryValue = decodeURIComponent(listDto.query);
-        query += ` AND (board_title LIKE '%${queryValue}%' OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE '%${queryValue}%')`;
-      }
-
       const [countResult] = await db.query(
-        `  SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
+        `SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
           query +
           ` ) AS distinctBoards`,
         params
@@ -158,8 +136,6 @@ export class BoardListService {
               isBefore: listDto.isBefore
             });
 
-      sortedList.isWriter = isWriter;
-
       const modifiedList = sortedList.map((boardData: BoardInDBDto) => {
         boardData.isWriter = isWriter; // data 배열의 각 객체에 isWriter 속성을 추가
         if (!boardData.category_name) boardData.category_name = '기본 카테고리'; // 카테고리 이름이 없을 경우 "기본 카테고리"로 설정
@@ -168,6 +144,7 @@ export class BoardListService {
 
       const totalCount = Number(countResult.totalCount.toString());
       const totalPageCount = Math.ceil(totalCount / pageSize);
+
       if (modifiedList.length >= 0) {
         return {
           result: true,
@@ -200,6 +177,33 @@ export class BoardListService {
     }
   };
 
+  private static _buildQueryConditions(
+    queryValue?: string,
+    tag?: string
+  ): { query: string; params: any[] } {
+    let queryParts: string[] = [];
+    const params: any[] = [];
+
+    queryParts.push(
+      'WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'
+    );
+    if (queryValue) {
+      const decodedQuery = decodeURIComponent(queryValue);
+      queryParts.push(
+        `AND (board_title LIKE ? OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE ?)`
+      );
+      params.push(`%${decodedQuery}%`, `%${decodedQuery}%`);
+    }
+
+    if (tag) {
+      const tagCondition = this._AddTagCondition(tag);
+      queryParts.push(tagCondition.query);
+      params.push(...tagCondition.params);
+    }
+
+    return { query: ' ' + queryParts.join(' '), params };
+  }
+
   private static _AddTagCondition(boardTags: string) {
     const tags = boardTags.split(',');
 
@@ -226,14 +230,15 @@ export class BoardListService {
       (board: { board_id: string }) => `board_like:${board.board_id}`
     );
 
-    for (let i = 0; i < viewKeys.length; i++) {
-      const cashedCount = await redis.scard(viewKeys[i]);
-      data[i].board_view += Number(cashedCount) || 0;
-    }
-    for (let i = 0; i < likeKeys.length; i++) {
-      const cashedCount = await redis.scard(likeKeys[i]);
-      data[i].board_like += Number(cashedCount) || 0;
-    }
+    const [viewCounts, likeCounts] = await Promise.all([
+      Promise.all(viewKeys.map((key) => redis.scard(key))),
+      Promise.all(likeKeys.map((key) => redis.scard(key)))
+    ]);
+
+    data.forEach((board, index) => {
+      board.board_view += Number(viewCounts[index]) || 0;
+      board.board_like += Number(likeCounts[index]) || 0;
+    });
 
     return data;
   }
@@ -241,7 +246,12 @@ export class BoardListService {
   private static async _sortByViewOrLike(
     query: string,
     params: any[],
-    listDto: any
+    listDto: {
+      sort: 'view' | 'like';
+      pageSize: number;
+      cursor?: string;
+      isBefore?: boolean;
+    }
   ) {
     // 1. 전체 게시글 반환
     let data = await db.query(
@@ -282,7 +292,7 @@ export class BoardListService {
     }
 
     const cursorIndex = data.findIndex(
-      (item: BoardInDBDto) => item.board_id === listDto.cursor
+      (board: BoardInDBDto) => board.board_id === listDto.cursor
     );
 
     if (cursorIndex === -1) {
@@ -302,11 +312,11 @@ export class BoardListService {
       : data.slice(cursorIndex + 1, cursorIndex + 1 + listDto.pageSize);
   }
 
-  private static _sortByASC = async (
+  private static async _sortByASC(
     query: string,
     params: any[],
-    listDto: any
-  ) => {
+    listDto: { pageSize: number; cursor?: string; isBefore?: boolean }
+  ) {
     if (!listDto.cursor) {
       // 커서가 없는 경우 : 최신순으로 정렬
       query += ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
@@ -346,5 +356,5 @@ export class BoardListService {
     if (listDto.cursor && listDto.isBefore === true) data = data.reverse();
 
     return await this._reflectCashed(data);
-  };
+  }
 }
