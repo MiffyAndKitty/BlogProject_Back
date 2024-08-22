@@ -54,10 +54,13 @@ boardRouter.get(
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
         pageSize: req.query['page-size'] as unknown as number,
-
         isBefore: req.query['is-before'] === 'true' ? true : false
       };
-      const result = await BoardListService.getList(listDto);
+      const result =
+        listDto.sort !== 'like' && listDto.sort !== 'view'
+          ? await BoardListService.getListByASC(listDto)
+          : await BoardListService.getListByLikeOrView(listDto);
+
       return res.status(result.result ? 200 : 500).send({
         data: result.data,
         total: result.total,
