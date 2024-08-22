@@ -37,8 +37,14 @@ boardRouter.get(
       ),
     query('is-before')
       .optional({ checkFalsy: true })
-      .isBoolean()
-      .withMessage('ture이면 커서 기준으로 이전 페이지를 조회합니다.')
+      .custom((value) => {
+        if (value !== 'true' && value !== 'false') {
+          throw new Error(
+            'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
+          );
+        }
+        return true;
+      })
   ]),
   async (req: Request, res: Response) => {
     try {
@@ -48,7 +54,8 @@ boardRouter.get(
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
         pageSize: req.query['page-size'] as unknown as number,
-        isBefore: Boolean(req.query['is-before'])
+
+        isBefore: req.query['is-before'] === 'true' ? true : false
       };
       const result = await BoardListService.getList(listDto);
       return res.status(result.result ? 200 : 500).send({
@@ -93,8 +100,14 @@ boardRouter.get(
       .withMessage('카테고리 id는 32자리의 문자열이어야합니다.'),
     query('is-before')
       .optional({ checkFalsy: true })
-      .isBoolean()
-      .withMessage('ture이면 커서 기준으로 이전 페이지를 조회합니다.')
+      .custom((value) => {
+        if (value !== 'true' && value !== 'false') {
+          throw new Error(
+            'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
+          );
+        }
+        return true;
+      })
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -108,7 +121,7 @@ boardRouter.get(
         nickname: req.params.nickname.split(':')[1],
         userId: req.id,
         categoryId: req.query['category-id'] as string,
-        isBefore: Boolean(req.query['is-before'])
+        isBefore: req.query['is-before'] === 'true' ? true : false
       };
 
       const result = await BoardListService.getUserList(userListDto);
