@@ -43,24 +43,22 @@ export class BoardListService {
       const totalCount = Number(countResult.totalCount.toString());
       const totalPageCount = Math.ceil(totalCount / pageSize);
 
-      if (sortedList.length >= 0) {
-        return {
-          result: true,
-          data: sortedList,
-          total: {
-            totalCount: totalCount, // 총 글의 개수
-            totalPageCount: totalPageCount // 총 페이지 수
-          },
-          message: '게시글 리스트 데이터 조회 성공'
-        };
-      } else {
-        return {
-          result: false,
-          data: null,
-          total: null,
-          message: '게시글 리스트 데이터 조회 실패'
-        };
-      }
+      return sortedList.length >= 0
+        ? {
+            result: true,
+            data: sortedList,
+            total: {
+              totalCount: totalCount, // 총 글의 개수
+              totalPageCount: totalPageCount // 총 페이지 수
+            },
+            message: '게시글 리스트 데이터 조회 성공'
+          }
+        : {
+            result: false,
+            data: null,
+            total: null,
+            message: '게시글 리스트 데이터 조회 실패'
+          };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
@@ -152,26 +150,24 @@ export class BoardListService {
       const totalCount = Number(countResult.totalCount.toString());
       const totalPageCount = Math.ceil(totalCount / pageSize);
 
-      if (modifiedList.length >= 0) {
-        return {
-          result: true,
-          data: modifiedList,
-          isWriter: isWriter,
-          total: {
-            totalCount: totalCount,
-            totalPageCount: totalPageCount
-          },
-          message: '특정 사용자의 게시글 리스트 데이터 조회 성공'
-        };
-      } else {
-        return {
-          result: false,
-          data: null,
-          isWriter: isWriter,
-          total: null,
-          message: '특정 사용자의 게시글 리스트 데이터 조회 실패'
-        };
-      }
+      return modifiedList.length >= 0
+        ? {
+            result: true,
+            data: modifiedList,
+            isWriter: isWriter,
+            total: {
+              totalCount: totalCount,
+              totalPageCount: totalPageCount
+            },
+            message: '특정 사용자의 게시글 리스트 데이터 조회 성공'
+          }
+        : {
+            result: false,
+            data: null,
+            isWriter: isWriter,
+            total: null,
+            message: '특정 사용자의 게시글 리스트 데이터 조회 실패'
+          };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
@@ -187,13 +183,14 @@ export class BoardListService {
   private static _buildQueryConditions(
     queryValue?: string,
     tag?: string
-  ): { query: string; params: any[] } {
+  ): { query: string; params: (string | string[] | number)[] } {
     let queryParts: string[] = [];
-    const params: any[] = [];
+    const params: (string | string[] | number)[] = [];
 
     queryParts.push(
       'WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'
     );
+
     if (queryValue) {
       const decodedQuery = decodeURIComponent(queryValue);
       queryParts.push(
@@ -211,7 +208,10 @@ export class BoardListService {
     return { query: ' ' + queryParts.join(' '), params };
   }
 
-  private static _AddTagCondition(boardTags: string) {
+  private static _AddTagCondition(boardTags: string): {
+    query: string;
+    params: (string[] | number)[];
+  } {
     const tags = boardTags.split(',');
 
     const query = ` INNER JOIN Board_Tag ON Board.board_id = Board_Tag.board_id
@@ -222,14 +222,11 @@ export class BoardListService {
                 GROUP BY Board_Tag.board_id
                 HAVING COUNT(DISTINCT Board_Tag.tag_name) = ?
             )`;
-    const params = [tags, tags.length]; // 태그 배열과 해당 배열의 길이를 파라미터로 추가
+    const params = [tags, tags.length];
     return { query, params };
   }
 
   private static async _reflectCashed(data: BoardInDBDto[]) {
-    // 좋아요순 정렬일 경우 -> 해당 게시글의 좋아요 수 확인 -> 동일한 갯수의 좋아요 이면서 오래된 글이나 더 작은 좋아요 순으로, 좋아요가 0이면 최신순으로 정렬
-    // Redis에서 조회수와 좋아요 수 가져오기
-
     const viewKeys = data.map(
       (board: { board_id: string }) => `board_view:${board.board_id}`
     );
@@ -252,9 +249,9 @@ export class BoardListService {
 
   private static async _sortByViewOrLike(
     query: string,
-    params: any[],
+    params: (string | number | string[])[],
     options: ViewOrLikeSortOptions
-  ) {
+  ): Promise<BoardInDBDto[]> {
     // 1. 전체 게시글 반환
     let data = await db.query(
       `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name 
@@ -264,6 +261,7 @@ export class BoardListService {
         query,
       params
     );
+
     // 2. 캐시된 좋아요/ 조회수 반영
     data = await this._reflectCashed(data);
 
@@ -287,27 +285,15 @@ export class BoardListService {
         break;
     }
 
-    // 4. 커서, 커서 앞/뒤의 값인지(isBefore), 배열의 크기만큼 반환
-    if (!options.cursor) {
-      // 커서가 없는 경우, 처음부터 페이지 사이즈만큼 자르기
-      return data.slice(0, options.pageSize);
-    }
+    // 4-(1). 커서가 없는 경우, 처음부터 페이지 사이즈만큼 자르기
+    if (!options.cursor) return data.slice(0, options.pageSize);
 
+    // 4-(2). 커서가 있다면 커서 앞/뒤의 값인지(isBefore) 확인하여 배열의 크기만큼의 데이터를 반환
     const cursorIndex = data.findIndex(
       (board: BoardInDBDto) => board.board_id === options.cursor
     );
 
-    if (cursorIndex === -1) {
-      return {
-        result: false,
-        data: data,
-        total: {
-          totalCount: [],
-          totalPageCount: []
-        },
-        message: '유효하지 않은 커서'
-      };
-    }
+    if (cursorIndex === -1) throw new Error('유효하지 않은 커서');
 
     return options.isBefore
       ? data.slice(Math.max(0, cursorIndex - options.pageSize), cursorIndex) // 커서 이전의 데이터만 잘라서 반환
@@ -316,9 +302,9 @@ export class BoardListService {
 
   private static async _sortByASC(
     query: string,
-    params: any[],
+    params: (string | number | string[])[],
     options: SortOptions
-  ) {
+  ): Promise<BoardInDBDto[]> {
     if (!options.cursor) {
       // 커서가 없는 경우 : 최신순으로 정렬
       query += ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
@@ -329,9 +315,7 @@ export class BoardListService {
         [options.cursor]
       );
 
-      if (!boardByCursor) {
-        throw new Error('커서에 해당하는 게시글 id가 유효하지 않습니다.');
-      }
+      if (!boardByCursor) throw new Error('유효하지 않은 커서');
 
       query += ` AND (Board.created_at ${options.isBefore ? '>' : '<'} ? 
           OR (Board.created_at = ? AND Board.board_order ${options.isBefore ? '>' : '<'} ?)) 
