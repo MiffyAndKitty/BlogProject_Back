@@ -6,9 +6,12 @@ import { localAuthService } from '../services/auth/passport-local-login';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AuthService } from '../services/auth/auth';
 import { ensureError } from '../errors/ensureError';
-import { BasicResponse, MultipleDataResponse } from '../interfaces/response';
-import { UserDto } from '../interfaces/user/user';
-import { GoogleLoginUserDto } from '../interfaces/user/GoogleLoginUser';
+import {
+  BasicResponse,
+  MultipleUserDataResponse
+} from '../interfaces/response';
+import { AuthUserDto } from '../interfaces/user/authUser';
+import { LoginUserDto, LoginServiceDto } from '../interfaces/user/loginUser';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 
@@ -26,7 +29,6 @@ authRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     passport.authenticate('local', (err?: any, user?: any, info?: any) => {
       try {
-        console.log('process.env.A', process.env.A);
         if (err) {
           return res.status(500).send({ result: false, message: err.message });
         }
@@ -41,21 +43,22 @@ authRouter.post(
         req.login(user, { session: false }, async (err) => {
           if (err) return err;
 
-          const result: MultipleDataResponse<string> =
-            await localAuthService(user); //userid, usernickname
+          const result: MultipleUserDataResponse = await localAuthService(
+            user as LoginServiceDto
+          ); //userid, userEmail
           if (result.result === true) {
             return res
-              .set('Authorization', `Bearer ${result.data[0]}`)
+              .set('Authorization', `Bearer ${result.data.accessToken}`)
               .status(200)
               .send({
                 result: result.result,
-                data: result.data[1],
+                data: result.data.userEmail,
                 message: result.message
               });
           } else {
             return res.status(500).set('Authorization', '').send({
               result: result.result,
-              data: [],
+              data: {},
               message: result.message
             });
           }
@@ -63,7 +66,9 @@ authRouter.post(
       } catch (err) {
         const error = ensureError(err);
         console.log(error.message);
-        return res.status(500).send({ result: false, message: error.message });
+        return res
+          .status(500)
+          .send({ result: false, data: {}, message: error.message });
       }
     })(req, res, next);
   }
@@ -79,43 +84,33 @@ authRouter.get(
 authRouter.get(
   '/google/callback',
   passport.authenticate('google', {
-    failureRedirect: '/auth/login',
+    failureRedirect: '/api/auth/login',
     session: false
   }),
   async (req: Request, res: Response) => {
     try {
-      let result: MultipleDataResponse<string | null> = {
+      const googleUser = req.user as LoginUserDto;
+
+      let result: MultipleUserDataResponse = {
         result: false,
-        data: [],
+        data: {},
         message: '유저 정보 확인 실패'
       };
-      if (
-        req.user &&
-        'id' in req.user &&
-        'nickname' in req.user &&
-        typeof req.user.id === 'string' &&
-        typeof req.user.nickname === 'string'
-      ) {
-        result = await googleAuthService(req.user as GoogleLoginUserDto);
-      } else if (
-        req.user &&
-        'email' in req.user &&
-        typeof req.user.email === 'string'
-      ) {
+
+      if (googleUser.userId && typeof googleUser.userId === 'string') {
+        result = await googleAuthService(req.user as LoginServiceDto);
+      } else if (googleUser.userEmail) {
+        // !googleUser.userId
         result = {
           result: true,
-          data: [req.user.email],
+          data: { accessToken: undefined, userEmail: googleUser.userEmail },
           message: '회원가입 되지 않은 구글 유저'
         };
       }
-      console.log(result);
-      console.log(
-        `https://mk-blogservice.site/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
-      );
       if (result.result === true) {
         // 프론트엔드로 리다이렉트하고 JWT 토큰 전달
         return res.redirect(
-          `https://mk-blogservice.site/auth/callback?data=${encodeURIComponent(result.data[0] as string)}&token=${result.data[1]}&message=${encodeURIComponent(result.message)}`
+          `https://mk-blogservice.site/auth/callback?data=${result.data?.userEmail}&token=${result.data.accessToken}&message=${encodeURIComponent(result.message)}`
         );
       } else {
         return res.redirect(
@@ -126,7 +121,7 @@ authRouter.get(
       const error = ensureError(err);
       console.log(error.message);
       return res.redirect(
-        `https://mk-blogservice.site/auth/login?error=${error.message}`
+        `https://mk-blogservice.site/auth/login?error=${encodeURIComponent(error.message)}`
       );
     }
   }
@@ -174,7 +169,7 @@ authRouter.post(
   ]),
   async (req: Request, res: Response) => {
     try {
-      const newUser: UserDto = req.body;
+      const newUser: AuthUserDto = req.body;
       const result: BasicResponse = await AuthService.saveUser(newUser);
 
       if (result.result === true) {

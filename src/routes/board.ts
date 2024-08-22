@@ -96,8 +96,11 @@ boardRouter.get(
       ),
     query('category-id')
       .optional({ checkFalsy: true })
-      .matches(/^[0-9a-f]{32}$/i)
-      .withMessage('카테고리 id는 32자리의 문자열이어야합니다.'),
+      .matches(/^(default|[0-9a-f]{32})$/i)
+      .withMessage(
+        '카테고리 id는 32자리의 문자열이거나 "default"이어야 합니다.'
+      ),
+
     query('is-before')
       .optional({ checkFalsy: true })
       .custom((value) => {

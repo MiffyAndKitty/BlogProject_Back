@@ -10,3 +10,7 @@ export interface SingleDataResponse extends BasicResponse {
 export interface MultipleDataResponse<T> extends BasicResponse {
   data: Array<T>;
 }
+
+export interface MultipleUserDataResponse extends BasicResponse {
+  data: { accessToken?: string; userEmail?: string };
+}

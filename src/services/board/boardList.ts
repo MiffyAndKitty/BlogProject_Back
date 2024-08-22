@@ -254,7 +254,7 @@ export class BoardListService {
   ): Promise<BoardInDBDto[]> {
     // 1. 전체 게시글 반환
     let data = await db.query(
-      `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name 
+      `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name 
         FROM Board 
         LEFT JOIN User ON Board.user_id = User.user_id
         LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
@@ -330,7 +330,7 @@ export class BoardListService {
     }
 
     let data = await db.query(
-      `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name 
+      `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name 
         FROM Board 
         LEFT JOIN User ON Board.user_id = User.user_id
         LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +

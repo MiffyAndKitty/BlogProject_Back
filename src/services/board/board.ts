@@ -7,7 +7,7 @@ export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
     try {
       const [data] = await db.query(
-        `SELECT Board.*, User.user_nickname 
+        `SELECT Board.*, User.user_nickname , User.user_email
        FROM Board 
        JOIN User ON Board.user_id = User.user_id
        WHERE Board.board_id = ? AND Board.deleted_at IS NULL 
