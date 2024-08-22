@@ -12,6 +12,15 @@ export class commentService {
   // 댓글 생성
   static create = async (commentDto: CommentDto) => {
     try {
+      // Board 테이블의 board_id에 해당하면서 deleted_at IS NULL인 데이터가 있는지 확인
+      const boardCheckQuery = `SELECT 1 FROM Board WHERE board_id = ? AND deleted_at IS NULL`;
+      const [boardExists] = await db.query(boardCheckQuery, [
+        commentDto.boardId
+      ]);
+
+      if (!boardExists)
+        return { result: false, message: '존재하지 않거나 삭제된 게시글' };
+
       const commentId = uuidv4().replace(/-/g, '');
       const query = `INSERT INTO Comment (comment_id, board_id, user_id, comment_content, parent_comment_id) VALUES (?,?,?,?,?);`;
       const params = [
