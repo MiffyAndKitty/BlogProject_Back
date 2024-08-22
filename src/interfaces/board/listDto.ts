@@ -12,3 +12,13 @@ export interface UserListDto extends ListDto {
   userId?: string;
   categoryId?: string;
 }
+
+export interface SortOptions {
+  pageSize: number;
+  cursor?: string;
+  isBefore?: boolean;
+}
+
+export interface ViewOrLikeSortOptions extends SortOptions {
+  sort: 'view' | 'like';
+}

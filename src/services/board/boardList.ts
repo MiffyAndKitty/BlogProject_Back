@@ -1,7 +1,12 @@
 import { db } from '../../loaders/mariadb';
 import { redis } from '../../loaders/redis';
 import { ensureError } from '../../errors/ensureError';
-import { ListDto, UserListDto } from '../../interfaces/board/listDto';
+import {
+  ListDto,
+  UserListDto,
+  SortOptions,
+  ViewOrLikeSortOptions
+} from '../../interfaces/board/listDto';
 import { BoardInDBDto } from '../../interfaces/board/boardInDB';
 
 export class BoardListService {
@@ -20,19 +25,20 @@ export class BoardListService {
       );
 
       const pageSize = listDto.pageSize || 10;
+
+      const sortOptions: SortOptions = {
+        pageSize: pageSize,
+        cursor: listDto.cursor,
+        isBefore: listDto.isBefore
+      };
+
       const sortedList =
         listDto.sort === 'view' || listDto.sort === 'like'
           ? await this._sortByViewOrLike(query, params, {
-              sort: listDto.sort,
-              pageSize: pageSize,
-              cursor: listDto.cursor,
-              isBefore: listDto.isBefore
-            })
-          : await this._sortByASC(query, params, {
-              pageSize: pageSize,
-              cursor: listDto.cursor,
-              isBefore: listDto.isBefore
-            });
+              ...sortOptions,
+              sort: listDto.sort
+            } as ViewOrLikeSortOptions)
+          : await this._sortByASC(query, params, sortOptions);
 
       const totalCount = Number(countResult.totalCount.toString());
       const totalPageCount = Math.ceil(totalCount / pageSize);
@@ -122,19 +128,20 @@ export class BoardListService {
       );
 
       const pageSize = listDto.pageSize || 10;
+
+      const sortOptions: SortOptions = {
+        pageSize: pageSize,
+        cursor: listDto.cursor,
+        isBefore: listDto.isBefore
+      };
+
       const sortedList =
         listDto.sort === 'view' || listDto.sort === 'like'
           ? await this._sortByViewOrLike(query, params, {
-              sort: listDto.sort,
-              pageSize: pageSize,
-              cursor: listDto.cursor,
-              isBefore: listDto.isBefore
-            })
-          : await this._sortByASC(query, params, {
-              pageSize: pageSize,
-              cursor: listDto.cursor,
-              isBefore: listDto.isBefore
-            });
+              ...sortOptions,
+              sort: listDto.sort
+            } as ViewOrLikeSortOptions)
+          : await this._sortByASC(query, params, sortOptions);
 
       const modifiedList = sortedList.map((boardData: BoardInDBDto) => {
         boardData.isWriter = isWriter; // data 배열의 각 객체에 isWriter 속성을 추가
@@ -246,12 +253,7 @@ export class BoardListService {
   private static async _sortByViewOrLike(
     query: string,
     params: any[],
-    listDto: {
-      sort: 'view' | 'like';
-      pageSize: number;
-      cursor?: string;
-      isBefore?: boolean;
-    }
+    options: ViewOrLikeSortOptions
   ) {
     // 1. 전체 게시글 반환
     let data = await db.query(
@@ -266,7 +268,7 @@ export class BoardListService {
     data = await this._reflectCashed(data);
 
     // 3. 좋아요/조회수순으로 정렬
-    switch (listDto.sort) {
+    switch (options.sort) {
       case 'like':
         data.sort(
           (a: BoardInDBDto, b: BoardInDBDto) =>
@@ -286,13 +288,13 @@ export class BoardListService {
     }
 
     // 4. 커서, 커서 앞/뒤의 값인지(isBefore), 배열의 크기만큼 반환
-    if (!listDto.cursor) {
+    if (!options.cursor) {
       // 커서가 없는 경우, 처음부터 페이지 사이즈만큼 자르기
-      return data.slice(0, listDto.pageSize);
+      return data.slice(0, options.pageSize);
     }
 
     const cursorIndex = data.findIndex(
-      (board: BoardInDBDto) => board.board_id === listDto.cursor
+      (board: BoardInDBDto) => board.board_id === options.cursor
     );
 
     if (cursorIndex === -1) {
@@ -307,39 +309,39 @@ export class BoardListService {
       };
     }
 
-    return listDto.isBefore
-      ? data.slice(Math.max(0, cursorIndex - listDto.pageSize), cursorIndex) // 커서 이전의 데이터만 잘라서 반환
-      : data.slice(cursorIndex + 1, cursorIndex + 1 + listDto.pageSize);
+    return options.isBefore
+      ? data.slice(Math.max(0, cursorIndex - options.pageSize), cursorIndex) // 커서 이전의 데이터만 잘라서 반환
+      : data.slice(cursorIndex + 1, cursorIndex + 1 + options.pageSize);
   }
 
   private static async _sortByASC(
     query: string,
     params: any[],
-    listDto: { pageSize: number; cursor?: string; isBefore?: boolean }
+    options: SortOptions
   ) {
-    if (!listDto.cursor) {
+    if (!options.cursor) {
       // 커서가 없는 경우 : 최신순으로 정렬
       query += ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
-      params.push(listDto.pageSize);
+      params.push(options.pageSize);
     } else {
       const [boardByCursor] = await db.query(
         `SELECT created_at, board_order, board_like, board_view FROM Board WHERE board_id = ?`,
-        [listDto.cursor]
+        [options.cursor]
       );
 
       if (!boardByCursor) {
         throw new Error('커서에 해당하는 게시글 id가 유효하지 않습니다.');
       }
 
-      query += ` AND (Board.created_at ${listDto.isBefore ? '>' : '<'} ? 
-          OR (Board.created_at = ? AND Board.board_order ${listDto.isBefore ? '>' : '<'} ?)) 
-          ORDER BY Board.board_order ${listDto.isBefore ? 'ASC' : 'DESC'}, 
-          Board.created_at ${listDto.isBefore ? 'ASC' : 'DESC'} LIMIT ?`;
+      query += ` AND (Board.created_at ${options.isBefore ? '>' : '<'} ? 
+          OR (Board.created_at = ? AND Board.board_order ${options.isBefore ? '>' : '<'} ?)) 
+          ORDER BY Board.board_order ${options.isBefore ? 'ASC' : 'DESC'}, 
+          Board.created_at ${options.isBefore ? 'ASC' : 'DESC'} LIMIT ?`;
       params.push(
         boardByCursor.created_at,
         boardByCursor.created_at,
         boardByCursor.board_order,
-        listDto.pageSize
+        options.pageSize
       );
     }
 
@@ -353,7 +355,7 @@ export class BoardListService {
     );
 
     //커서가 있고, 이전 페이지를 조회하는 경우
-    if (listDto.cursor && listDto.isBefore === true) data = data.reverse();
+    if (options.cursor && options.isBefore === true) data = data.reverse();
 
     return await this._reflectCashed(data);
   }
