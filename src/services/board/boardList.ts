@@ -72,7 +72,7 @@ export class BoardListService {
           query,
         params
       );
-      data = await BoardListService._reflectCashed(data);
+      data = await this._reflectCashed(data);
 
       if (listDto.cursor && listDto.isBefore === true) {
         //커서가 있고, 이전 페이지를 조회하는 경우
@@ -132,7 +132,7 @@ export class BoardListService {
       const params: (string | string[] | number)[] = [];
 
       if (listDto.tag) {
-        const tag = BoardListService._AddTagCondition(listDto.tag);
+        const tag = this._AddTagCondition(listDto.tag);
         query += tag.query;
         params.push(...tag.params);
       }
@@ -160,7 +160,7 @@ export class BoardListService {
         params
       );
       // 2. 좋아요/ 조회수 반영
-      data = await BoardListService._reflectCashed(data);
+      data = await this._reflectCashed(data);
 
       // 3. 좋아요/조회수순으로 정렬
       if (listDto.sort === 'like') {
@@ -253,32 +253,40 @@ export class BoardListService {
     }
   };
 
-  static getUserList = async (listDto: UserListDto) => {
+  static getUserListByASC = async (listDto: UserListDto) => {
     try {
       let query = ``;
       const params: (string | string[] | number)[] = [];
-
-      if (listDto.tag) {
-        const tag = BoardListService._AddTagCondition(listDto.tag);
-        query += tag.query;
-        params.push(...tag.params);
-      }
 
       const [writer] = await db.query(
         // 검색 대상인 유저를 찾음
         'SELECT user_id FROM User WHERE user_nickname = ? LIMIT 1;',
         decodeURIComponent(listDto.nickname)
       );
+
+      if (!writer) {
+        return {
+          result: false,
+          data: null,
+          total: null,
+          message: '검색 대상인 유저가 존재하지 않습니다'
+        };
+      }
+
+      if (listDto.tag) {
+        const tag = this._AddTagCondition(listDto.tag);
+        query += tag.query;
+        params.push(...tag.params);
+      }
+
       // 특정 user의 게시글이면서 삭제되지 않은 글
       query += ` WHERE Board.deleted_at IS NULL AND Board.user_id = ?`;
       params.push(writer.user_id);
 
-      let isWriter = true;
+      const isWriter = writer.user_id === listDto.userId ? true : false;
+
       // 작성자와 동일하지 않은 경우 공개 게시글만 보여주도록 제한
-      if (writer.user_id !== listDto.userId) {
-        query += ' AND Board.board_public = TRUE';
-        isWriter = false;
-      }
+      if (!isWriter) query += ' AND Board.board_public = TRUE';
 
       if (listDto.categoryId) {
         const [category] = await db.query(
@@ -299,8 +307,6 @@ export class BoardListService {
 
       if (listDto.query) {
         const queryValue = decodeURIComponent(listDto.query);
-
-        // board_content에서 모든 HTML 태그 제거 후 검색
         query += ` AND (board_title LIKE '%${queryValue}%' OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE '%${queryValue}%')`;
       }
 
@@ -324,20 +330,20 @@ export class BoardListService {
             '유효한 게시글 id가 아닙니다. 혹은, 해당 유저의 게시글이 아닙니다. '
           );
         }
-        const cursor = BoardListService._AddCursorCondition(
-          boardByCursor,
-          listDto.sort,
-          listDto.isBefore
+        query += ` AND (Board.created_at ${listDto.isBefore ? '>' : '<'} ? 
+          OR (Board.created_at = ? AND Board.board_order ${listDto.isBefore ? '>' : '<'} ?)) 
+          ORDER BY Board.board_order ${listDto.isBefore ? 'ASC' : 'DESC'}, 
+          Board.created_at ${listDto.isBefore ? 'ASC' : 'DESC'} LIMIT ?`;
+
+        params.push(
+          boardByCursor.created_at,
+          boardByCursor.created_at,
+          boardByCursor.board_order
         );
-        query += cursor.query;
-        params.push(...cursor.params);
       } else {
-        // 커서가 없는 경우 : 좋아요순, 조회수순, 최신순으로 정렬
-        query +=
-          listDto.sort === 'like' || listDto.sort === 'view'
-            ? ` ORDER BY Board.board_${listDto.sort} DESC, Board.created_at DESC, Board.board_order DESC  LIMIT ?`
-            : ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
+        query += ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
       }
+
       const pageSize = listDto.pageSize || 10;
       params.push(pageSize);
 
@@ -349,7 +355,7 @@ export class BoardListService {
           query,
         params
       );
-      data = await BoardListService._reflectCashed(data);
+      data = await this._reflectCashed(data);
 
       if (listDto.cursor && listDto.isBefore === true) {
         //커서가 있고, 이전 페이지를 조회하는 경우
@@ -367,13 +373,170 @@ export class BoardListService {
         return boardData;
       });
 
-      // console.log('특정 유저의 게시글 리스트 query :', query);
-      // console.log('특정 유저의 게시글 리스트 params :', params);
-
       const totalCount = Number(countResult.totalCount.toString());
 
       // 총 페이지 수
       const totalPageCount = Math.ceil(totalCount / pageSize);
+      if (data.length >= 0) {
+        return {
+          result: true,
+          data: data,
+          isWriter: isWriter,
+          total: {
+            totalCount: totalCount,
+            totalPageCount: totalPageCount
+          },
+          message: '특정 사용자의 게시글 리스트 데이터 조회 성공'
+        };
+      } else {
+        return {
+          result: false,
+          data: null,
+          isWriter: isWriter,
+          total: null,
+          message: '특정 사용자의 게시글 리스트 데이터 조회 실패'
+        };
+      }
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return {
+        result: false,
+        data: null,
+        total: null,
+        message: error.message
+      };
+    }
+  };
+
+  static getUserListByLikeOrView = async (listDto: UserListDto) => {
+    try {
+      let query = ``;
+      const params: (string | string[] | number)[] = [];
+
+      const [writer] = await db.query(
+        // 검색 대상인 유저를 찾음
+        'SELECT user_id FROM User WHERE user_nickname = ? LIMIT 1;',
+        decodeURIComponent(listDto.nickname)
+      );
+
+      if (!writer) {
+        return {
+          result: false,
+          data: null,
+          total: null,
+          message: '검색 대상인 유저가 존재하지 않습니다'
+        };
+      }
+
+      if (listDto.tag) {
+        const tag = this._AddTagCondition(listDto.tag);
+        query += tag.query;
+        params.push(...tag.params);
+      }
+
+      // 특정 user의 게시글이면서 삭제되지 않은 글
+      query += ` WHERE Board.deleted_at IS NULL AND Board.user_id = ?`;
+      params.push(writer.user_id);
+
+      const isWriter = writer.user_id === listDto.userId ? true : false;
+
+      // 작성자와 동일하지 않은 경우 공개 게시글만 보여주도록 제한
+      if (!isWriter) query += ' AND Board.board_public = TRUE';
+
+      if (listDto.categoryId) {
+        const [category] = await db.query(
+          `SELECT category_id FROM Board_Category WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
+          [listDto.categoryId, writer.user_id]
+        );
+
+        if (!category) {
+          throw new Error(
+            '해당 닉네임을 소유한 유저가 생성한 카테고리가 아니거나 삭제된 카테고리입니다.'
+          );
+        }
+
+        // 검색 대상 유저가 생성한 카테고리인 경우에만
+        query += ` AND Board.category_id = ?`;
+        params.push(category.category_id);
+      }
+
+      if (listDto.query) {
+        const queryValue = decodeURIComponent(listDto.query);
+        query += ` AND (board_title LIKE '%${queryValue}%' OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE '%${queryValue}%')`;
+      }
+
+      const [countResult] = await db.query(
+        `  SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
+          query +
+          ` ) AS distinctBoards`,
+        params
+      );
+
+      let data = await db.query(
+        `SELECT DISTINCT Board.*, User.user_nickname, Board_Category.category_name
+        FROM Board 
+        LEFT JOIN User ON Board.user_id = User.user_id
+        LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
+          query,
+        params
+      );
+      data = await this._reflectCashed(data);
+
+      if (listDto.sort === 'like') {
+        data.sort(
+          (a: BoardInDBDto, b: BoardInDBDto) =>
+            b.board_like - a.board_like ||
+            b.created_at.getTime() - a.created_at.getTime() ||
+            b.board_order - a.board_order
+        );
+      } else if (listDto.sort === 'view') {
+        data.sort(
+          (a: BoardInDBDto, b: BoardInDBDto) =>
+            b.board_view - a.board_view ||
+            b.created_at.getTime() - a.created_at.getTime() ||
+            b.board_order - a.board_order
+        );
+      }
+
+      const pageSize = listDto.pageSize || 10;
+      if (listDto.cursor) {
+        const cursorIndex = data.findIndex(
+          (item: BoardInDBDto) => item.board_id === listDto.cursor
+        );
+
+        if (cursorIndex === -1) {
+          return {
+            result: false,
+            data: data,
+            total: {
+              totalCount: [],
+              totalPageCount: []
+            },
+            message: '유효하지 않은 커서'
+          };
+        }
+
+        data = listDto.isBefore
+          ? data.slice(Math.max(0, cursorIndex - pageSize), cursorIndex)
+          : data.slice(cursorIndex + 1, cursorIndex + 1 + pageSize);
+      } else {
+        data = data.slice(0, pageSize);
+      }
+
+      data.isWriter = isWriter;
+
+      // 카테고리 이름이 없을 경우 "기본 카테고리"로 설정
+      data = data.map((boardData: BoardInDBDto) => {
+        boardData.isWriter = isWriter; // isWriter는 해당 게시글을 작성한 사용자의 고유 식별자일 것
+        if (!boardData.category_name) {
+          boardData.category_name = '기본 카테고리';
+        }
+        return boardData;
+      });
+
+      const totalCount = Number(countResult.totalCount.toString());
+      const totalPageCount = Math.ceil(totalCount / pageSize); // 총 페이지 수
       if (data.length >= 0) {
         return {
           result: true,
@@ -418,57 +581,6 @@ export class BoardListService {
                 HAVING COUNT(DISTINCT Board_Tag.tag_name) = ?
             )`;
     const params = [tags, tags.length]; // 태그 배열과 해당 배열의 길이를 파라미터로 추가
-    return { query, params };
-  }
-
-  private static _AddCursorCondition(
-    cursor: any,
-    sort?: string,
-    isBefore?: boolean
-  ) {
-    // 좋아요순 정렬일 경우 -> 해당 게시글의 좋아요 수 확인 -> 동일한 갯수의 좋아요 이면서 오래된 글이나 더 작은 좋아요 순으로, 좋아요가 0이면 최신순으로 정렬
-    let query, params;
-
-    if (sort === 'like' || sort === 'view') {
-      if (isBefore === false) {
-        // 다음 페이지
-        // 좋아요순 정렬일 경우 : 커서의 좋아요 수와 동일한 갯수의 좋아요이면서 오래된 글-> 더 작은 좋아요 순으로, 좋아요가 0이면 최신순으로 정렬
-        query = ` AND (Board.board_${sort} < ? OR (Board.board_${sort} = ? AND (Board.created_at < ? OR (Board.created_at = ? AND Board.board_order < ?))))`;
-        params = [
-          cursor[`board_${sort}`],
-          cursor[`board_${sort}`],
-          cursor.created_at,
-          cursor.created_at,
-          cursor.board_order
-        ];
-        // 이전 페이지의 마지막 board_id를 기준으로 다음 페이지 가져오기
-        query += ` ORDER BY Board.board_${sort} DESC, Board.created_at DESC, Board.board_order DESC`;
-      } else {
-        // 이전페이지
-        // 좋아요순 정렬일 경우 : 동일한 갯수의 좋아요 이면서 동일한 시간대이면 order가 더 큰 값(최신) 선택 -> 더 큰 좋아요 갯수
-        query = ` AND ( (Board.board_${sort} = ?  AND (Board.created_at > ? OR (Board.created_at = ? AND Board.board_order > ?)) )  OR Board.board_${sort} > ? )`;
-        params = [
-          cursor[`board_${sort}`],
-          cursor.created_at,
-          cursor.created_at,
-          cursor.board_order,
-          cursor[`board_${sort}`]
-        ];
-        query += ` ORDER BY Board.board_${sort} ASC, Board.created_at ASC, Board.board_order ASC`;
-      }
-    } else {
-      let inequalitySign = '<',
-        order = 'DESC';
-
-      if (isBefore === true) {
-        inequalitySign = '>';
-        order = 'ASC';
-      }
-      query = ` AND (Board.created_at ${inequalitySign} ? OR (Board.created_at = ? AND Board.board_order ${inequalitySign} ?))`;
-      params = [cursor.created_at, cursor.created_at, cursor.board_order];
-      query += ` ORDER BY Board.board_order ${order}, Board.created_at ${order}`;
-    }
-    query += ` LIMIT ?`;
     return { query, params };
   }
 

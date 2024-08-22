@@ -127,7 +127,10 @@ boardRouter.get(
         isBefore: req.query['is-before'] === 'true' ? true : false
       };
 
-      const result = await BoardListService.getUserList(userListDto);
+      const result =
+        userListDto.sort !== 'like' && userListDto.sort !== 'view'
+          ? await BoardListService.getUserListByASC(userListDto)
+          : await BoardListService.getUserListByLikeOrView(userListDto);
 
       return res.status(result.result ? 200 : 500).send({
         data: result.data,
