@@ -20,7 +20,7 @@ export class BoardListService {
 
       if (listDto.query) {
         const queryValue = decodeURIComponent(listDto.query);
-        query += ` AND (board_title LIKE '%${queryValue}%' OR board_content LIKE '%${queryValue}%')`;
+        query += ` AND (board_title LIKE '%${queryValue}%' OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE '%${queryValue}%')`;
       }
 
       const [countResult] = await db.query(
@@ -51,7 +51,7 @@ export class BoardListService {
         // 커서가 없는 경우 : 좋아요순, 조회수순, 최신순으로 정렬
         query +=
           listDto.sort === 'like' || listDto.sort === 'view'
-            ? ` ORDER BY Board.board_${listDto.sort} DESC, Board.created_at DESC, Board.board_order DESC  LIMIT ?`
+            ? ` ORDER BY Board.board_${listDto.sort} DESC, Board.created_at DESC, Board.board_order DESC LIMIT ?`
             : ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
       }
       const pageSize = listDto.pageSize || 10;
@@ -165,7 +165,9 @@ export class BoardListService {
 
       if (listDto.query) {
         const queryValue = decodeURIComponent(listDto.query);
-        query += ` AND (board_title LIKE '%${queryValue}%' OR board_content LIKE '%${queryValue}%')`;
+
+        // board_content에서 모든 HTML 태그 제거 후 검색
+        query += ` AND (board_title LIKE '%${queryValue}%' OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE '%${queryValue}%')`;
       }
 
       const [countResult] = await db.query(
