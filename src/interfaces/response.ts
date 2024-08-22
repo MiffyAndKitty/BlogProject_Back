@@ -1,3 +1,5 @@
+import { NotificationDto } from './notification';
+
 export interface BasicResponse {
   result: boolean;
   message: string;
@@ -13,4 +15,8 @@ export interface MultipleDataResponse<T> extends BasicResponse {
 
 export interface MultipleUserDataResponse extends BasicResponse {
   data: { accessToken?: string; userEmail?: string };
+}
+
+export interface NotificationResponse extends BasicResponse {
+  notifications?: NotificationDto;
 }

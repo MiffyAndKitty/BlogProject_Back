@@ -1,6 +1,6 @@
 export interface NotificationDto {
   id?: string;
-  recipient: string;
+  recipient?: string;
   trigger: string;
   type:
     | 'new-follower'
@@ -10,4 +10,9 @@ export interface NotificationDto {
     | 'comment-reply'
     | 'broadcast';
   location?: string;
+}
+
+export interface UserNotificationDto {
+  userId: string;
+  notificationId: string;
 }
