@@ -146,18 +146,12 @@ export class saveBoardService {
     try {
       for (const tag of tagNames) {
         // 게시판 태그 테이블에 태그 이름 + 게시글 아이디 저장
-        const savedTag = await db.query(
-          'INSERT INTO Tag (tag_name) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM Tag WHERE tag_name = ?)',
-          [tag, tag]
-        );
-
-        // 게시판 태그 테이블에 태그 이름 + 게시글 아이디 저장
         const savedBoardTag = await db.query(
           'INSERT INTO Board_Tag (tag_name, board_id) VALUES (?, ?)',
           [tag, boardId]
         );
 
-        if (!(savedTag.affectedRows >= 0 && savedBoardTag.affectedRows === 1)) {
+        if (savedBoardTag.affectedRows !== 1) {
           break; // 게시글 태그 저장 실패
         }
       }

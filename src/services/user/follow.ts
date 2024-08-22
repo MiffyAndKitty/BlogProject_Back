@@ -7,7 +7,10 @@ import { NotificationResponse } from '../../interfaces/response';
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
     try {
+      // userId는 현재 이 리스트를 조회하는 사용자의 id
+      // email을 가진 사용자는 follow 리스트 조회 대상
       const [user] = await db.query(
+        // email을 가진 사용자를 팔로우하는 유저들
         `
       SELECT *
       FROM User
