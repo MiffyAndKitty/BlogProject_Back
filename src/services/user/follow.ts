@@ -104,6 +104,8 @@ export class FollowService {
   };
 
   static addfollow = async (userInfoDto: UserInfoDto) => {
+    let followed: string = '';
+    const currentUser = userInfoDto.userId!;
     try {
       // 먼저 팔로우하려는 사용자가 존재하는지 확인
       const followedQuery = `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`;
@@ -114,8 +116,7 @@ export class FollowService {
         return { result: false, message: '팔로우할 유저를 찾을 수 없습니다.' };
       }
 
-      const followed = followedUser.user_id!;
-      const currentUser = userInfoDto.userId;
+      followed = followedUser.user_id!;
 
       if (followed === currentUser) {
         return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
@@ -137,7 +138,46 @@ export class FollowService {
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
+      if ('errno' in error && error.errno === 1062) {
+        return await FollowService._restoreFollow(followed, currentUser);
+      }
       return { result: false, message: error.message };
+    }
+  };
+
+  private static _restoreFollow = async (
+    followedId: string,
+    followingId: string
+  ) => {
+    try {
+      const query = `UPDATE Follow 
+               SET deleted_at = NULL 
+               WHERE followed_id = ? AND following_id = ? AND deleted_at IS NOT NULL;`;
+
+      const values = [
+        followedId, // 팔로우하려는 사용자의 ID
+        followingId // 팔로우하는 사용자의 ID
+      ];
+
+      const { affectedRows: restoredCount } = await db.query(query, values);
+
+      if (restoredCount === 1) {
+        return { result: true, message: '삭제했던 팔로우 복구 성공' };
+      } else {
+        const [alreadyFollow] = await db.query(
+          `SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL;`,
+          values
+        );
+        console.log('alreadyFollow : ', alreadyFollow);
+        return alreadyFollow
+          ? { result: false, message: '이미 팔로우된 유저' }
+          : { result: false, message: '팔로우 실패' };
+      }
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error);
+
+      return { result: false, message: error };
     }
   };
 
