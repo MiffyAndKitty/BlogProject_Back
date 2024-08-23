@@ -1,6 +1,6 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
-import { MultipleDataResponse } from '../../interfaces/response';
+import { BasicResponse, MultipleDataResponse } from '../../interfaces/response';
 import { UserIdDto } from '../../interfaces/user/userInfo';
 import { UserNotificationDto } from '../../interfaces/notification';
 
@@ -54,6 +54,27 @@ export class NotificationService {
       const error = ensureError(err);
       console.log(error.message);
       return { result: false, data: [], message: error.message };
+    }
+  }
+
+  static async delete(
+    userNotificationDto: UserNotificationDto
+  ): Promise<BasicResponse> {
+    try {
+      const result = await db.query(
+        `UPDATE Notifications 
+        SET deleted_at = NOW() 
+        WHERE notification_recipient = ? AND notification_id = ? AND deleted_at IS NULL;`,
+        [userNotificationDto.userId, userNotificationDto.notificationId]
+      );
+
+      return result.affectedRows > 0
+        ? { result: true, message: '알림 삭제 성공' }
+        : { result: false, message: '알림 삭제 실패 또는 이미 삭제됨' };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return { result: false, message: error.message };
     }
   }
 }

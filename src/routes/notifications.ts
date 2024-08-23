@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { redis } from '../loaders/redis';
 import { validate } from '../middleware/express-validation';
-import { header, param } from 'express-validator';
+import { header, param, body } from 'express-validator';
 import { clientsService } from '../utils/notification/clients';
 import { ensureError } from '../errors/ensureError';
 import { UserIdDto } from '../interfaces/user/userInfo';
@@ -153,6 +153,41 @@ notificationsRouter.get(
       };
 
       const result = await NotificationService.get(userNotificationDto);
+
+      return res.status(result.result ? 200 : 500).send(result);
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ message: error.message });
+    }
+  }
+);
+
+notificationsRouter.delete(
+  '/',
+  validate([
+    header('Authorization')
+      .optional({ checkFalsy: true })
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    body('notificationId').isString()
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id) {
+        return res.status(401).send({
+          result: false,
+          message: req.tokenMessage || '유효하지 않은 토큰'
+        });
+      }
+
+      const userNotificationDto: UserNotificationDto = {
+        userId: req.id,
+        notificationId: req.body.notificationId
+      };
+
+      const result = await NotificationService.delete(userNotificationDto);
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
