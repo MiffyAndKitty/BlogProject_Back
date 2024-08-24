@@ -8,11 +8,16 @@ import { saveBoardService } from '../services/board/saveBoard';
 import { BoardListService } from '../services/board/boardList';
 import { BoardIdInfoDto } from '../interfaces/board/IdInfo';
 import { boardDto, modifiedBoardDto } from '../interfaces/board/board';
-import { ListDto, UserListDto } from '../interfaces/board/listDto';
+import {
+  ListDto,
+  UserListDto,
+  BoardCommentListDto
+} from '../interfaces/board/listDto';
 import { upload } from '../middleware/multer';
 import { checkWriter } from '../middleware/checkWriter';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
 import { NotificationResponse } from '../interfaces/response';
+import { BoardCommentListService } from '../services/board/commentList';
 
 export const boardRouter = Router();
 
@@ -102,7 +107,6 @@ boardRouter.get(
       .withMessage(
         '카테고리 id는 32자리의 문자열이거나 "default"이어야 합니다.'
       ),
-
     query('is-before')
       .optional({ checkFalsy: true })
       .custom((value) => {
@@ -141,6 +145,62 @@ boardRouter.get(
       const error = ensureError(err);
       console.error(error);
       return res.status(500).send({ message: error.message });
+    }
+  }
+);
+
+// 특정 게시글의 댓글 조회 (GET : /board/:boardId/comments)
+boardRouter.get(
+  '/:boardId/comments',
+  validate([
+    header('Authorization')
+      .optional({ checkFalsy: true })
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    param('boardId')
+      .matches(/^:[0-9a-f]{32}$/i)
+      .withMessage('올바른 형식의 게시글 id가 아닙니다.'),
+    query('sort')
+      .optional({ checkFalsy: true })
+      .isIn(['like'])
+      .withMessage('sort의 값이 존재한다면 "like"이어야합니다.'),
+    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('page-size')
+      .optional({ checkFalsy: true })
+      .toInt() // 숫자로 전환
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
+    query('is-before')
+      .optional({ checkFalsy: true })
+      .custom((value) => {
+        if (value !== 'true' && value !== 'false') {
+          throw new Error(
+            'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
+          );
+        }
+        return true;
+      })
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const boardIdInfoDto: BoardCommentListDto = {
+        userId: req.id,
+        boardId: req.params.boardId.split(':')[1],
+        sort: req.query.sort as string,
+        pageSize: req.query['page-size'] as unknown as number,
+        cursor: req.query.cursor as string,
+        isBefore: req.query['is-before'] === 'true' ? true : false
+      };
+      const result =
+        await BoardCommentListService.getCommentsByBoardId(boardIdInfoDto);
+      return res.status(result.result ? 200 : 500).send(result);
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ result: false, message: error.message });
     }
   }
 );
