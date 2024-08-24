@@ -10,9 +10,20 @@ export class NotificationService {
   ): Promise<MultipleDataResponse<object>> {
     try {
       const result = await db.query(
-        `SELECT * FROM Notifications 
-        WHERE notification_recipient = ? AND deleted_at IS NULL 
-        ORDER BY created_at DESC;`,
+        `SELECT 
+          Notifications.*, 
+          User.user_nickname AS trigger_nickname, 
+          User.user_email AS trigger_email, 
+          User.user_image AS trigger_image,
+          Board.board_title AS board_title,
+          Comment.comment_content AS comment_content 
+       FROM Notifications
+       JOIN User ON Notifications.notification_trigger = User.user_id
+       LEFT JOIN Board ON Notifications.notification_location = Board.board_id 
+       LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id 
+       WHERE Notifications.notification_recipient = ? 
+         AND Notifications.deleted_at IS NULL
+       ORDER BY Notifications.created_at DESC;`,
         [userIdDto.userId]
       );
 
