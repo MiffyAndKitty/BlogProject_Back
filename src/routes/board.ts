@@ -167,8 +167,8 @@ boardRouter.get(
       .withMessage('올바른 형식의 게시글 id가 아닙니다.'),
     query('sort')
       .optional({ checkFalsy: true })
-      .isIn(['like'])
-      .withMessage('sort의 값이 존재한다면 "like"이어야합니다.'),
+      .isIn(['like', 'dislike'])
+      .withMessage('sort의 값이 존재한다면 "like" 또는 "dislike"이어야합니다.'),
     query('cursor').optional({ checkFalsy: true }).isString(),
     query('page-size')
       .optional({ checkFalsy: true })
