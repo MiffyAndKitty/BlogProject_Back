@@ -8,74 +8,90 @@ export class BoardCommentListService {
   static getCommentsByBoardId = async (commentDto: BoardCommentListDto) => {
     try {
       const query = `
-      WITH RECURSIVE CommentHierarchy AS (
-        SELECT -- 부모 댓글이 없는 댓글을 선택, level 필드를 0으로 설정
-          c.comment_id,
-          c.comment_content,
-          c.user_id,
-          c.parent_comment_id,
-          c.comment_order,
-          c.created_at,
-          u.user_email,
-          u.user_nickname,
-          u.user_image,
-          0 AS level
-        FROM Comment c
-        JOIN User u ON c.user_id = u.user_id
-        WHERE c.board_id = ? 
-          AND c.parent_comment_id IS NULL 
-          AND c.deleted_at IS NULL
-        
-        UNION ALL
-        
-        SELECT -- 위의 SELECT문에서 선택된 루트 댓글의 자식 댓글을 찾아서 추가
-          c.comment_id,
-          c.comment_content,
-          c.user_id,
-          c.parent_comment_id,
-          c.comment_order,
-          c.created_at,
-          u.user_email,
-          u.user_nickname,
-          u.user_image,
-          ch.level + 1 AS level
-        FROM Comment c
-        JOIN User u ON c.user_id = u.user_id
-        INNER JOIN CommentHierarchy ch ON c.parent_comment_id = ch.comment_id
-        WHERE c.deleted_at IS NULL
-      )
+    WITH RECURSIVE InitialComments AS (
+      SELECT -- 레벨 0인 부모 댓글을 pageSize 개수만큼 가져옴
+        c.comment_id,
+        c.comment_content,
+        c.user_id,
+        c.parent_comment_id,
+        c.comment_order,
+        c.created_at,
+        u.user_email,
+        u.user_nickname,
+        u.user_image,
+        0 AS level
+      FROM Comment c
+      JOIN User u ON c.user_id = u.user_id
+      WHERE c.board_id = ?
+        AND c.parent_comment_id IS NULL
+        AND c.deleted_at IS NULL
+      ORDER BY c.comment_order ASC
+      LIMIT ?
+    ),
+    CommentHierarchy AS (
+      SELECT -- InitialComments에서 선택된 레벨 0 부모 댓글을 포함
+        ic.comment_id,
+        ic.comment_content,
+        ic.user_id,
+        ic.parent_comment_id,
+        ic.comment_order,
+        ic.created_at,
+        ic.user_email,
+        ic.user_nickname,
+        ic.user_image,
+        ic.level
+      FROM InitialComments ic
 
-      SELECT -- 각 댓글의 좋아요, 싫어요 정보를 추가로 가져옴
-        ch.comment_id,
-        ch.comment_content,
-        ch.user_id,
-        ch.parent_comment_id,
-        ch.comment_order,
-        ch.created_at,
-        ch.user_email,
-        ch.user_nickname,
-        ch.user_image,
-        ch.level,
-        COALESCE(likes.like_count, 0) AS likes,
-        COALESCE(dislikes.dislike_count, 0) AS dislikes
-      FROM CommentHierarchy ch
-      LEFT JOIN (
-        SELECT comment_id, COUNT(*) AS like_count
-        FROM Comment_Like
-        WHERE comment_like = 1
-          AND deleted_at IS NULL  -- 삭제된 좋아요는 제외
-        GROUP BY comment_id
-      ) likes ON ch.comment_id = likes.comment_id
-      LEFT JOIN (
-        SELECT comment_id, COUNT(*) AS dislike_count
-        FROM Comment_Like
-        WHERE comment_like = 0
-          AND deleted_at IS NULL  -- 삭제된 싫어요는 제외
-        GROUP BY comment_id
-      ) dislikes ON ch.comment_id = dislikes.comment_id 
-      ORDER BY ch.level, ch.comment_order ASC -- 오래된 순으로
-      LIMIT ?;
-      `;
+      UNION ALL
+
+      SELECT -- InitialComments의 자식 댓글들을 재귀적으로 가져옴
+        c.comment_id,
+        c.comment_content,
+        c.user_id,
+        c.parent_comment_id,
+        c.comment_order,
+        c.created_at,
+        u.user_email,
+        u.user_nickname,
+        u.user_image,
+        ch.level + 1 AS level
+      FROM Comment c
+      JOIN User u ON c.user_id = u.user_id
+      INNER JOIN CommentHierarchy ch ON c.parent_comment_id = ch.comment_id
+      WHERE c.deleted_at IS NULL
+    )
+
+    SELECT -- 각 댓글의 좋아요, 싫어요 정보를 추가로 가져옴
+      ch.comment_id,
+      ch.comment_content,
+      ch.user_id,
+      ch.parent_comment_id,
+      ch.comment_order,
+      ch.created_at,
+      ch.user_email,
+      ch.user_nickname,
+      ch.user_image,
+      ch.level,
+      COALESCE(likes.like_count, 0) AS likes,
+      COALESCE(dislikes.dislike_count, 0) AS dislikes
+    FROM CommentHierarchy ch
+    LEFT JOIN (
+      SELECT comment_id, COUNT(*) AS like_count
+      FROM Comment_Like
+      WHERE comment_like = 1
+        AND deleted_at IS NULL
+      GROUP BY comment_id
+    ) likes ON ch.comment_id = likes.comment_id
+    LEFT JOIN (
+      SELECT comment_id, COUNT(*) AS dislike_count
+      FROM Comment_Like
+      WHERE comment_like = 0
+        AND deleted_at IS NULL
+      GROUP BY comment_id
+    ) dislikes ON ch.comment_id = dislikes.comment_id
+    ORDER BY ch.level, ch.comment_order ASC;
+    `;
+
       const pageSize = commentDto.pageSize || 10;
       const comments = await db.query(query, [commentDto.boardId, pageSize]);
 
@@ -140,13 +156,14 @@ export class BoardCommentListService {
             return likeDiff !== 0
               ? likeDiff
               : a.comment_order - b.comment_order; // 좋아요수가 같으면 오래된순으로 정렬
+          });
           break;
         case 'dislike':
           parsedComments.sort((a, b) => {
             const dislikeDiff = b.dislikes - a.dislikes;
             return dislikeDiff !== 0
               ? dislikeDiff
-              : a.comment_order - b.comment_order; 
+              : a.comment_order - b.comment_order;
           });
           break;
         default:
@@ -154,7 +171,7 @@ export class BoardCommentListService {
       }
 
       // 트리 구조로 변환
-      const commentTree = this.buildCommentTree(parsedComments);
+      const commentTree = this._buildCommentTree(parsedComments);
 
       return {
         result: true,
@@ -169,7 +186,7 @@ export class BoardCommentListService {
   };
 
   // 댓글을 트리 구조로 변환하는 함수
-  static buildCommentTree(comments: any[]) {
+  private static _buildCommentTree(comments: any[]) {
     const commentMap: { [key: string]: any } = {};
     const roots: any[] = [];
 
