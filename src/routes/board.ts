@@ -16,7 +16,11 @@ import {
 import { upload } from '../middleware/multer';
 import { checkWriter } from '../middleware/checkWriter';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
-import { NotificationResponse } from '../interfaces/response';
+import {
+  ListResponse,
+  NotificationResponse,
+  UserListResponse
+} from '../interfaces/response';
 import { BoardCommentListService } from '../services/board/commentList';
 
 export const boardRouter = Router();
@@ -63,7 +67,7 @@ boardRouter.get(
         pageSize: req.query['page-size'] as unknown as number,
         isBefore: req.query['is-before'] === 'true' ? true : false
       };
-      const result = await BoardListService.getList(listDto);
+      const result: ListResponse = await BoardListService.getList(listDto);
 
       return res.status(result.result ? 200 : 500).send({
         data: result.data,
@@ -133,7 +137,8 @@ boardRouter.get(
         isBefore: req.query['is-before'] === 'true' ? true : false
       };
 
-      const result = await BoardListService.getUserList(userListDto);
+      const result: UserListResponse =
+        await BoardListService.getUserList(userListDto);
 
       return res.status(result.result ? 200 : 500).send({
         data: result.data,

@@ -20,3 +20,15 @@ export interface MultipleUserDataResponse extends BasicResponse {
 export interface NotificationResponse extends BasicResponse {
   notifications?: NotificationDto;
 }
+
+export interface ListResponse extends BasicResponse {
+  data: Array<object> | null;
+  total: {
+    totalCount: number;
+    totalPageCount: number;
+  } | null;
+}
+
+export interface UserListResponse extends ListResponse {
+  isWriter?: boolean;
+}
