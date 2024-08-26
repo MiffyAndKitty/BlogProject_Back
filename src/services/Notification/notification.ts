@@ -55,11 +55,11 @@ export class NotificationService {
 
         if (!notificationByCursor) throw new Error('유효하지 않은 커서입니다.');
 
-        query += ` AND notification_order ${listDto.isBefore ? '<' : '>'} ? `;
+        query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ? `;
         params.push(notificationByCursor.notification_order);
       }
 
-      query += ` ORDER BY Notifications.notification_order ASC LIMIT ?`;
+      query += ` ORDER BY Notifications.notification_order DESC LIMIT ?`;
       params.push(pageSize);
       const result = await db.query(query, params);
 
