@@ -9,14 +9,12 @@ export class UserCommentService {
       const pageSize = commentList.pageSize || 10; // 기본 페이지 크기 설정
 
       let cursorCondition = '';
-      let sortOrder = 'DESC';
+      let sortOrder = commentList.sort === 'oldest' ? 'ASC' : 'DESC';
 
       if (commentList.cursor) {
         let comparisonOperator = commentList.isBefore ? '>' : '<';
-
         // sort가 'oldest'인 경우
         if (commentList.sort === 'oldest') {
-          sortOrder = 'ASC';
           comparisonOperator = commentList.isBefore ? '<' : '>';
         }
 
