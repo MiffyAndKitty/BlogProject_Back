@@ -3,6 +3,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
 import { v4 as uuidv4 } from 'uuid';
+import { NotificationResponse } from '../../interfaces/response';
 
 export class saveBoardService {
   static modifyBoard = async (boardDto: modifiedBoardDto) => {
@@ -81,7 +82,9 @@ export class saveBoardService {
     }
   };
 
-  static createBoard = async (boardDto: boardDto) => {
+  static createBoard = async (
+    boardDto: boardDto
+  ): Promise<NotificationResponse> => {
     try {
       const boardId = uuidv4().replace(/-/g, '');
       // content의 사진 url를 s3에 저장된 url로 변경
@@ -120,7 +123,15 @@ export class saveBoardService {
           ? { result: true, message: '태그와 게시글 저장 성공' }
           : { result: false, message: '태그와 게시글 저장 실패' };
       }
-      return { result: true, message: '게시글 저장 성공' };
+      return {
+        result: true,
+        notifications: {
+          trigger: boardDto.userId!,
+          type: 'following-new-board',
+          location: boardId
+        },
+        message: '게시글 저장 성공'
+      };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
@@ -135,18 +146,12 @@ export class saveBoardService {
     try {
       for (const tag of tagNames) {
         // 게시판 태그 테이블에 태그 이름 + 게시글 아이디 저장
-        const savedTag = await db.query(
-          'INSERT INTO Tag (tag_name) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM Tag WHERE tag_name = ?)',
-          [tag, tag]
-        );
-
-        // 게시판 태그 테이블에 태그 이름 + 게시글 아이디 저장
         const savedBoardTag = await db.query(
           'INSERT INTO Board_Tag (tag_name, board_id) VALUES (?, ?)',
           [tag, boardId]
         );
 
-        if (!(savedTag.affectedRows >= 0 && savedBoardTag.affectedRows === 1)) {
+        if (savedBoardTag.affectedRows !== 1) {
           break; // 게시글 태그 저장 실패
         }
       }

@@ -3,19 +3,17 @@ import { ensureError } from '../errors/ensureError';
 import {
   CategoryDto,
   CategoryListDto,
+  CategoryOwnerDto,
   HierarchicalCategoryDto
 } from '../interfaces/category';
 import { v4 as uuidv4 } from 'uuid';
-import { BasicResponse } from '../interfaces/response';
 
 export class categoryService {
   static getAllList = async (categoryDto: CategoryListDto) => {
     try {
-      const decodedNickname = decodeURIComponent(categoryDto.nickname);
-
       const [user] = await db.query(
-        `SELECT user_id FROM User WHERE user_nickname= ? AND deleted_at IS NULL LIMIT 1;`,
-        [decodedNickname]
+        `SELECT user_id FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`,
+        [categoryDto.nickname]
       );
 
       if (!user) {
@@ -24,22 +22,68 @@ export class categoryService {
         );
       }
 
-      const categories = await db.query(
-        `SELECT * FROM Board_Category WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at ASC`,
+      // 카테고리 ID가 없는 게시글의 개수 조회
+      const [uncategorizedCountResult] = await db.query(
+        `SELECT CAST(COUNT(board_id) AS CHAR) AS uncategorized_count
+       FROM Board
+       WHERE (category_id IS NULL OR category_id = '') AND user_id = ? AND deleted_at IS NULL;`,
         [user.user_id]
+      );
+      const uncategorizedCount = parseInt(
+        uncategorizedCountResult.uncategorized_count
+      );
+
+      // 유저가 작성한 전체 게시글의 개수 조회
+      const [totalPostCountResult] = await db.query(
+        `SELECT CAST(COUNT(board_id) AS CHAR) AS total_post_count
+       FROM Board
+       WHERE user_id = ? AND deleted_at IS NULL;`,
+        [user.user_id]
+      );
+      const totalPostCount = parseInt(totalPostCountResult.total_post_count);
+
+      const categories = await db.query(
+        `SELECT 
+          C.topcategory_id, C.category_id, C.category_name, CAST(COUNT(B.board_id) AS CHAR) AS board_count
+        FROM 
+          Board_Category C
+        LEFT JOIN
+          Board B ON B.category_id = C.category_id AND B.user_id = ? AND B.deleted_at IS NULL
+        WHERE 
+          C.user_id = ? AND C.deleted_at IS NULL 
+        GROUP BY 
+          C.category_id, C.category_name 
+        ORDER BY 
+          C.created_at ASC;`,
+        [user.user_id, user.user_id]
+      );
+
+      const parsedCategories = categories.map(
+        (row: {
+          category_id: string;
+          category_name: string;
+          board_count: string;
+        }) => ({
+          ...row,
+          board_count: parseInt(row.board_count, 10)
+        })
       );
 
       // 상위 카테고리와 그 하위 카테고리들을 포함하여 조회
       const hierarchicalCategory =
         await categoryService._getHierarchicalCategory(
-          categories,
+          parsedCategories,
           categoryDto.topcategoryId
         );
       const owner = user.user_id === categoryDto.userId; // 카테고리 소유자 여부
 
       return {
         result: true,
-        data: hierarchicalCategory,
+        data: {
+          totalPostCount, // 유저가 작성한 전체 게시글의 개수 추가
+          uncategorizedCount, // 카테고리 ID가 없는 게시글의 개수 추가
+          hierarchicalCategory
+        },
         owner: owner,
         message: '사용자의 전체 게시글 카테고리 리스트 조회 성공'
       };
@@ -83,6 +127,7 @@ export class categoryService {
         return {
           category_id: category.category_id,
           category_name: category.category_name,
+          board_count: category.board_count,
           ...(subcategories.length > 0 && { subcategories }) // subcategories가 비어있지 않으면 포함
         };
       });

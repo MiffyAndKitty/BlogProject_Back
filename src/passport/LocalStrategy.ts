@@ -1,8 +1,8 @@
 import { Strategy as LocalStrategy } from 'passport-local';
 import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
-import bcrypt from 'bcrypt';
 import { ensureError } from '../errors/ensureError';
+import { comparePw } from '../utils/comparePassword';
 export const local = (passport: PassportStatic) => {
   passport.use('local', new LocalStrategy(passportConfig, passportVerify));
 };
@@ -25,13 +25,13 @@ const passportVerify = async (
       return done(null, false, { reason: '존재하지 않는 사용자 입니다.' });
     }
 
-    const compareResult = await bcrypt.compare(
-      password,
-      exUser[0].user_password
-    );
+    const isMatch = await comparePw(password, exUser[0].user_password);
 
-    if (compareResult) {
-      return done(null, [exUser[0].user_id, exUser[0].user_nickname]);
+    if (isMatch) {
+      return done(null, {
+        userId: exUser[0].user_id,
+        userEmail: exUser[0].user_email
+      });
     }
 
     done(null, false, {
