@@ -3,7 +3,7 @@ import '../config/env';
 import request from 'supertest';
 import { faker } from '@faker-js/faker';
 
-describe('Local AuthenticationFlow', () => {
+describe('로컬 회원가입 -> 로그인 -> 로그아웃 흐름 테스트', () => {
   let authToken: string | null = null;
 
   const fakeUser = {
@@ -28,7 +28,7 @@ describe('Local AuthenticationFlow', () => {
     expect(response.status).toBe(200);
     expect(response.headers['authorization']).toBeDefined();
     expect(response.body.result).toBe(true);
-    expect(response.body.data).toBe(fakeUser.nickname);
+    expect(response.body.data).toBe(fakeUser.email);
 
     // 인증 토큰 저장
     authToken = response.headers['authorization'];
