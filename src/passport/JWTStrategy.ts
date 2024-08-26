@@ -1,7 +1,7 @@
 import '../config/env';
 import { ExtractJwt, Strategy as JWTStrategy } from 'passport-jwt';
 import { PassportStatic } from 'passport';
-import { isPayload } from '../utils/typegard/isPayload';
+import { isPayload } from '../utils/typegaurd/isPayload';
 import { ensureError } from '../errors/ensureError';
 
 export const jwtAuth = (passport: PassportStatic) => {
