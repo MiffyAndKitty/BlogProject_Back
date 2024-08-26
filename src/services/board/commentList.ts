@@ -26,7 +26,6 @@ export class BoardCommentListService {
         AND c.parent_comment_id IS NULL
         AND c.deleted_at IS NULL
       ORDER BY c.comment_order ASC
-      LIMIT ?
     ),
     CommentHierarchy AS (
       SELECT -- InitialComments에서 선택된 레벨 0 부모 댓글을 포함
@@ -89,16 +88,15 @@ export class BoardCommentListService {
         AND deleted_at IS NULL
       GROUP BY comment_id
     ) dislikes ON ch.comment_id = dislikes.comment_id
-    ORDER BY ch.level, ch.comment_order ASC;
+    ORDER BY ch.level, ch.comment_order DESC;
     `;
 
-      const pageSize = commentDto.pageSize || 10;
-      const comments = await db.query(query, [commentDto.boardId, pageSize]);
+      const comments = await db.query(query, [commentDto.boardId]);
 
       // Redis에서 좋아요/싫어요 수를 가져와 기존 데이터에 더하고, 정렬을 위해 처리
       const parsedComments = await Promise.all(
         comments.map(async (row: any) => {
-          // Redis에서 캐시된 좋아요/싫어요 수 가져오기 (HGETALL을 사용하여 각 댓글의 유저별 좋아요/싫어요 상태 조회)
+          // Redis에서 캐시된 좋아요/싫어요 수 가져오기
           const cachedVotes = await redis.hgetall(
             `comment_like:${row.comment_id}`
           );
@@ -155,7 +153,7 @@ export class BoardCommentListService {
             const likeDiff = b.likes - a.likes;
             return likeDiff !== 0
               ? likeDiff
-              : a.comment_order - b.comment_order; // 좋아요수가 같으면 오래된순으로 정렬
+              : b.comment_order - a.comment_order; // 좋아요수가 같으면 최신순으로 정렬
           });
           break;
         case 'dislike':
@@ -163,7 +161,12 @@ export class BoardCommentListService {
             const dislikeDiff = b.dislikes - a.dislikes;
             return dislikeDiff !== 0
               ? dislikeDiff
-              : a.comment_order - b.comment_order;
+              : b.comment_order - a.comment_order;
+          });
+          break;
+        case 'oldest': // 작성한 순
+          parsedComments.sort((a, b) => {
+            return a.comment_order - b.comment_order;
           });
           break;
         default:
@@ -173,6 +176,41 @@ export class BoardCommentListService {
       // 트리 구조로 변환
       const commentTree = this._buildCommentTree(parsedComments);
 
+      // 커서가 있는 경우, isBefore 값에 따라 해당 커서의 값 앞 또는 뒤부터 레벨 0 댓글을 필터링하여 반환
+      if (commentDto.cursor) {
+        const cursorIndex = commentTree.findIndex(
+          (comment) => comment.comment_id === commentDto.cursor
+        );
+
+        if (cursorIndex !== -1) {
+          const paginatedComments = commentDto.isBefore
+            ? commentTree.slice(
+                Math.max(0, cursorIndex - commentDto.pageSize),
+                cursorIndex
+              )
+            : commentTree.slice(
+                cursorIndex + 1,
+                cursorIndex + 1 + commentDto.pageSize
+              );
+
+          // 마지막 페이지 여부 확인
+          const isLastPage = paginatedComments.length < commentDto.pageSize;
+
+          return {
+            result: true,
+            data: paginatedComments,
+            isLastPage,
+            message: '댓글 리스트 조회 성공'
+          };
+        } else {
+          // cursor에 해당하는 댓글이 없을 경우, 빈 배열 반환
+          return {
+            result: true,
+            data: [],
+            message: '해당 커서의 댓글을 찾을 수 없습니다'
+          };
+        }
+      }
       return {
         result: true,
         data: commentTree,
