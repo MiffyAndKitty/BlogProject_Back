@@ -21,6 +21,15 @@ export interface UserProfileDto extends UserPwDto {
 export interface FollowListDto {
   userId?: string;
   email: string;
-  page: number;
   pageSize: number;
+  page: number;
+}
+
+export interface CommentListDto {
+  userId?: string;
+  email?: string;
+  sort: string;
+  pageSize: number;
+  cursor: string;
+  isBefore: boolean;
 }
