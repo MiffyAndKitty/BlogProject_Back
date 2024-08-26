@@ -16,3 +16,10 @@ export interface UserNotificationDto {
   userId: string;
   notificationId: string;
 }
+
+export interface NotificationListDto {
+  userId: string;
+  pageSize: number;
+  cursor: string;
+  isBefore: boolean;
+}

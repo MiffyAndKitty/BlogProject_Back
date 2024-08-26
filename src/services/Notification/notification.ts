@@ -1,41 +1,81 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
-import { BasicResponse, MultipleDataResponse } from '../../interfaces/response';
-import { UserIdDto } from '../../interfaces/user/userInfo';
-import { UserNotificationDto } from '../../interfaces/notification';
+import {
+  BasicResponse,
+  MultipleDataResponse,
+  ListResponse
+} from '../../interfaces/response';
+import {
+  NotificationListDto,
+  UserNotificationDto
+} from '../../interfaces/notification';
 
 export class NotificationService {
-  static async getAll(
-    userIdDto: UserIdDto
-  ): Promise<MultipleDataResponse<object>> {
+  static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
     try {
-      const result = await db.query(
-        `SELECT 
-          Notifications.*, 
-          User.user_nickname AS trigger_nickname, 
-          User.user_email AS trigger_email, 
-          User.user_image AS trigger_image,
-          Board.board_title AS board_title,
-          Comment.comment_content AS comment_content 
-       FROM Notifications
-       JOIN User ON Notifications.notification_trigger = User.user_id
-       LEFT JOIN Board ON Notifications.notification_location = Board.board_id 
-       LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id 
-       WHERE Notifications.notification_recipient = ? 
-         AND Notifications.deleted_at IS NULL
-       ORDER BY Notifications.created_at DESC;`,
-        [userIdDto.userId]
+      const [countResult] = await db.query(
+        `SELECT COUNT(*) AS totalCount 
+       FROM Notifications 
+       WHERE notification_recipient = ? 
+         AND deleted_at IS NULL`,
+        [listDto.userId]
       );
+
+      const pageSize = listDto.pageSize || 10;
+      console.log(pageSize);
+      const totalCount = Number(countResult.totalCount.toString());
+      const totalPageCount = Math.ceil(totalCount / pageSize);
+
+      let query = `
+      SELECT 
+        Notifications.*, 
+        User.user_nickname AS trigger_nickname, 
+        User.user_email AS trigger_email, 
+        User.user_image AS trigger_image,
+        Board.board_title AS board_title,
+        Comment.comment_content AS comment_content 
+      FROM Notifications
+      JOIN User ON Notifications.notification_trigger = User.user_id
+      LEFT JOIN Board ON Notifications.notification_location = Board.board_id 
+      LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id 
+      WHERE Notifications.notification_recipient = ? 
+        AND Notifications.deleted_at IS NULL
+    `;
+
+      const params: (string | number)[] = [listDto.userId];
+
+      // 커서가 있을 경우 커서 이후의 데이터를 가져오기 위해 조건 추가
+      if (listDto.cursor) {
+        const [notificationByCursor] = await db.query(
+          `SELECT notification_order 
+         FROM Notifications 
+         WHERE notification_id = ?`,
+          [listDto.cursor]
+        );
+
+        if (!notificationByCursor) throw new Error('유효하지 않은 커서입니다.');
+
+        query += ` AND notification_order ${listDto.isBefore ? '<' : '>'} ? `;
+        params.push(notificationByCursor.notification_order);
+      }
+
+      query += ` ORDER BY Notifications.notification_order ASC LIMIT ?`;
+      params.push(pageSize);
+      const result = await db.query(query, params);
 
       return {
         result: true,
         data: result,
+        total: {
+          totalCount: totalCount,
+          totalPageCount: totalPageCount
+        },
         message: '알림 리스트 조회 성공'
       };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      return { result: false, data: [], message: error.message };
+      return { result: false, data: [], total: null, message: error.message };
     }
   }
 

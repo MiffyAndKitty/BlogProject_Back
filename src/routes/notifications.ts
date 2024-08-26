@@ -2,12 +2,14 @@ import { Router, Request, Response } from 'express';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { redis } from '../loaders/redis';
 import { validate } from '../middleware/express-validation';
-import { header, param, body } from 'express-validator';
+import { header, param, query, body } from 'express-validator';
 import { clientsService } from '../utils/notification/clients';
 import { ensureError } from '../errors/ensureError';
-import { UserIdDto } from '../interfaces/user/userInfo';
 import { NotificationService } from '../services/Notification/notification';
-import { UserNotificationDto } from '../interfaces/notification';
+import {
+  NotificationListDto,
+  UserNotificationDto
+} from '../interfaces/notification';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
@@ -101,7 +103,25 @@ notificationsRouter.get(
     header('Authorization')
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
-      .withMessage('올바른 토큰 형식이 아닙니다.')
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    query('page-size')
+      .optional({ checkFalsy: true })
+      .toInt() // 숫자로 전환
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
+    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('is-before')
+      .optional({ checkFalsy: true })
+      .custom((value) => {
+        if (value !== 'true' && value !== 'false') {
+          throw new Error(
+            'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
+          );
+        }
+        return true;
+      })
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -113,11 +133,14 @@ notificationsRouter.get(
         });
       }
 
-      const userIdDto: UserIdDto = {
-        userId: req.id
+      const listDto: NotificationListDto = {
+        userId: req.id,
+        pageSize: req.query['page-size'] as unknown as number,
+        cursor: req.query.cursor as string,
+        isBefore: req.query['is-before'] === 'true' ? true : false
       };
 
-      const result = await NotificationService.getAll(userIdDto);
+      const result = await NotificationService.getAll(listDto);
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
