@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { ensureError } from '../errors/ensureError';
-import { BasicResponse, NotificationResponse } from '../interfaces/response';
+import {
+  BasicResponse,
+  SingleNotificationResponse
+} from '../interfaces/response';
 import { UsersService } from '../services/user/userInfo';
 import { FollowService } from '../services/user/follow';
 import { header, param, query, body } from 'express-validator';
@@ -218,7 +221,7 @@ usersRouter.post(
         email: req.body.email
       };
 
-      const result: NotificationResponse =
+      const result: SingleNotificationResponse =
         await FollowService.addfollow(userInfoDto);
 
       if (result.result === true && result.notifications) {

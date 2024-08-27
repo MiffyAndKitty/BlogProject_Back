@@ -2,7 +2,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
 import { FollowListDto } from '../../interfaces/user/userInfo';
-import { NotificationResponse } from '../../interfaces/response';
+import { SingleNotificationResponse } from '../../interfaces/response';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -112,7 +112,7 @@ export class FollowService {
 
   static addfollow = async (
     userInfoDto: UserInfoDto
-  ): Promise<NotificationResponse> => {
+  ): Promise<SingleNotificationResponse> => {
     try {
       // 먼저 팔로우하려는 사용자가 존재하는지 확인
       const [followedUser] = await db.query(
