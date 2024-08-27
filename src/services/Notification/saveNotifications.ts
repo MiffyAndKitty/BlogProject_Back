@@ -65,10 +65,9 @@ export class saveNotificationService {
         ]
       );
 
-      const sended = await this.sendNotification(notificationDto);
-      // console.log('단일 사용자에게 알림 전송 상태:', sended);
+      const sent = await this.sendNotification(notificationDto);
 
-      return savedCount > 0 && sended.result
+      return savedCount > 0 && sent.result
         ? { result: true, message: '단일 사용자에게 알림 전송 성공' }
         : { result: false, message: '단일 사용자에게 알림 전송 실패' };
     } catch (err) {
@@ -86,7 +85,6 @@ export class saveNotificationService {
       let userList: string[] = [];
       let dbSaveFailedUserIds: string[] = []; // 데이터베이스에 저장 실패한 사용자 ID 저장
       let notificationFailedUserIds: string[] = []; // 알림 전송 실패한 사용자 ID 저장
-      let finalFailedUserIds: string[] = []; // 최종 실패한 사용자 ID 저장
 
       if (notificationDto.type === 'following-new-board') {
         const followers = await db.query(
@@ -107,8 +105,6 @@ export class saveNotificationService {
           (follower: { following_id: string }) => follower.following_id
         );
       }
-
-      let allSucceeded = true;
 
       // 각 팔로워에게 알림 저장 및 전송
       for (const user of userList) {
@@ -135,88 +131,94 @@ export class saveNotificationService {
         );
 
         if (savedCount === 0) {
-          allSucceeded = false;
           dbSaveFailedUserIds.push(user); // 실패한 유저 ID 저장
           continue; // 데이터베이스에 저장 실패 시 알림 전송 시도하지 않음
         }
 
         // SSE 또는 Redis로 알림 전송
-        const sended = await this.sendNotification(userNotificationDto);
+        const sent = await this.sendNotification(userNotificationDto);
 
-        if (!sended.result) {
-          allSucceeded = false;
+        if (!sent.result) {
           notificationFailedUserIds.push(user); // 실패한 유저 ID 저장
         }
       }
 
-      // 실패한 사용자들에게 재시도
-      if (dbSaveFailedUserIds.length > 0) {
-        console.log('데이터베이스 저장 실패한 사용자들에게 재시도 중...');
-        for (const failedUser of dbSaveFailedUserIds) {
-          const retryNotificationDto: NotificationDto = {
-            ...notificationDto,
-            id: uuidv4().replace(/-/g, ''), // 새로운 ID 생성
-            recipient: failedUser
-          };
-
-          // 재시도: 데이터베이스 저장
-          const { affectedRows: retrySavedCount } = await db.query(
-            `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
-           VALUES (?, ?, ?, ?, ?)`,
-            [
-              retryNotificationDto.id,
-              retryNotificationDto.recipient,
-              retryNotificationDto.trigger,
-              retryNotificationDto.type,
-              retryNotificationDto.location
-            ]
-          );
-
-          if (retrySavedCount === 0) {
-            allSucceeded = false;
-            console.log(`데이터베이스에 저장 실패 for ${failedUser}`);
-            finalFailedUserIds.push(failedUser); // 최종 실패한 유저 ID 저장
-          } else {
-            console.log(`데이터베이스에 저장 성공 for ${failedUser}`);
-          }
-        }
-      }
-
-      if (allSucceeded)
+      if (
+        dbSaveFailedUserIds.length === 0 &&
+        notificationFailedUserIds.length === 0
+      ) {
         return { result: true, message: '다수의 유저들에게 알림 전달 성공' };
-
-      console.log('알림 전달 실패한 사용자들에게 재시도 중...');
-
-      for (const failedUser of notificationFailedUserIds) {
-        const retryNotificationDto: NotificationDto = {
-          ...notificationDto,
-          id: uuidv4().replace(/-/g, ''), // 새로운 ID 생성
-          recipient: failedUser
-        };
-
-        // 재시도: 알림 전송
-        const retrySended = await this.sendNotification(retryNotificationDto);
-        console.log(`재시도 알림 전송 상태 for ${failedUser}:`, retrySended);
-
-        if (!retrySended.result) finalFailedUserIds.push(failedUser); // 최종 실패한 유저 ID 저장
       }
 
-      if (finalFailedUserIds.length === 0) {
+      const retryResult = await this._retryFailedUsers(
+        notificationDto,
+        dbSaveFailedUserIds,
+        notificationFailedUserIds
+      );
+
+      if (retryResult.length > 0) {
         return {
-          result: true,
-          message: '오류 발생 후 다수의 유저들에게 알림 재전달 성공'
+          result: false,
+          message: `일부 유저 혹은 전체 유저에게 알림 전달 실패\n실패한 유저 id : ${retryResult}`
         };
       }
 
-      console.log('최종 실패한 유저 ID 목록:', finalFailedUserIds);
       return {
-        result: false,
-        message: '일부 유저 혹은 전체 유저에게 알림 전달 실패'
+        result: true,
+        message: '오류 발생 후 다수의 유저들에게 알림 재전달 성공'
       };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
       return { result: false, message: error.message };
     }
+  }
+
+  private static async _retryFailedUsers(
+    notificationDto: NotificationDto,
+    dbSaveFailedUserIds: string[],
+    notificationFailedUserIds: string[]
+  ): Promise<string[]> {
+    let finalFailedUserIds: string[] = []; // 최종 실패한 사용자 ID 저장
+
+    for (const failedUser of dbSaveFailedUserIds) {
+      const retryNotificationDto = {
+        ...notificationDto,
+        id: uuidv4().replace(/-/g, ''),
+        recipient: failedUser
+      };
+
+      const { affectedRows: retrySavedCount } = await db.query(
+        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
+           VALUES (?, ?, ?, ?, ?)`,
+        [
+          retryNotificationDto.id,
+          retryNotificationDto.recipient,
+          retryNotificationDto.trigger,
+          retryNotificationDto.type,
+          retryNotificationDto.location
+        ]
+      );
+
+      if (retrySavedCount === 0) {
+        finalFailedUserIds.push(failedUser);
+      }
+    }
+
+    for (const failedUser of notificationFailedUserIds) {
+      const retryNotificationDto = {
+        ...notificationDto,
+        id: uuidv4().replace(/-/g, ''),
+        recipient: failedUser
+      };
+
+      const retrySended = await this.sendNotification(retryNotificationDto);
+
+      if (!retrySended.result) {
+        finalFailedUserIds.push(failedUser);
+      }
+    }
+
+    return finalFailedUserIds;
   }
 }
