@@ -8,13 +8,16 @@ import {
   CommentLikeDto
 } from '../../interfaces/comment';
 import { redis } from '../../loaders/redis';
+import { MultipleNotificationResponse } from '../../interfaces/response';
+import { NotificationDto } from '../../interfaces/notification';
 
 export class commentService {
   // 댓글 생성
-  static create = async (commentDto: CommentDto) => {
+  static create = async (
+    commentDto: CommentDto
+  ): Promise<MultipleNotificationResponse> => {
     try {
-      // Board 테이블의 board_id에 해당하면서 deleted_at IS NULL인 데이터가 있는지 확인
-      const boardCheckQuery = `SELECT 1 FROM Board WHERE board_id = ? AND deleted_at IS NULL`;
+      const boardCheckQuery = `SELECT user_id FROM Board WHERE board_id = ? AND deleted_at IS NULL`;
       const [boardExists] = await db.query(boardCheckQuery, [
         commentDto.boardId
       ]);
@@ -34,9 +37,46 @@ export class commentService {
 
       const { affectedRows: createdCount } = await db.query(query, params);
 
-      return createdCount === 1
-        ? { result: true, message: '댓글 생성 성공' }
-        : { result: false, message: '댓글 생성 실패' };
+      if (createdCount !== 1)
+        return { result: false, message: '댓글 생성 실패' };
+
+      let replyToComment: NotificationDto | undefined,
+        commentOnBoard: NotificationDto | undefined;
+
+      // 1. 대댓글 알림
+      if (commentDto.parentCommentId) {
+        // 부모 댓글 작성자에게 대댓글 알림
+        const [parentUserId] = await db.query(
+          `SELECT user_id From Comment Where comment_id =?;`,
+          [commentDto.parentCommentId]
+        );
+
+        replyToComment = {
+          recipient: parentUserId.user_id,
+          trigger: commentDto.userId,
+          type: 'reply-to-comment',
+          location: commentId
+        };
+      }
+
+      // 2. 게시글 댓글 알림
+      if (boardExists.user_id !== commentDto.userId) {
+        commentOnBoard = {
+          recipient: boardExists.user_id,
+          trigger: commentDto.userId,
+          type: 'comment-on-board',
+          location: commentId
+        };
+      }
+
+      return {
+        result: true,
+        notifications: {
+          replyToComment: replyToComment,
+          commentOnBoard: commentOnBoard
+        },
+        message: '댓글 생성 성공'
+      };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);

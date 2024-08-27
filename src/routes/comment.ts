@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
-import { header, body } from 'express-validator';
+import { header, body, param } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { commentService } from '../services/comment/comment';
@@ -10,6 +10,9 @@ import {
   CommentLikeDto,
   CommentUpdateDto
 } from '../interfaces/comment';
+import { MultipleNotificationResponse } from '../interfaces/response';
+import { saveNotificationService } from '../services/Notification/saveNotifications';
+import { BoardCommentListService } from '../services/board/commentList';
 
 export const commentRouter = Router();
 
@@ -45,7 +48,58 @@ commentRouter.post(
         commentContent: req.body.commentContent,
         parentCommentId: req.body.parentCommentId
       };
-      const result = await commentService.create(commentDto);
+      const result: MultipleNotificationResponse =
+        await commentService.create(commentDto);
+
+      if (result.result === true && result.notifications) {
+        // true일 때만 notifications 존재
+        const promises: Promise<any>[] = [];
+
+        if (result.notifications.replyToComment) {
+          promises.push(
+            saveNotificationService.createSingleUserNotification(
+              result.notifications.replyToComment
+            )
+          );
+        }
+
+        if (result.notifications.commentOnBoard) {
+          promises.push(
+            saveNotificationService.createSingleUserNotification(
+              result.notifications.commentOnBoard
+            )
+          );
+        }
+
+        if (promises.length === 0) return res.status(201).send(result);
+
+        // Promise.all로 병렬 처리
+        const notificationResults = await Promise.all(promises);
+
+        // 모든 알림이 성공했는지 확인
+        const allSucceeded = notificationResults.every(
+          (notificationResult) => notificationResult.result === true
+        );
+
+        if (allSucceeded) {
+          return res
+            .status(201)
+            .send({ result: true, message: '모든 알림 전송 성공' });
+        } else {
+          // 실패한 알림이 있으면 에러 메시지 반환
+          const failedMessages = notificationResults
+            .filter((notificationResult) => !notificationResult.result)
+            .map(
+              (notificationResult) =>
+                `${notificationResult.type}: ${notificationResult.message}`
+            );
+
+          return res.status(500).send({
+            result: false,
+            message: `일부 알림 전송 실패: ${failedMessages.join(', ')}`
+          });
+        }
+      }
 
       return res.status(result.result ? 201 : 500).send(result);
     } catch (err) {
