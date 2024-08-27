@@ -21,7 +21,7 @@ import {
   SingleNotificationResponse,
   UserListResponse
 } from '../interfaces/response';
-import { CommentListService } from '../services/comment/commentList';
+import { BoardCommentListService } from '../services/comment/boardCommentList';
 
 export const boardRouter = Router();
 
@@ -200,7 +200,9 @@ boardRouter.get(
         isBefore: req.query['is-before'] === 'true' ? true : false
       };
       const result =
-        await CommentListService.getTopLevelCommentsByPostId(boardIdInfoDto);
+        await BoardCommentListService.getTopLevelCommentsByPostId(
+          boardIdInfoDto
+        );
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
       const error = ensureError(err);
