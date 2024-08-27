@@ -23,40 +23,37 @@ export class saveNotificationService {
           result: true,
           message: 'client가 로그인되어 있어 실시간 알림 전송됨'
         };
-      } else {
-        // 클라이언트가 연결되지 않은 경우 Redis에 알림 캐싱
-        const cashed = await redis.lpush(
-          `notification:${notificationDto.recipient}`,
-          JSON.stringify(notificationDto)
-        );
-
-        return cashed
-          ? {
-              result: true,
-              message:
-                '클라이언트가 연결되어 있지 않음, Redis에 알림을 저장 완료'
-            }
-          : {
-              result: false,
-              message:
-                '클라이언트가 연결되어 있지 않음, Redis에 알림을 저장 실패'
-            };
       }
+      // 클라이언트가 연결되지 않은 경우 Redis에 알림 캐싱
+      const cashed = await redis.lpush(
+        `notification:${notificationDto.recipient}`,
+        JSON.stringify(notificationDto)
+      );
+
+      return cashed
+        ? {
+            result: true,
+            message: '클라이언트가 연결되어 있지 않음, Redis에 알림을 저장 완료'
+          }
+        : {
+            result: false,
+            message: '클라이언트가 연결되어 있지 않음, Redis에 알림을 저장 실패'
+          };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
       return { result: false, message: error.message };
     }
   }
+
   //  'new-follower',  'reply-to-comment', 'comment-on-board'
   static async createSingleUserNotification(
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
     try {
       const userNotificationId = uuidv4().replace(/-/g, '');
-
       // 단일 사용자에게 알림 저장
-      await db.query(
+      const { affectedRows: savedCount } = await db.query(
         `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
          VALUES (?, ?, ?, ?, ?)`,
         [
@@ -68,8 +65,12 @@ export class saveNotificationService {
         ]
       );
 
-      // 단일 사용자에게 알림 전송
-      return await this.sendNotification(notificationDto);
+      const sended = await this.sendNotification(notificationDto);
+      // console.log('단일 사용자에게 알림 전송 상태:', sended);
+
+      return savedCount > 0 && sended.result
+        ? { result: true, message: '단일 사용자에게 알림 전송 성공' }
+        : { result: false, message: '단일 사용자에게 알림 전송 실패' };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
@@ -104,6 +105,8 @@ export class saveNotificationService {
         };
       }
 
+      let allSucceeded = true;
+
       // 각 팔로워에게 알림 저장 및 전송
       for (const user of userList) {
         if (!user) continue;
@@ -129,12 +132,20 @@ export class saveNotificationService {
         );
 
         // SSE 또는 Redis로 알림 전송
-        await this.sendNotification(userNotificationDto);
+        const sended = await this.sendNotification(userNotificationDto);
+        console.log(`유저 ${user}에게 알림 전송 상태:`, sended);
+
+        if (!sended.result) {
+          allSucceeded = false;
+        }
       }
-      return {
-        result: true,
-        message: '다수의 유저들에게 알림 전달 성공'
-      };
+
+      return allSucceeded
+        ? { result: true, message: '다수의 유저들에게 알림 전달 성공' }
+        : {
+            result: false,
+            message: '일부 유저 혹은 전체 유저에게 알림 전달 실패'
+          };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
