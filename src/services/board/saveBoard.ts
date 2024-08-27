@@ -3,7 +3,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
 import { v4 as uuidv4 } from 'uuid';
-import { NotificationResponse } from '../../interfaces/response';
+import { SingleNotificationResponse } from '../../interfaces/response';
 
 export class saveBoardService {
   static modifyBoard = async (boardDto: modifiedBoardDto) => {
@@ -84,7 +84,7 @@ export class saveBoardService {
 
   static createBoard = async (
     boardDto: boardDto
-  ): Promise<NotificationResponse> => {
+  ): Promise<SingleNotificationResponse> => {
     try {
       const boardId = uuidv4().replace(/-/g, '');
       // content의 사진 url를 s3에 저장된 url로 변경

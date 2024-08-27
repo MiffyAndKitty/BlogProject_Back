@@ -18,7 +18,7 @@ import { checkWriter } from '../middleware/checkWriter';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
 import {
   ListResponse,
-  NotificationResponse,
+  SingleNotificationResponse,
   UserListResponse
 } from '../interfaces/response';
 import { BoardCommentListService } from '../services/board/commentList';
@@ -297,7 +297,7 @@ boardRouter.post(
         fileUrls: fileUrls
       };
 
-      const result: NotificationResponse =
+      const result: SingleNotificationResponse =
         await saveBoardService.createBoard(boardDto);
 
       if (result.result === true && result.notifications) {

@@ -17,8 +17,12 @@ export interface MultipleUserDataResponse extends BasicResponse {
   data: { accessToken?: string; userEmail?: string };
 }
 
-export interface NotificationResponse extends BasicResponse {
+export interface SingleNotificationResponse extends BasicResponse {
   notifications?: NotificationDto;
+}
+
+export interface MultipleNotificationResponse extends BasicResponse {
+  notifications?: Record<string, NotificationDto | undefined>;
 }
 
 export interface ListResponse extends BasicResponse {
