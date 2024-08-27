@@ -5,9 +5,9 @@ export interface NotificationDto {
   type:
     | 'new-follower'
     | 'following-new-board'
-    | 'board-new-comment'
+    | 'comment-on-board'
     | 'board-new-like'
-    | 'comment-reply'
+    | 'reply-to-comment'
     | 'broadcast';
   location?: string;
 }

@@ -301,9 +301,10 @@ boardRouter.post(
         await saveBoardService.createBoard(boardDto);
 
       if (result.result === true && result.notifications) {
-        const notified = await saveNotificationService.createNotification(
-          result.notifications
-        );
+        const notified =
+          await saveNotificationService.createMultiUserNotification(
+            result.notifications
+          );
         return notified.result
           ? res.status(200).send(notified)
           : res.status(500).send(notified);
