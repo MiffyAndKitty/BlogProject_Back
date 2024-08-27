@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
-import { header, body, param } from 'express-validator';
+import { header, body, param, query } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { commentService } from '../services/comment/comment';
@@ -267,15 +267,35 @@ commentRouter.get(
       .withMessage('올바른 토큰 형식이 아닙니다.'),
     param('parentCommentId')
       .matches(/^:[0-9a-f]{32}$/i)
-      .withMessage('올바른 형식의 부모 댓글 id가 아닙니다.')
+      .withMessage('올바른 형식의 부모 댓글 id가 아닙니다.'),
+    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('page-size')
+      .optional({ checkFalsy: true })
+      .toInt() // 숫자로 전환
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
+    query('is-before')
+      .optional({ checkFalsy: true })
+      .custom((value) => {
+        if (value !== 'true' && value !== 'false') {
+          throw new Error(
+            'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
+          );
+        }
+        return true;
+      })
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      console.log(1212);
       const commentIdDto: ParentCommentIdDto = {
         userId: req.id,
-        parentCommentId: req.params.parentCommentId.split(':')[1]
+        parentCommentId: req.params.parentCommentId.split(':')[1],
+        pageSize: req.query['page-size'] as unknown as number,
+        cursor: req.query.cursor as string,
+        isBefore: req.query['is-before'] === 'true' ? true : false
       };
       const result =
         await CommentListService.getChildCommentsByParentId(commentIdDto);

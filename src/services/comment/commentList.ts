@@ -9,6 +9,14 @@ export class CommentListService {
     commentIdDto: ParentCommentIdDto
   ) => {
     try {
+      let cursorQuery = '';
+      if (commentIdDto.cursor) {
+        const [cursor] = await db.query(
+          `SELECT comment_order FROM Comment WHERE comment_id = ? AND deleted_at IS NULL`,
+          [commentIdDto.cursor]
+        );
+        cursorQuery += `AND c.comment_order ${commentIdDto.isBefore ? '<' : '>'} ${cursor.comment_order}`;
+      }
       const query = `
       SELECT
         c.comment_id,
@@ -24,10 +32,22 @@ export class CommentListService {
       JOIN User u ON c.user_id = u.user_id
       WHERE c.parent_comment_id = ? -- 부모 댓글 ID를 기준으로 대댓글 조회
         AND c.deleted_at IS NULL
-      ORDER BY c.comment_order ASC; -- 오래된 순으로 정렬
+        ${cursorQuery}
+      ORDER BY c.comment_order ASC -- 오래된 순으로 정렬
+      LIMIT ?; 
     `;
+      const pageSize = commentIdDto.pageSize || 30;
+      const comments = await db.query(query, [
+        commentIdDto.parentCommentId,
+        pageSize + 1 // 페이지 크기보다 하나 더 가져와서 마지막 페이지 여부를 확인
+      ]);
 
-      const comments = await db.query(query, [commentIdDto.parentCommentId]);
+      // 페이지 크기보다 많이 가져왔을 경우, 마지막 페이지가 아님
+      const isLastPage = comments.length <= pageSize;
+
+      if (!isLastPage) {
+        comments.pop(); // 초과된 하나의 댓글 제거
+      }
 
       if (comments.length === 0) {
         return {
@@ -83,6 +103,7 @@ export class CommentListService {
       return {
         result: true,
         data: parsedComments,
+        isLastPage: isLastPage,
         message: '대댓글 리스트 조회 성공'
       };
     } catch (err) {
