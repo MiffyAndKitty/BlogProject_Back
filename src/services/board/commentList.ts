@@ -2,6 +2,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { BoardCommentListDto } from '../../interfaces/board/listDto';
 import { redis } from '../../loaders/redis'; // Redis 클라이언트 가져오기
+import { CommentIdDto } from '../../interfaces/comment';
 
 export class BoardCommentListService {
   // 특정 게시판의 최상위 댓글을 조회하고 사용자 정보와 함께 반환
@@ -81,8 +82,8 @@ export class BoardCommentListService {
             }
           }
 
-          const dbLikes = Number(row.likes);
-          const dbDislikes = Number(row.dislikes);
+          const dbLikes = Number(row.likes ?? 0);
+          const dbDislikes = Number(row.dislikes ?? 0);
 
           // DB에서 가져온 값과 캐시에서 계산한 값을 합산
           const totalLikes = dbLikes + cachedLikes;
@@ -92,7 +93,8 @@ export class BoardCommentListService {
             ...row,
             likes: totalLikes, // 캐시된 좋아요 수를 더한 총 좋아요 수
             dislikes: totalDislikes, // 캐시된 싫어요 수를 더한 총 싫어요 수
-            comment_order: row.comment_order // comment_order 필드를 변환된 객체에 추가
+            comment_order: row.comment_order, // comment_order 필드를 변환된 객체에 추가
+            isWriter: row.user_id === commentDto.userId // 사용자가 작성한 댓글인지 여부 추가
           };
         })
       );
@@ -155,7 +157,7 @@ export class BoardCommentListService {
   };
 
   // 특정 부모 댓글의 대댓글을 조회하는 함수 (작성된 순으로 정렬)
-  static getChildCommentsByParentId = async (parentCommentId: string) => {
+  static getChildCommentsByParentId = async (commentIdDto: CommentIdDto) => {
     try {
       const query = `
       SELECT
@@ -175,7 +177,7 @@ export class BoardCommentListService {
       ORDER BY c.comment_order ASC; -- 오래된 순으로 정렬
     `;
 
-      const comments = await db.query(query, [parentCommentId]);
+      const comments = await db.query(query, [commentIdDto.commentId]);
 
       // Redis에서 좋아요/싫어요 수를 가져와 기존 데이터에 더하고 처리
       const parsedComments = await Promise.all(
@@ -203,8 +205,8 @@ export class BoardCommentListService {
             }
           }
 
-          const dbLikes = Number(row.likes);
-          const dbDislikes = Number(row.dislikes);
+          const dbLikes = Number(row.likes ?? 0);
+          const dbDislikes = Number(row.dislikes ?? 0);
 
           // DB에서 가져온 값과 캐시에서 계산한 값을 합산
           const totalLikes = dbLikes + cachedLikes;
@@ -214,7 +216,8 @@ export class BoardCommentListService {
             ...row,
             likes: totalLikes, // 캐시된 좋아요 수를 더한 총 좋아요 수
             dislikes: totalDislikes, // 캐시된 싫어요 수를 더한 총 싫어요 수
-            comment_order: row.comment_order // comment_order 필드를 변환된 객체에 추가
+            comment_order: row.comment_order, // comment_order 필드를 변환된 객체에 추가
+            isWriter: row.user_id === commentIdDto.userId // 사용자가 작성한 댓글인지 여부 추가
           };
         })
       );
