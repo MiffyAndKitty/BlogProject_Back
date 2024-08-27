@@ -2,11 +2,13 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { BoardCommentListDto } from '../../interfaces/board/listDto';
 import { redis } from '../../loaders/redis'; // Redis 클라이언트 가져오기
-import { CommentIdDto } from '../../interfaces/comment';
+import { ParentCommentIdDto } from '../../interfaces/comment';
 
-export class BoardCommentListService {
+export class CommentListService {
   // 특정 게시판의 최상위 댓글을 조회하고 사용자 정보와 함께 반환
-  static getParentComments = async (commentDto: BoardCommentListDto) => {
+  static getTopLevelCommentsByPostId = async (
+    commentDto: BoardCommentListDto
+  ) => {
     try {
       const sort = 'ASC'; // 작성된 순서
       const query = `
@@ -157,7 +159,9 @@ export class BoardCommentListService {
   };
 
   // 특정 부모 댓글의 대댓글을 조회하는 함수 (작성된 순으로 정렬)
-  static getChildCommentsByParentId = async (commentIdDto: CommentIdDto) => {
+  static getChildCommentsByParentId = async (
+    commentIdDto: ParentCommentIdDto
+  ) => {
     try {
       const query = `
       SELECT
@@ -177,7 +181,7 @@ export class BoardCommentListService {
       ORDER BY c.comment_order ASC; -- 오래된 순으로 정렬
     `;
 
-      const comments = await db.query(query, [commentIdDto.commentId]);
+      const comments = await db.query(query, [commentIdDto.parentCommentId]);
 
       // Redis에서 좋아요/싫어요 수를 가져와 기존 데이터에 더하고 처리
       const parsedComments = await Promise.all(

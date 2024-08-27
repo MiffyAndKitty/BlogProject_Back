@@ -19,7 +19,7 @@ import {
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
-import { UserCommentService } from '../services/user/commentList';
+import { UserCommentService } from '../services/comment/userCommentList';
 export const usersRouter = Router();
 
 usersRouter.post(
