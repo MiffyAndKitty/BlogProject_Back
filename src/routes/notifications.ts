@@ -151,41 +151,6 @@ notificationsRouter.get(
   }
 );
 
-notificationsRouter.get(
-  '/:notificationId',
-  validate([
-    header('Authorization')
-      .optional({ checkFalsy: true })
-      .matches(/^Bearer\s[^\s]+$/)
-      .withMessage('올바른 토큰 형식이 아닙니다.'),
-    param('notificationId').isString()
-  ]),
-  jwtAuth,
-  async (req: Request, res: Response) => {
-    try {
-      if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
-      }
-
-      const userNotificationDto: UserNotificationDto = {
-        userId: req.id,
-        notificationId: req.params.notificationId.split(':')[1]
-      };
-
-      const result = await NotificationService.get(userNotificationDto);
-
-      return res.status(result.result ? 200 : 500).send(result);
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
-    }
-  }
-);
-
 notificationsRouter.delete(
   '/',
   validate([
