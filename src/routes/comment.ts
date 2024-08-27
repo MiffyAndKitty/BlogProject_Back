@@ -8,11 +8,12 @@ import {
   CommentDto,
   CommentIdDto,
   CommentLikeDto,
-  CommentUpdateDto
+  CommentUpdateDto,
+  ParentCommentIdDto
 } from '../interfaces/comment';
 import { MultipleNotificationResponse } from '../interfaces/response';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
-import { BoardCommentListService } from '../services/board/commentList';
+import { CommentListService } from '../services/comment/commentList';
 
 export const commentRouter = Router();
 
@@ -247,6 +248,37 @@ commentRouter.delete(
       };
       const result = await commentService.unlike(commentIdDto);
 
+      return res.status(result.result ? 200 : 500).send(result);
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res.status(500).send({ result: false, message: error.message });
+    }
+  }
+);
+
+// 부모 댓글의 대댓글 조회 (GET : /comment/:parentCommentId/replies)
+commentRouter.get(
+  '/:parentCommentId/replies',
+  validate([
+    header('Authorization')
+      .optional({ checkFalsy: true })
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    param('parentCommentId')
+      .matches(/^:[0-9a-f]{32}$/i)
+      .withMessage('올바른 형식의 부모 댓글 id가 아닙니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      console.log(1212);
+      const commentIdDto: ParentCommentIdDto = {
+        userId: req.id,
+        parentCommentId: req.params.parentCommentId.split(':')[1]
+      };
+      const result =
+        await CommentListService.getChildCommentsByParentId(commentIdDto);
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
       const error = ensureError(err);

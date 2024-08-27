@@ -16,6 +16,11 @@ export interface CommentIdDto {
   commentId: string;
 }
 
+export interface ParentCommentIdDto {
+  userId?: string;
+  parentCommentId: string;
+}
+
 export interface CommentLikeDto extends CommentIdDto {
   isLike: boolean;
 }
