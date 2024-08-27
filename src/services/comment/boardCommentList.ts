@@ -26,12 +26,10 @@ export class BoardCommentListService {
         WHERE c.board_id = ?
           AND c.parent_comment_id IS NULL -- 최상위 댓글만 선택
           AND c.deleted_at IS NULL
-        ORDER BY c.comment_order ${sort}
-        LIMIT ?;
+        ORDER BY c.comment_order ${sort};
       `;
 
-      const pageSize = commentDto.pageSize || 10; // 기본 페이지 크기 설정
-      const comments = await db.query(query, [commentDto.boardId, pageSize]);
+      const comments = await db.query(query, [commentDto.boardId]);
 
       if (comments.length === 0) {
         return {
@@ -55,9 +53,11 @@ export class BoardCommentListService {
       `;
       const [countResult] = await db.query(countQuery, [commentDto.boardId]);
       const totalCount = Number(countResult.totalCount);
+
+      const pageSize = commentDto.pageSize || 10; // 기본 페이지 크기 설정
       const totalPageCount = Math.ceil(totalCount / pageSize);
 
-      // Redis에서 좋아요/싫어요 수를 가져와 기존 데이터에 더하고, 정렬을 위해 처리
+      // Redis에서 좋아요/싫어요 수를 가져와 기존 데이터에 더함
       const parsedComments = await Promise.all(
         comments.map(async (row: any) => {
           // Redis에서 캐시된 좋아요/싫어요 수 가져오기
@@ -109,47 +109,50 @@ export class BoardCommentListService {
       }
 
       // 커서가 있는 경우, isBefore 값에 따라 해당 커서의 값 앞 또는 뒤부터 댓글을 필터링하여 반환
-      if (commentDto.cursor) {
-        const cursorIndex = parsedComments.findIndex(
-          (comment) => comment.comment_id === commentDto.cursor
-        );
+      // 커서가 없는 경우, pageSize 만큼 데이터를 반환
+      if (!commentDto.cursor) {
+        const paginatedComments = parsedComments.slice(0, pageSize);
 
-        if (cursorIndex !== -1) {
-          const paginatedComments = commentDto.isBefore
-            ? parsedComments.slice(
-                Math.max(0, cursorIndex - pageSize),
-                cursorIndex
-              )
-            : parsedComments.slice(cursorIndex + 1, cursorIndex + 1 + pageSize);
-
-          return {
-            result: true,
-            data: paginatedComments,
-            total: {
-              totalCount: totalCount,
-              totalPageCount: totalPageCount
-            },
-            message: '댓글 리스트 조회 성공'
-          };
-        } else {
-          // cursor에 해당하는 댓글이 없을 경우, 빈 배열 반환
-          return {
-            result: true,
-            data: [],
-            message: '해당 커서의 댓글을 찾을 수 없습니다'
-          };
-        }
+        return {
+          result: true,
+          data: paginatedComments,
+          total: {
+            totalCount: totalCount,
+            totalPageCount: totalPageCount
+          },
+          message: '댓글 리스트 조회 성공'
+        };
       }
 
-      return {
-        result: true,
-        data: parsedComments,
-        total: {
-          totalCount: totalCount,
-          totalPageCount: totalPageCount
-        },
-        message: '댓글 리스트 조회 성공'
-      };
+      const cursorIndex = parsedComments.findIndex(
+        (comment) => comment.comment_id === commentDto.cursor
+      );
+
+      if (cursorIndex !== -1) {
+        const paginatedComments = commentDto.isBefore
+          ? parsedComments.slice(
+              Math.max(0, cursorIndex - pageSize),
+              cursorIndex
+            )
+          : parsedComments.slice(cursorIndex + 1, cursorIndex + 1 + pageSize);
+
+        return {
+          result: true,
+          data: paginatedComments,
+          total: {
+            totalCount: totalCount,
+            totalPageCount: totalPageCount
+          },
+          message: '댓글 리스트 조회 성공'
+        };
+      } else {
+        // cursor에 해당하는 댓글이 없을 경우, 빈 배열 반환
+        return {
+          result: false,
+          data: [],
+          message: '해당 커서의 댓글을 찾을 수 없습니다'
+        };
+      }
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
