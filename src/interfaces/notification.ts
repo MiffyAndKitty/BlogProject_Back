@@ -1,5 +1,4 @@
 export interface NotificationDto {
-  id?: string;
   recipient?: string;
   type:
     | 'new-follower'
@@ -19,6 +18,7 @@ export interface NotificationDto {
     boardTitle?: string;
     commentContent?: string;
   };
+  id?: string;
 }
 
 export interface UserNotificationDto {

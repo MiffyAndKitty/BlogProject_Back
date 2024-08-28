@@ -116,9 +116,9 @@ export class saveNotificationService {
 
         const userNotificationId = uuidv4().replace(/-/g, '');
         const userNotificationDto: NotificationDto = {
+          recipient: user,
           ...notificationDto,
-          id: userNotificationId,
-          recipient: user
+          id: userNotificationId
         };
 
         // DB에 알림 저장
