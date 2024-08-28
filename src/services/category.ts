@@ -64,14 +64,16 @@ export class categoryService {
         (row: {
           category_id: string;
           category_name: string;
+          category_topcategory: string | null;
           board_count: string;
         }) => ({
           ...row,
+          category_topcategory: row.category_topcategory || 'root',
           board_count: parseInt(row.board_count, 10)
         })
       );
 
-      // 상위 카테고리와 그 하위 카테고리들을 포함하여 조회
+      // 상위 카테고리와 그 하위 카테고리들을 포함하여 트리 구조로 변환
       const hierarchicalCategory =
         await categoryService._getHierarchicalCategory(
           parsedCategories,
@@ -146,28 +148,14 @@ export class categoryService {
   static create = async (categoryDto: NewCategoryDto) => {
     try {
       const categoryId = uuidv4().replace(/-/g, '');
-      let level = 0;
 
-      let query = `INSERT INTO Board_Category (user_id, category_id, category_name, category_level) VALUES (?,?,?,?) `;
-      const params: (string | number)[] = [
-        categoryDto.userId as string,
+      let query = `INSERT INTO Board_Category (user_id, category_id, category_name) VALUES (?,?,?,?) `;
+      const params = [
+        categoryDto.userId,
         categoryId,
-        categoryDto.categoryName!
+        categoryDto.categoryName,
+        categoryDto.topcategoryId ?? null
       ];
-
-      if (categoryDto.topcategoryId) {
-        // 상위 카테고리가 주어진 경우
-        const [topCategory] = await db.query(
-          // 상위 카테고리
-          `SELECT * FROM Board_Category WHERE user_id = ? AND category_id = ? AND deleted_at IS NULL LIMIT 1;`,
-          [categoryDto.userId, categoryDto.topcategoryId]
-        );
-        level = topCategory.category_level + 1;
-        query = `INSERT INTO Board_Category (user_id, category_id, category_name, category_level, topcategory_id) VALUES (?,?,?,?,?) `;
-        params.push(level, categoryDto.topcategoryId);
-      } else {
-        params.push(level);
-      }
 
       const created = await db.query(query, params);
 
@@ -190,9 +178,9 @@ export class categoryService {
 
   private static _restore = async (categoryDto: NewCategoryDto) => {
     try {
-      const topCategory = categoryDto.topcategoryId || null;
+      const topCategory = categoryDto.topcategoryId ?? null;
 
-      const query = `SELECT * FROM Board_Category WHERE user_id = ? AND category_name = ? AND deleted_at IS NOT NULL AND topcategory_id = ? `; // 삭제된 카테고리
+      const query = `SELECT category_id FROM Board_Category WHERE user_id = ? AND category_name = ? AND deleted_at IS NOT NULL AND topcategory_id = ? `; // 삭제된 카테고리
       const params = [
         categoryDto.userId,
         categoryDto.categoryName,
@@ -248,23 +236,10 @@ export class categoryService {
 
   static modifyLevel = async (categoryDto: UpdateCategoryLevelDto) => {
     try {
-      let level = 0;
-
-      if (categoryDto.topcategoryId) {
-        const [topCategory] = await db.query(
-          // 상위 카테고리
-          `SELECT category_level FROM Board_Category WHERE user_id = ? AND category_id = ? AND deleted_at IS NULL LIMIT 1;`,
-          [categoryDto.userId, categoryDto.topcategoryId]
-        );
-        console.log('topCategory : ', topCategory);
-        level = topCategory.category_level + 1;
-      }
-
       const updated = await db.query(
-        `UPDATE Board_Category SET category_level = ?, topcategory_id = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
+        `UPDATE Board_Category SET topcategory_id = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
         [
-          level,
-          categoryDto.topcategoryId,
+          categoryDto.topcategoryId ?? null,
           categoryDto.categoryId,
           categoryDto.userId
         ]
