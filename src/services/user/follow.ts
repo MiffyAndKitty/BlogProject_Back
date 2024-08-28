@@ -120,56 +120,74 @@ export class FollowService {
         [userInfoDto.email]
       );
 
-      if (!followedUser)
+      if (!followedUser) {
         return {
           result: false,
           message: '팔로우할 유저를 찾을 수 없습니다.'
         };
+      }
 
       const [currentUser] = await db.query(
         `SELECT user_id, user_email, user_nickname, user_image FROM User WHERE user_id = ? AND deleted_at IS NULL;`,
         [userInfoDto.userId]
       );
 
-      const followed = followedUser.user_id!;
-
-      if (followed === currentUser.user_id)
+      if (followedUser.user_id === currentUser.user_id) {
         return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
+      }
 
       const values = [
-        followed, // 팔로우하려는 사용자의 ID
+        followedUser.user_id, // 팔로우하려는 사용자의 ID
         currentUser.user_id // 팔로우하는 사용자의 ID
       ];
 
-      const { affectedRows: addedCount } = await db.query(
-        `INSERT INTO Follow (followed_id, following_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE deleted_at = NULL;`,
+      // 기존 팔로우 관계 확인
+      const [existingFollow] = await db.query(
+        `SELECT deleted_at FROM Follow WHERE followed_id = ? AND following_id = ?`,
         values
       );
 
-      if (addedCount > 0) {
+      if (existingFollow && !existingFollow.deleted_at) {
+        // 이미 팔로우된 경우
         return {
-          result: true,
-          message:
-            addedCount === 1
-              ? '팔로우 추가 성공'
-              : 'soft delete한 팔로우 복구 성공',
-          notifications: {
-            recipient: followed,
-            type: 'new-follower',
-            trigger: {
-              id: currentUser.user_id,
-              nickname: currentUser.user_nickname,
-              email: currentUser.user_email,
-              image: currentUser.user_image
-            }
-          }
+          result: false,
+          message: '이미 팔로우된 유저입니다.'
         };
       }
 
-      return {
-        result: false,
-        message: '팔로우 추가 실패 (ex. 이미 팔로우된 유저)'
-      };
+      let query: string;
+
+      if (existingFollow) {
+        // 기존 팔로우가 존재하고 soft delete 상태인 경우, deleted_at을 NULL로 업데이트
+        query = `UPDATE Follow SET deleted_at = NULL WHERE followed_id = ? AND following_id = ?`;
+      } else {
+        // 새로운 팔로우 관계 추가
+        query = `INSERT INTO Follow (followed_id, following_id) VALUES (?, ?)`;
+      }
+
+      const { affectedRows: addedCount } = await db.query(query, values);
+
+      return addedCount > 0
+        ? {
+            result: true,
+            message: existingFollow
+              ? 'soft delete한 팔로우 복구 성공'
+              : '팔로우 추가 성공',
+            notifications: {
+              recipient: followedUser.user_id,
+              type: 'new-follower',
+              trigger: {
+                id: currentUser.user_id,
+                nickname: currentUser.user_nickname,
+                email: currentUser.user_email,
+                image: currentUser.user_image
+              }
+            }
+          }
+        : {
+            result: false,
+            message: '팔로우 추가 실패'
+          };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
