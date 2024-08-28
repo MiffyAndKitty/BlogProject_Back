@@ -6,7 +6,9 @@ import { jwtAuth } from '../middleware/passport-jwt-checker';
 import {
   CategoryDto,
   CategoryListDto,
-  CategoryOwnerDto
+  NewCategoryDto,
+  UpdateCategoryLevelDto,
+  UpdateCategoryNameDto
 } from '../interfaces/category';
 import { categoryService } from '../services/category';
 
@@ -72,7 +74,7 @@ categoryRouter.post(
         });
       }
 
-      const categoryDto: CategoryDto = {
+      const categoryDto: NewCategoryDto = {
         userId: req.id,
         topcategoryId: req.body.topcategoryId,
         categoryName: req.body.categoryName
@@ -111,7 +113,7 @@ categoryRouter.put(
         });
       }
 
-      const categoryDto: CategoryDto = {
+      const categoryDto: UpdateCategoryNameDto = {
         userId: req.id,
         categoryId: req.body.categoryId,
         categoryName: req.body.categoryName
@@ -154,7 +156,7 @@ categoryRouter.put(
         });
       }
 
-      const categoryDto: CategoryDto = {
+      const categoryDto: UpdateCategoryLevelDto = {
         userId: req.id,
         categoryId: req.body.categoryId,
         topcategoryId: req.body.topcategoryId

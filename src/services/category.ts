@@ -3,8 +3,10 @@ import { ensureError } from '../errors/ensureError';
 import {
   CategoryDto,
   CategoryListDto,
-  CategoryOwnerDto,
-  HierarchicalCategoryDto
+  HierarchicalCategoryDto,
+  NewCategoryDto,
+  UpdateCategoryLevelDto,
+  UpdateCategoryNameDto
 } from '../interfaces/category';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -52,7 +54,7 @@ export class categoryService {
         WHERE 
           C.user_id = ? AND C.deleted_at IS NULL 
         GROUP BY 
-          C.category_id, C.category_name 
+          C.category_id, C.category_name, C.topcategory_id
         ORDER BY 
           C.created_at ASC;`,
         [user.user_id, user.user_id]
@@ -141,7 +143,7 @@ export class categoryService {
     return buildCategoryTree('root');
   };
 
-  static create = async (categoryDto: CategoryDto) => {
+  static create = async (categoryDto: NewCategoryDto) => {
     try {
       const categoryId = uuidv4().replace(/-/g, '');
       let level = 0;
@@ -186,7 +188,7 @@ export class categoryService {
     }
   };
 
-  private static _restore = async (categoryDto: CategoryDto) => {
+  private static _restore = async (categoryDto: NewCategoryDto) => {
     try {
       const topCategory = categoryDto.topcategoryId || null;
 
@@ -224,7 +226,7 @@ export class categoryService {
     }
   };
 
-  static modifyName = async (categoryDto: CategoryDto) => {
+  static modifyName = async (categoryDto: UpdateCategoryNameDto) => {
     try {
       const updated = await db.query(
         `UPDATE Board_Category SET category_name = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
@@ -244,7 +246,7 @@ export class categoryService {
     }
   };
 
-  static modifyLevel = async (categoryDto: CategoryDto) => {
+  static modifyLevel = async (categoryDto: UpdateCategoryLevelDto) => {
     try {
       let level = 0;
 
