@@ -2,6 +2,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { BoardIdInfoDto } from '../../interfaces/board/IdInfo';
 import { redis } from '../../loaders/redis';
+import { SingleNotificationResponse } from '../../interfaces/response';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
@@ -108,7 +109,9 @@ export class BoardService {
   };
 
   // 사용자의 좋아요 추가 -> cash -> DB
-  static addLike = async (boardIdInfoDto: BoardIdInfoDto) => {
+  static addLike = async (
+    boardIdInfoDto: BoardIdInfoDto
+  ): Promise<SingleNotificationResponse> => {
     try {
       const { boardId, userId } = boardIdInfoDto;
 
@@ -121,12 +124,42 @@ export class BoardService {
       if (likedInDB)
         return { result: true, message: '이미 좋아요한 누른 게시물입니다.' };
 
+      const [currentUser] = await db.query(
+        'SELECT user_id, user_nickname, user_email, user_image From User WHERE user_id =? AND deleted_at IS NULL;',
+        [userId]
+      );
+
+      const [board] = await db.query(
+        'SELECT user_id, board_title From Board WHERE board_id =?;',
+        [boardId]
+      );
+
       // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
-      const likedInRedis = await redis.sadd(`board_like:${boardId}`, userId!); // 추가될 시 1, 추가되지 않으면 0
+      const likedInRedis = await redis.sadd(
+        `board_like:${boardId}`, // 왜 여기 0이야?
+        currentUser.user_id
+      ); // 추가될 시 1, 추가되지 않으면 0
 
       return likedInRedis === 1
-        ? { result: true, message: '좋아요 추가 성공' }
-        : { result: false, message: '좋아요 추가 실패' }; // 캐시 실패
+        ? {
+            result: true,
+            notifications: {
+              recipient: board.user_id,
+              type: 'board-new-like',
+              trigger: {
+                id: currentUser.user_id,
+                nickname: currentUser.user_nickname,
+                email: currentUser.user_email,
+                image: currentUser.user_image
+              },
+              location: {
+                id: boardId,
+                boardTitle: board.board_title
+              }
+            },
+            message: '좋아요 추가 성공'
+          }
+        : { result: false, message: '좋아요 추가 실패 ( ex. 캐시 실패 )' };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);

@@ -307,9 +307,7 @@ boardRouter.post(
           await saveNotificationService.createMultiUserNotification(
             result.notifications
           );
-        return notified.result
-          ? res.status(200).send(notified)
-          : res.status(500).send(notified);
+        return res.status(notified.result ? 200 : 500).send(notified);
       }
 
       return res.status(result.result ? 200 : 500).send({
@@ -437,7 +435,7 @@ boardRouter.delete(
   }
 );
 
-// 게시글 좋아요 추가( post : /board/like/add )
+// 게시글 좋아요 추가( post : /board/like )
 boardRouter.post(
   '/like',
   validate([
@@ -464,6 +462,14 @@ boardRouter.post(
       };
 
       const result = await BoardService.addLike(boardIdInfoDto);
+
+      if (result.result === true && result.notifications) {
+        const notified =
+          await saveNotificationService.createSingleUserNotification(
+            result.notifications
+          );
+        return res.status(notified.result ? 200 : 500).send(notified);
+      }
 
       return res
         .status(result.result ? 200 : 500)
