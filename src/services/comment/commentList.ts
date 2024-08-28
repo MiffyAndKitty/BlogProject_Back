@@ -2,7 +2,6 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis'; // Redis 클라이언트 가져오기
 import { ParentCommentIdDto } from '../../interfaces/comment';
-
 export class CommentListService {
   // 특정 부모 댓글의 대댓글을 조회하는 함수 (작성된 순으로 정렬)
   static getChildCommentsByParentId = async (
@@ -17,25 +16,27 @@ export class CommentListService {
         );
         cursorQuery += `AND c.comment_order ${commentIdDto.isBefore ? '<' : '>'} ${cursor.comment_order}`;
       }
+
       const query = `
-      SELECT
-        c.comment_id,
-        c.comment_content,
-        c.user_id,
-        c.parent_comment_id,
-        c.comment_order,
-        c.created_at,
-        u.user_email,
-        u.user_nickname,
-        u.user_image
-      FROM Comment c
-      JOIN User u ON c.user_id = u.user_id
-      WHERE c.parent_comment_id = ? -- 부모 댓글 ID를 기준으로 대댓글 조회
-        AND c.deleted_at IS NULL
-        ${cursorQuery}
-      ORDER BY c.comment_order ASC -- 오래된 순으로 정렬
-      LIMIT ?; 
-    `;
+        SELECT
+          c.comment_id,
+          c.comment_content,
+          c.user_id,
+          c.parent_comment_id,
+          c.comment_order,
+          c.created_at,
+          u.user_email,
+          u.user_nickname,
+          u.user_image
+        FROM Comment c
+        JOIN User u ON c.user_id = u.user_id
+        WHERE c.parent_comment_id = ? -- 부모 댓글 ID를 기준으로 대댓글 조회
+          AND c.deleted_at IS NULL
+          ${cursorQuery}
+        ORDER BY c.comment_order ASC -- 오래된 순으로 정렬
+        LIMIT ?;
+      `;
+
       const pageSize = commentIdDto.pageSize || 30;
       const comments = await db.query(query, [
         commentIdDto.parentCommentId,
@@ -68,18 +69,21 @@ export class CommentListService {
           // 좋아요와 싫어요 카운트를 초기화
           let cachedLikes = 0;
           let cachedDislikes = 0;
+          let isLike = false;
+          let isDislike = false;
 
           // 캐시된 모든 유저별 상태를 순회하며 좋아요(1)와 싫어요(0) 수를 계산
-          for (const vote of Object.values(cachedVotes)) {
-            switch (vote) {
-              case '1':
-                cachedLikes++;
-                break;
-              case '0':
-                cachedDislikes++;
-                break;
-              default:
-                break; // 다른 값은 처리하지 않음
+          for (const [userId, vote] of Object.entries(cachedVotes)) {
+            if (vote === '1') {
+              cachedLikes++;
+              if (userId === commentIdDto.userId) {
+                isLike = true; // 사용자가 좋아요를 했을 경우
+              }
+            } else if (vote === '0') {
+              cachedDislikes++;
+              if (userId === commentIdDto.userId) {
+                isDislike = true; // 사용자가 싫어요를 했을 경우
+              }
             }
           }
 
@@ -95,7 +99,9 @@ export class CommentListService {
             likes: totalLikes, // 캐시된 좋아요 수를 더한 총 좋아요 수
             dislikes: totalDislikes, // 캐시된 싫어요 수를 더한 총 싫어요 수
             comment_order: row.comment_order, // comment_order 필드를 변환된 객체에 추가
-            isWriter: row.user_id === commentIdDto.userId // 사용자가 작성한 댓글인지 여부 추가
+            isWriter: row.user_id === commentIdDto.userId, // 사용자가 작성한 댓글인지 여부 추가
+            isLike, // 사용자가 좋아요를 했는지 여부
+            isDislike // 사용자가 싫어요를 했는지 여부
           };
         })
       );
