@@ -19,9 +19,9 @@ export interface CommentIdDto {
 export interface ParentCommentIdDto {
   userId?: string;
   parentCommentId: string;
-  cursor: string;
-  pageSize: number;
-  isBefore: boolean;
+  //cursor: string;
+  //pageSize: number;
+  //isBefore: boolean;
 }
 
 export interface CommentLikeDto extends CommentIdDto {
