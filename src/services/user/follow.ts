@@ -116,7 +116,7 @@ export class FollowService {
     try {
       // 먼저 팔로우하려는 사용자가 존재하는지 확인
       const [followedUser] = await db.query(
-        `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`,
+        `SELECT user_id, user_email, user_nickname, user_image FROM User WHERE user_email = ? AND deleted_at IS NULL;`,
         [userInfoDto.email]
       );
 
@@ -126,15 +126,19 @@ export class FollowService {
           message: '팔로우할 유저를 찾을 수 없습니다.'
         };
 
-      const currentUser = userInfoDto.userId!;
+      const [currentUser] = await db.query(
+        `SELECT user_id, user_email, user_nickname, user_image FROM User WHERE user_id = ? AND deleted_at IS NULL;`,
+        [userInfoDto.userId]
+      );
+
       const followed = followedUser.user_id!;
 
-      if (followed === currentUser)
+      if (followed === currentUser.user_id)
         return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
 
       const values = [
         followed, // 팔로우하려는 사용자의 ID
-        currentUser // 팔로우하는 사용자의 ID
+        currentUser.user_id // 팔로우하는 사용자의 ID
       ];
 
       const { affectedRows: addedCount } = await db.query(
@@ -151,8 +155,13 @@ export class FollowService {
               : 'soft delete한 팔로우 복구 성공',
           notifications: {
             recipient: followed,
-            trigger: currentUser,
-            type: 'new-follower'
+            type: 'new-follower',
+            trigger: {
+              id: currentUser.user_id,
+              nickname: currentUser.user_nickname,
+              email: currentUser.user_email,
+              image: currentUser.user_image
+            }
           }
         };
       }

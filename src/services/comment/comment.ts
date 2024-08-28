@@ -46,29 +46,73 @@ export class commentService {
       // 1. 대댓글 알림
       if (commentDto.parentCommentId) {
         // 부모 댓글 작성자에게 대댓글 알림
-        const [parentUserId] = await db.query(
+        const [parentUser] = await db.query(
           `SELECT user_id From Comment Where comment_id =?;`,
           [commentDto.parentCommentId]
         );
 
-        replyToComment = {
-          recipient: parentUserId.user_id,
-          trigger: commentDto.userId,
-          type: 'reply-to-comment',
-          location: commentId
-        };
+        if (parentUser) {
+          const [triggerUser] = await db.query(
+            `SELECT user_nickname, user_email, user_image FROM User WHERE user_id = ?`,
+            [commentDto.userId]
+          );
+
+          const [comment] = await db.query(
+            `SELECT comment_content FROM Comment WHERE comment_id = ?`,
+            [commentId]
+          );
+
+          replyToComment = {
+            recipient: parentUser.user_id,
+            type: 'reply-to-comment',
+            trigger: {
+              id: commentDto.userId,
+              nickname: triggerUser.user_nickname,
+              email: triggerUser.user_email,
+              image: triggerUser.user_image
+            },
+            location: {
+              id: commentId,
+              boardTitle: undefined,
+              commentContent: comment.comment_content
+            }
+          };
+        }
       }
 
       // 2. 게시글 댓글 알림
       if (boardExists.user_id !== commentDto.userId) {
+        const [triggerUser] = await db.query(
+          `SELECT user_nickname, user_email, user_image FROM User WHERE user_id = ?`,
+          [commentDto.userId]
+        );
+
+        const [comment] = await db.query(
+          `SELECT comment_content FROM Comment WHERE comment_id = ?`,
+          [commentId]
+        );
+
+        const [board] = await db.query(
+          `SELECT board_title FROM Board WHERE board_id = ?`,
+          [commentDto.boardId]
+        );
+
         commentOnBoard = {
           recipient: boardExists.user_id,
-          trigger: commentDto.userId,
           type: 'comment-on-board',
-          location: commentId
+          trigger: {
+            id: commentDto.userId,
+            nickname: triggerUser.user_nickname,
+            email: triggerUser.user_email,
+            image: triggerUser.user_image
+          },
+          location: {
+            id: commentId,
+            boardTitle: board.board_title,
+            commentContent: comment.comment_content
+          }
         };
       }
-
       return {
         result: true,
         notifications: {

@@ -6,7 +6,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { SingleNotificationResponse } from '../../interfaces/response';
 
 export class saveBoardService {
-  static modifyBoard = async (boardDto: modifiedBoardDto) => {
+  static modifyBoard = async (
+    boardDto: modifiedBoardDto
+  ): Promise<SingleNotificationResponse> => {
     try {
       // content의 사진 url를 s3에 저장된 url로 변경
       const [original] = await db.query(
@@ -123,12 +125,26 @@ export class saveBoardService {
           ? { result: true, message: '태그와 게시글 저장 성공' }
           : { result: false, message: '태그와 게시글 저장 실패' };
       }
+
+      const [writer] = await db.query(
+        'SELECT user_id, user_nickname, user_email, user_image From User WHERE user_id =?;',
+        [boardDto.userId]
+      );
+
       return {
         result: true,
         notifications: {
-          trigger: boardDto.userId!,
           type: 'following-new-board',
-          location: boardId
+          trigger: {
+            id: writer.user_id,
+            nickname: writer.user_nickname,
+            email: writer.user_email,
+            image: writer.user_image
+          },
+          location: {
+            id: boardId,
+            boardTitle: boardDto.title
+          }
         },
         message: '게시글 저장 성공'
       };

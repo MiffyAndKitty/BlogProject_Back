@@ -1,10 +1,6 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
-import {
-  BasicResponse,
-  MultipleDataResponse,
-  ListResponse
-} from '../../interfaces/response';
+import { BasicResponse, ListResponse } from '../../interfaces/response';
 import {
   NotificationListDto,
   UserNotificationDto

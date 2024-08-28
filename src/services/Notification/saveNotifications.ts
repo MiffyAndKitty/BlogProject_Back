@@ -11,9 +11,13 @@ export class saveNotificationService {
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
     try {
+      if (!notificationDto.recipient) {
+        throw new Error('알림 수신인이 정의되어 있지 않습니다');
+      }
+
       // 클라이언트가 SSE로 연결되어 있는지 확인
       const client: Response | undefined = clientsService.get(
-        notificationDto.recipient as string
+        notificationDto.recipient
       );
 
       if (client) {
@@ -51,17 +55,17 @@ export class saveNotificationService {
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
     try {
-      const userNotificationId = uuidv4().replace(/-/g, '');
+      notificationDto.id = uuidv4().replace(/-/g, '');
       // 단일 사용자에게 알림 저장
       const { affectedRows: savedCount } = await db.query(
         `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
          VALUES (?, ?, ?, ?, ?)`,
         [
-          userNotificationId,
+          notificationDto.id,
           notificationDto.recipient,
-          notificationDto.trigger,
+          notificationDto.trigger.id,
           notificationDto.type,
-          notificationDto.location
+          notificationDto.location?.id || null
         ]
       );
 
@@ -91,7 +95,7 @@ export class saveNotificationService {
           `SELECT following_id 
          FROM Follow
          WHERE followed_id = ? AND deleted_at IS NULL;`,
-          [notificationDto.trigger]
+          [notificationDto.trigger.id]
         );
 
         if (followers.length === 0) {
@@ -124,9 +128,9 @@ export class saveNotificationService {
           [
             userNotificationDto.id,
             userNotificationDto.recipient,
-            userNotificationDto.trigger,
+            userNotificationDto.trigger.id,
             userNotificationDto.type,
-            userNotificationDto.location
+            notificationDto.location?.id || null
           ]
         );
 
@@ -194,9 +198,9 @@ export class saveNotificationService {
         [
           retryNotificationDto.id,
           retryNotificationDto.recipient,
-          retryNotificationDto.trigger,
+          retryNotificationDto.trigger.id,
           retryNotificationDto.type,
-          retryNotificationDto.location
+          retryNotificationDto.location?.id || null
         ]
       );
 

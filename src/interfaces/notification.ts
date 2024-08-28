@@ -1,7 +1,6 @@
 export interface NotificationDto {
   id?: string;
   recipient?: string;
-  trigger: string;
   type:
     | 'new-follower'
     | 'following-new-board'
@@ -9,7 +8,17 @@ export interface NotificationDto {
     | 'board-new-like'
     | 'reply-to-comment'
     | 'broadcast';
-  location?: string;
+  trigger: {
+    id: string;
+    nickname: string;
+    email: string;
+    image: string;
+  };
+  location?: {
+    id: string;
+    boardTitle?: string;
+    commentContent?: string;
+  };
 }
 
 export interface UserNotificationDto {
