@@ -32,4 +32,5 @@ export interface NotificationListDto {
   pageSize: number;
   cursor: string;
   isBefore: boolean;
+  sort: string;
 }

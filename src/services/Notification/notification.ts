@@ -9,11 +9,15 @@ import {
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
     try {
+      const sortQuery = listDto.sort
+        ? `AND notification_type = '${listDto.sort}'`
+        : ``;
       const [countResult] = await db.query(
         `SELECT COUNT(*) AS totalCount 
        FROM Notifications 
        WHERE notification_recipient = ? 
-         AND deleted_at IS NULL`,
+         ${sortQuery}
+         AND deleted_at IS NULL;`,
         [listDto.userId]
       );
 
@@ -35,6 +39,7 @@ export class NotificationService {
       LEFT JOIN Board ON Notifications.notification_board = Board.board_id 
       LEFT JOIN Comment ON Notifications.notification_comment = Comment.comment_id 
       WHERE Notifications.notification_recipient = ? 
+        ${sortQuery}
         AND Notifications.deleted_at IS NULL
     `;
 
@@ -45,7 +50,7 @@ export class NotificationService {
         const [notificationByCursor] = await db.query(
           `SELECT notification_order 
          FROM Notifications 
-         WHERE notification_id = ?`,
+         WHERE notification_id = ? ${sortQuery};`,
           [listDto.cursor]
         );
 

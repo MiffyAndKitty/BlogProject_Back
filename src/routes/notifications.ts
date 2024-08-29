@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { redis } from '../loaders/redis';
 import { validate } from '../middleware/express-validation';
-import { header, param, query, body } from 'express-validator';
+import { header, query, body } from 'express-validator';
 import { clientsService } from '../utils/notification/clients';
 import { ensureError } from '../errors/ensureError';
 import { NotificationService } from '../services/Notification/notification';
@@ -121,7 +121,20 @@ notificationsRouter.get(
           );
         }
         return true;
-      })
+      }),
+    query('sort')
+      .optional({ checkFalsy: true })
+      .isIn([
+        'new-follower',
+        'following-new-board',
+        'comment-on-board',
+        'board-new-like',
+        'reply-to-comment',
+        'broadcast'
+      ])
+      .withMessage(
+        'sort의 값이 존재한다면 알림 타입값 중 하나의 값이어야합니다.'
+      )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -137,7 +150,8 @@ notificationsRouter.get(
         userId: req.id,
         pageSize: req.query['page-size'] as unknown as number,
         cursor: req.query.cursor as string,
-        isBefore: req.query['is-before'] === 'true' ? true : false
+        isBefore: req.query['is-before'] === 'true' ? true : false,
+        sort: req.query.sort as string
       };
 
       const result = await NotificationService.getAll(listDto);
