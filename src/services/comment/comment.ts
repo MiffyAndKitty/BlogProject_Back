@@ -45,13 +45,16 @@ export class commentService {
 
       // 1. 대댓글 알림
       if (commentDto.parentCommentId) {
-        // 부모 댓글 작성자에게 대댓글 알림
         const [parentUser] = await db.query(
           `SELECT user_id From Comment Where comment_id =?;`,
           [commentDto.parentCommentId]
         );
 
-        if (parentUser) {
+        if (
+          parentUser &&
+          parentUser.user_id !== boardExists.user_id && // 부모 댓글 작성자가 게시글 작성자가 아닌 경우
+          parentUser.user_id !== commentDto.userId // // 부모 댓글 작성자가 대댓글 작성자가 아닌 경우
+        ) {
           const [triggerUser] = await db.query(
             `SELECT user_nickname, user_email, user_image FROM User WHERE user_id = ?`,
             [commentDto.userId]
