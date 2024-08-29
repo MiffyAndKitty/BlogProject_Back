@@ -19,9 +19,7 @@ export class categoryService {
       );
 
       if (!user) {
-        throw new Error(
-          '검색한 닉네임의 카테고리가 존재하지 않아 전체 카테고리 리스트를 조회할 수 없습니다.'
-        );
+        throw new Error('해당 닉네임을 가진 유저가 존재하지 않습니다.');
       }
 
       // 카테고리 ID가 없는 게시글의 개수 조회
@@ -123,16 +121,23 @@ export class categoryService {
       { root: [] }
     );
 
-    // 재귀적으로 계층 구조를 생성하는 함수
+    // 재귀적으로 계층 구조를 생성하면서, 하위 카테고리의 게시글 수를 상위 카테고리에 더하는 함수
     const buildCategoryTree = (parentId: string): HierarchicalCategoryDto[] => {
       const categories = categoryMap[parentId] || []; // 부모 ID에 대한 카테고리 배열
       return categories.map((category: HierarchicalCategoryDto) => {
         const subcategories = buildCategoryTree(category.category_id);
+
+        // 하위 카테고리들의 게시글 수를 모두 더함
+        const totalBoardCount = subcategories.reduce(
+          (sum, subcategory) => sum + subcategory.board_count,
+          category.board_count //현재 카테고리의 게시글 수 포함
+        );
+
         return {
           category_id: category.category_id,
           category_name: category.category_name,
-          board_count: category.board_count,
-          ...(subcategories.length > 0 && { subcategories }) // subcategories가 비어있지 않으면 포함
+          board_count: totalBoardCount, // 상위 카테고리로 누적된 게시글 수
+          ...(subcategories.length > 0 && { subcategories }) // 하위 카테고리가 있으면 포함
         };
       });
     };
@@ -147,9 +152,20 @@ export class categoryService {
 
   static create = async (categoryDto: NewCategoryDto) => {
     try {
+      if (categoryDto.topcategoryId) {
+        const [topcategory] = await db.query(
+          `SELECT 1 FROM Board_Category WHERE category_id = ? AND deleted_at IS NULL;`,
+          [categoryDto.topcategoryId]
+        );
+        if (!topcategory)
+          throw new Error(
+            '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
+          );
+      }
+
       const categoryId = uuidv4().replace(/-/g, '');
 
-      let query = `INSERT INTO Board_Category (user_id, category_id, category_name) VALUES (?,?,?,?) `;
+      const query = `INSERT INTO Board_Category (user_id, category_id, category_name, topcategory_id ) VALUES (?,?,?,?);`;
       const params = [
         categoryDto.userId,
         categoryId,
