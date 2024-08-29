@@ -18,7 +18,7 @@ export class NotificationService {
       );
 
       const pageSize = listDto.pageSize || 10;
-      console.log(pageSize);
+
       const totalCount = Number(countResult.totalCount.toString());
       const totalPageCount = Math.ceil(totalCount / pageSize);
 
@@ -32,8 +32,8 @@ export class NotificationService {
         Comment.comment_content AS comment_content 
       FROM Notifications
       JOIN User ON Notifications.notification_trigger = User.user_id
-      LEFT JOIN Board ON Notifications.notification_location = Board.board_id 
-      LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id 
+      LEFT JOIN Board ON Notifications.notification_board = Board.board_id 
+      LEFT JOIN Comment ON Notifications.notification_comment = Comment.comment_id 
       WHERE Notifications.notification_recipient = ? 
         AND Notifications.deleted_at IS NULL
     `;

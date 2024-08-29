@@ -14,7 +14,8 @@ export interface NotificationDto {
     image: string;
   };
   location?: {
-    id: string;
+    boardId?: string;
+    commentId?: string;
     boardTitle?: string;
     commentContent?: string;
   };

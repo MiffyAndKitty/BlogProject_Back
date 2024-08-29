@@ -153,7 +153,7 @@ export class BoardService {
                 image: currentUser.user_image
               },
               location: {
-                id: boardId,
+                boardId: boardId,
                 boardTitle: board.board_title
               }
             },

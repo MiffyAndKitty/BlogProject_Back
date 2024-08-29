@@ -142,7 +142,7 @@ export class saveBoardService {
             image: writer.user_image
           },
           location: {
-            id: boardId,
+            boardId: boardId,
             boardTitle: boardDto.title
           }
         },

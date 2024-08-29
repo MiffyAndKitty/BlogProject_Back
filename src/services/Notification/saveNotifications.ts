@@ -58,14 +58,15 @@ export class saveNotificationService {
       notificationDto.id = uuidv4().replace(/-/g, '');
       // 단일 사용자에게 알림 저장
       const { affectedRows: savedCount } = await db.query(
-        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_board, notification_comment)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           notificationDto.id,
           notificationDto.recipient,
           notificationDto.trigger.id,
           notificationDto.type,
-          notificationDto.location?.id || null
+          notificationDto.location?.boardId || null,
+          notificationDto.location?.commentId || null
         ]
       );
 
@@ -123,14 +124,15 @@ export class saveNotificationService {
 
         // DB에 알림 저장
         const { affectedRows: savedCount } = await db.query(
-          `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
-         VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_board, notification_comment)
+         VALUES (?, ?, ?, ?, ?, ?);`,
           [
             userNotificationDto.id,
             userNotificationDto.recipient,
             userNotificationDto.trigger.id,
             userNotificationDto.type,
-            notificationDto.location?.id || null
+            notificationDto.location?.boardId || null,
+            notificationDto.location?.commentId || null
           ]
         );
 
@@ -193,14 +195,15 @@ export class saveNotificationService {
       };
 
       const { affectedRows: retrySavedCount } = await db.query(
-        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
-           VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_board, notification_comment) 
+           VALUES (?, ?, ?, ?, ?, ?);`,
         [
           retryNotificationDto.id,
           retryNotificationDto.recipient,
           retryNotificationDto.trigger.id,
           retryNotificationDto.type,
-          retryNotificationDto.location?.id || null
+          retryNotificationDto.location?.boardId || null,
+          retryNotificationDto.location?.commentId || null
         ]
       );
 
