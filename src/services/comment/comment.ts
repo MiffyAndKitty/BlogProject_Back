@@ -10,26 +10,27 @@ import {
 import { redis } from '../../loaders/redis';
 import { MultipleNotificationResponse } from '../../interfaces/response';
 import { NotificationDto } from '../../interfaces/notification';
-
 export class commentService {
   // 댓글 생성
   static create = async (
     commentDto: CommentDto
   ): Promise<MultipleNotificationResponse> => {
     try {
-      const boardCheckQuery = `SELECT user_id FROM Board WHERE board_id = ? AND deleted_at IS NULL`;
-      const [boardExists] = await db.query(boardCheckQuery, [
-        commentDto.boardId
+      const boardId = commentDto.boardId;
+      const boardWriterQuery = `SELECT user_id FROM Board WHERE board_id = ? AND deleted_at IS NULL LIMIT 1;`;
+
+      const [{ user_id: boardWriter }] = await db.query(boardWriterQuery, [
+        boardId
       ]);
 
-      if (!boardExists)
+      if (!boardWriter)
         return { result: false, message: '존재하지 않거나 삭제된 게시글' };
 
       const commentId = uuidv4().replace(/-/g, '');
       const query = `INSERT INTO Comment (comment_id, board_id, user_id, comment_content, parent_comment_id) VALUES (?,?,?,?,?);`;
       const params = [
         commentId,
-        commentDto.boardId,
+        boardId,
         commentDto.userId,
         commentDto.commentContent,
         commentDto.parentCommentId || null
@@ -43,76 +44,78 @@ export class commentService {
       let replyToComment: NotificationDto | undefined,
         commentOnBoard: NotificationDto | undefined;
 
-      // 1. 대댓글 알림
+      // 1. 대댓글 알림: 부모 댓글 작성자에게만 부모 댓글에 대댓글 생성 시 알림
       if (commentDto.parentCommentId) {
-        const [parentUser] = await db.query(
-          `SELECT user_id From Comment Where comment_id =?;`,
+        const [{ user_id: parentCommenter }] = await db.query(
+          `SELECT user_id FROM Comment WHERE comment_id = ?;`,
           [commentDto.parentCommentId]
         );
 
-        if (
-          parentUser &&
-          parentUser.user_id !== boardExists.user_id && // 부모 댓글 작성자가 게시글 작성자가 아닌 경우
-          parentUser.user_id !== commentDto.userId // // 부모 댓글 작성자가 대댓글 작성자가 아닌 경우
-        ) {
-          const [triggerUser] = await db.query(
+        if (parentCommenter && parentCommenter !== commentDto.userId) {
+          const [replier] = await db.query(
             `SELECT user_nickname, user_email, user_image FROM User WHERE user_id = ?`,
             [commentDto.userId]
           );
 
-          const [comment] = await db.query(
+          const [{ comment_content: commentContent }] = await db.query(
             `SELECT comment_content FROM Comment WHERE comment_id = ?`,
             [commentId]
           );
 
           replyToComment = {
-            recipient: parentUser.user_id,
+            recipient: parentCommenter,
             type: 'reply-to-comment',
             trigger: {
               id: commentDto.userId,
-              nickname: triggerUser.user_nickname,
-              email: triggerUser.user_email,
-              image: triggerUser.user_image
+              nickname: replier.user_nickname,
+              email: replier.user_email,
+              image: replier.user_image
             },
             location: {
-              id: commentId,
+              boardId: boardId,
+              commentId: commentId,
               boardTitle: undefined,
-              commentContent: comment.comment_content
+              commentContent: commentContent
             }
           };
         }
       }
-
-      // 2. 게시글 댓글 알림
-      if (boardExists.user_id !== commentDto.userId) {
-        const [triggerUser] = await db.query(
+      // 2. 게시글 작성자에게 부모 댓글 알림
+      else if (
+        !commentDto.parentCommentId &&
+        boardWriter !== commentDto.userId
+      ) {
+        const [commenter] = await db.query(
           `SELECT user_nickname, user_email, user_image FROM User WHERE user_id = ?`,
           [commentDto.userId]
         );
 
-        const [comment] = await db.query(
-          `SELECT comment_content FROM Comment WHERE comment_id = ?`,
+        const [
+          { comment_content: commentContent, board_title: commentedBoardTitle }
+        ] = await db.query(
+          `SELECT 
+            C.comment_content, 
+            B.board_title 
+          FROM Comment C
+          JOIN Board B ON C.board_id = B.board_id
+          WHERE C.comment_id = ?`,
           [commentId]
         );
 
-        const [board] = await db.query(
-          `SELECT board_title FROM Board WHERE board_id = ?`,
-          [commentDto.boardId]
-        );
-
         commentOnBoard = {
-          recipient: boardExists.user_id,
+          recipient: boardWriter,
           type: 'comment-on-board',
           trigger: {
             id: commentDto.userId,
-            nickname: triggerUser.user_nickname,
-            email: triggerUser.user_email,
-            image: triggerUser.user_image
+            nickname: commenter.user_nickname,
+            email: commenter.user_email,
+            image: commenter.user_image
           },
           location: {
-            id: commentId,
-            boardTitle: board.board_title,
-            commentContent: comment.comment_content
+            boardId: boardId,
+            commentId: commentId,
+            boardTitle: commentedBoardTitle,
+            commentContent: commentContent
           }
         };
       }
