@@ -2,7 +2,6 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { BoardCommentListDto } from '../../interfaces/board/listDto';
 import { redis } from '../../loaders/redis';
-
 export class BoardCommentListService {
   // 특정 게시판의 최상위 댓글을 조회하고 사용자 정보와 함께 반환
   static getTopLevelCommentsByPostId = async (
@@ -20,7 +19,8 @@ export class BoardCommentListService {
           c.created_at,
           u.user_email,
           u.user_nickname,
-          u.user_image
+          u.user_image,
+          CAST((SELECT COUNT(*) FROM Comment WHERE parent_comment_id = c.comment_id AND deleted_at IS NULL) AS CHAR) AS reply_count -- 하위 댓글의 개수 계산
         FROM Comment c
         JOIN User u ON c.user_id = u.user_id
         WHERE c.board_id = ?
@@ -100,7 +100,8 @@ export class BoardCommentListService {
             comment_order: row.comment_order, // comment_order 필드를 변환된 객체에 추가
             isWriter: row.user_id === commentDto.userId, // 사용자가 작성한 댓글인지 여부 추가
             isLike, // 사용자가 좋아요를 했는지 여부
-            isDislike // 사용자가 싫어요를 했는지 여부
+            isDislike, // 사용자가 싫어요를 했는지 여부
+            reply_count: parseInt(row.reply_count) // 하위 댓글 개수 추가
           };
         })
       );
@@ -109,7 +110,7 @@ export class BoardCommentListService {
       if (commentDto.sort === 'like') {
         parsedComments.sort((a, b) => {
           const likeDiff = b.likes - a.likes;
-          return likeDiff !== 0 ? likeDiff : b.comment_order - a.comment_order; // 좋아요수가 같으면 최신순으로 정렬
+          return likeDiff !== 0 ? likeDiff : a.comment_order - b.comment_order; // 좋아요 수가 같으면 comment_order가 작은 순(댓글 작성 순)으로 정렬
         });
       }
 
