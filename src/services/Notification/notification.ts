@@ -45,24 +45,29 @@ export class NotificationService {
 
       const params: (string | number)[] = [listDto.userId];
 
+      let order = 'DESC';
       // 커서가 있을 경우 커서 이후의 데이터를 가져오기 위해 조건 추가
       if (listDto.cursor) {
-        const [notificationByCursor] = await db.query(
+        const [{ notification_order: cursorOrder }] = await db.query(
           `SELECT notification_order 
          FROM Notifications 
          WHERE notification_id = ? ${sortQuery};`,
           [listDto.cursor]
         );
 
-        if (!notificationByCursor) throw new Error('유효하지 않은 커서입니다.');
+        if (!cursorOrder) throw new Error('유효하지 않은 커서입니다.');
 
-        query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ? `;
-        params.push(notificationByCursor.notification_order);
+        query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ?`;
+        params.push(cursorOrder);
+
+        if (listDto.isBefore) order = 'ASC';
       }
 
-      query += ` ORDER BY Notifications.notification_order DESC LIMIT ?`;
+      query += ` ORDER BY notification_order ${order} LIMIT ?`;
       params.push(pageSize);
-      const result = await db.query(query, params);
+
+      let result = await db.query(query, params);
+      if (listDto.cursor && listDto.isBefore) result.reverse();
 
       return {
         result: true,
