@@ -2,7 +2,7 @@ import { db } from '../../loaders/mariadb';
 import { DbColumnDto } from '../../interfaces/dbColumn';
 import { ensureError } from '../../errors/ensureError';
 import {
-  UserInfoDto,
+  UserEmailDto,
   UserProfileDto,
   UserPwDto
 } from '../../interfaces/user/userInfo';
@@ -47,21 +47,21 @@ export class UsersService {
     }
   };
 
-  static getUserInfo = async (userInfoDto: UserInfoDto) => {
+  static getUserInfoByEmail = async (userEmailDto: UserEmailDto) => {
     try {
       const query = `SELECT * FROM User WHERE user_email = ? AND  deleted_at IS NULL LIMIT 1;`;
-      const values = [userInfoDto.email];
+      const values = [userEmailDto.email];
       const [userInfo] = await db.query(query, values);
 
       if (!userInfo)
         return { result: false, data: [], message: '존재하지 않는 사용자' };
 
       userInfo.isSelf = false;
-      if (userInfo.user_id === userInfoDto.userId) {
+      if (userInfo.user_id === userEmailDto.userId) {
         userInfo.isSelf = true;
       }
 
-      const currentUser = userInfoDto.userId;
+      const currentUser = userEmailDto.userId;
       const thisUser = userInfo.user_id;
 
       const followQuery = `
@@ -89,7 +89,7 @@ export class UsersService {
       return {
         result: true,
         data: userInfo,
-        message: '사용자 데이터 반환 성공'
+        message: '이메일을 이용하여 사용자의 상세 데이터 반환 성공'
       };
     } catch (err) {
       const error = ensureError(err);

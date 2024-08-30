@@ -13,6 +13,7 @@ import {
   CommentListDto,
   FollowListDto,
   UserInfoDto,
+  UserEmailDto,
   UserProfileDto,
   UserPwDto
 } from '../interfaces/user/userInfo';
@@ -284,7 +285,7 @@ usersRouter.delete(
   }
 );
 
-// 사용자 정보 조회 (GET : /users/:nickname)
+// 사용자 상세 정보 조회 (GET : /users/:email)
 usersRouter.get(
   '/:email',
   validate([
@@ -299,12 +300,13 @@ usersRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      const userInfoDto: UserInfoDto = {
+      const userEmailDto: UserEmailDto = {
         userId: req.id,
         email: req.params.email.split(':')[1]
       };
 
-      const result: BasicResponse = await UsersService.getUserInfo(userInfoDto);
+      const result: BasicResponse =
+        await UsersService.getUserInfoByEmail(userEmailDto);
 
       if (result.result === true) {
         return res.status(200).send(result);
