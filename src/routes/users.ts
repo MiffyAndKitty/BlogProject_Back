@@ -14,6 +14,7 @@ import {
   FollowListDto,
   UserInfoDto,
   UserEmailDto,
+  UserNicknameDto,
   UserProfileDto,
   UserPwDto
 } from '../interfaces/user/userInfo';
@@ -307,6 +308,42 @@ usersRouter.get(
 
       const result: BasicResponse =
         await UsersService.getUserInfoByEmail(userEmailDto);
+
+      if (result.result === true) {
+        return res.status(200).send(result);
+      } else {
+        return res.status(500).send(result);
+      }
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return res
+        .status(500)
+        .send({ result: false, data: [], message: error.message });
+    }
+  }
+);
+
+// 닉네임으로 사용자 기본 정보 조회 (GET : /users/nickname/:nickname)
+usersRouter.get(
+  '/nickname/:nickname',
+  validate([
+    header('Authorization')
+      .optional({ checkFalsy: true })
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    param('nickname').notEmpty().withMessage('닉네임은 비어 있을 수 없습니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const userNicknameDto: UserNicknameDto = {
+        userId: req.id,
+        nickname: req.params.nickname.split(':')[1]
+      };
+
+      const result: BasicResponse =
+        await UsersService.getUserInfoByNickname(userNicknameDto);
 
       if (result.result === true) {
         return res.status(200).send(result);

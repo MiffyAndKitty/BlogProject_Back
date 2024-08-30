@@ -3,6 +3,7 @@ import { DbColumnDto } from '../../interfaces/dbColumn';
 import { ensureError } from '../../errors/ensureError';
 import {
   UserEmailDto,
+  UserNicknameDto,
   UserProfileDto,
   UserPwDto
 } from '../../interfaces/user/userInfo';
@@ -97,6 +98,29 @@ export class UsersService {
       return { result: false, data: [], message: error.message };
     }
   };
+
+  static getUserInfoByNickname = async (userNicknameDto: UserNicknameDto) => {
+    try {
+      let query = `SELECT user_email, user_image, user_message FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`;
+      const params = [decodeURIComponent(userNicknameDto.nickname)];
+
+      const [userInfo] = await db.query(query, params);
+
+      if (!userInfo)
+        return { result: false, data: [], message: '존재하지 않는 사용자' };
+
+      return {
+        result: true,
+        data: userInfo,
+        message: '닉네임을 이용하여 사용자의 기본 데이터 반환 성공'
+      };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return { result: false, data: [], message: error.message };
+    }
+  };
+
   static modifyUserProfile = async (userProfileDto: UserProfileDto) => {
     try {
       let query = `UPDATE User SET `;
