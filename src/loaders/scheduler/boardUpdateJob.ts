@@ -8,42 +8,25 @@ const scheduleConfig = {
   tz: 'Asia/Seoul'
 };
 
-const updateToDB = async (keyname: string) => {
+const updateToDB = async (keyname: 'board_view' | 'board_like') => {
   try {
-    const keys = await redis.keys(`${keyname}:*`); // 'board_view:*' 또는 'board_like:*'
+    const keys = await redis.keys(`${keyname}:*`);
     for (const key of keys) {
       const boardId = key.split(':')[1];
       const count = await redis.scard(key);
 
       if (count <= 0) {
-        console.log('업데이트 할 캐시된 조회수가 없음');
-        return false;
+        continue;
       }
 
       const updated = await db.query(
-        `UPDATE Board SET ${keyname} = ${keyname} + ? WHERE board_id = ? AND deleted_at IS NULL`,
+        `UPDATE Board SET ${keyname} = ${keyname} + ? WHERE board_id = ?`,
         [count, boardId]
       );
 
-      console.log(`[ db ] Board ID ${boardId} 업데이트 완료 결과 : `, updated);
-
       if (updated.affectedRows > 0) {
         const deletedCashed = await redis.del(key);
-        console.log(
-          '[ redis ] Board ID ${boardId} 캐시된 key 삭제 : ',
-          deletedCashed
-        );
       }
-
-      /*
-      // 업데이트된 결과를 확인하기 위한 SELECT 쿼리 
-      const [updatedResult] = await db.query(
-        `SELECT ${keyname} FROM Board WHERE board_id = ? AND deleted_at IS NULL;`,
-        [boardId]
-      );
-
-      console.log(`[ db ] Board ID ${boardId} 조회 결과 : `, updatedResult);
-      */
     }
     return true;
   } catch (err) {
