@@ -3,9 +3,12 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
 import { v4 as uuidv4 } from 'uuid';
+import { SingleNotificationResponse } from '../../interfaces/response';
 
 export class saveBoardService {
-  static modifyBoard = async (boardDto: modifiedBoardDto) => {
+  static modifyBoard = async (
+    boardDto: modifiedBoardDto
+  ): Promise<SingleNotificationResponse> => {
     try {
       // content의 사진 url를 s3에 저장된 url로 변경
       const [original] = await db.query(
@@ -81,7 +84,9 @@ export class saveBoardService {
     }
   };
 
-  static createBoard = async (boardDto: boardDto) => {
+  static createBoard = async (
+    boardDto: boardDto
+  ): Promise<SingleNotificationResponse> => {
     try {
       const boardId = uuidv4().replace(/-/g, '');
       // content의 사진 url를 s3에 저장된 url로 변경
@@ -120,7 +125,29 @@ export class saveBoardService {
           ? { result: true, message: '태그와 게시글 저장 성공' }
           : { result: false, message: '태그와 게시글 저장 실패' };
       }
-      return { result: true, message: '게시글 저장 성공' };
+
+      const [writer] = await db.query(
+        'SELECT user_id, user_nickname, user_email, user_image From User WHERE user_id =?;',
+        [boardDto.userId]
+      );
+
+      return {
+        result: true,
+        notifications: {
+          type: 'following-new-board',
+          trigger: {
+            id: writer.user_id,
+            nickname: writer.user_nickname,
+            email: writer.user_email,
+            image: writer.user_image
+          },
+          location: {
+            boardId: boardId,
+            boardTitle: boardDto.title
+          }
+        },
+        message: '게시글 저장 성공'
+      };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);

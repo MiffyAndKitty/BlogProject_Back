@@ -2,7 +2,7 @@ import '../config/env';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
-import { isGoogleProfile } from '../utils/typegard/isGoogleProfile';
+import { isGoogleProfile } from '../utils/typegaurd/isGoogleProfile';
 import { ensureError } from '../errors/ensureError';
 import { LoginUserDto } from '../interfaces/user/loginUser';
 export const google = (passport: PassportStatic) => {

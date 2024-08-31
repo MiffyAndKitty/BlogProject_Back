@@ -1,17 +1,12 @@
 export interface CategoryDto {
   userId: string;
   categoryId?: string;
-  topcategoryId?: string;
-  categoryName?: string;
 }
 
-export interface CategoryOwnerDto {
-  nickname: string;
-}
-
-export interface CategoryListDto extends CategoryOwnerDto {
+export interface CategoryListDto {
   userId?: string;
   topcategoryId?: string;
+  nickname: string;
 }
 
 export interface HierarchicalCategoryDto {
@@ -21,4 +16,18 @@ export interface HierarchicalCategoryDto {
   topcategory_id?: string;
   subcategories?: HierarchicalCategoryDto[];
   board_count: number;
+}
+
+export interface UpdateCategoryNameDto extends CategoryDto {
+  categoryName: string;
+}
+
+export interface UpdateCategoryLevelDto extends CategoryDto {
+  topcategoryId: string;
+}
+
+export interface NewCategoryDto {
+  userId: string;
+  categoryName: string;
+  topcategoryId?: string;
 }

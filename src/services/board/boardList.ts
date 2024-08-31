@@ -8,9 +8,10 @@ import {
   ViewOrLikeSortOptions
 } from '../../interfaces/board/listDto';
 import { BoardInDBDto } from '../../interfaces/board/boardInDB';
+import { ListResponse, UserListResponse } from '../../interfaces/response';
 
 export class BoardListService {
-  static getList = async (listDto: ListDto) => {
+  static getList = async (listDto: ListDto): Promise<ListResponse> => {
     try {
       const { query, params } = this._buildQueryConditions(
         listDto.query,
@@ -71,7 +72,9 @@ export class BoardListService {
     }
   };
 
-  static getUserList = async (listDto: UserListDto) => {
+  static getUserList = async (
+    listDto: UserListDto
+  ): Promise<UserListResponse> => {
     try {
       const [writer] = await db.query(
         // 검색 대상인 유저를 찾음

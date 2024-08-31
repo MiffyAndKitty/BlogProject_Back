@@ -12,9 +12,11 @@ import { usersRouter } from './routes/users';
 import { boardRouter } from './routes/board';
 import { categoryRouter } from './routes/category';
 import { tagRouter } from './routes/tag';
+import { commentRouter } from './routes/comment';
 import { tagCacheJob } from './loaders/scheduler/tagCacheJob';
 import { boardUpdateJob } from './loaders/scheduler/boardUpdateJob';
 import { userIdentifier } from './middleware/userIdentifier';
+import { notificationsRouter } from './routes/notifications';
 
 const app = express();
 
@@ -45,6 +47,8 @@ app.use('/api/users', usersRouter);
 app.use('/api/board', boardRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/tag', tagRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/comment', commentRouter);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.log('[ 에러 핸들러 입니다! ]', err);

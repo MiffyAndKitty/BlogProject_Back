@@ -1,16 +1,22 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
+import { FollowListDto } from '../../interfaces/user/userInfo';
+import { SingleNotificationResponse } from '../../interfaces/response';
+
 export class FollowService {
-  static getfollowList = async (userInfoDto: UserInfoDto) => {
+  static getFollowList = async (followListDto: FollowListDto) => {
     try {
+      // userId는 현재 이 리스트를 조회하는 사용자의 id
+      // email을 가진 사용자는 follow 리스트 조회 대상
       const [user] = await db.query(
+        // email을 가진 사용자를 팔로우하는 유저들
         `
-        SELECT *
-        FROM User
-        WHERE user_email = ? AND deleted_at IS NULL LIMIT 1;
-        `,
-        [userInfoDto.email]
+      SELECT *
+      FROM User
+      WHERE user_email = ? AND deleted_at IS NULL LIMIT 1;
+      `,
+        [followListDto.email]
       );
 
       if (!user) {
@@ -22,77 +28,78 @@ export class FollowService {
       }
 
       const thisUser = user.user_id;
-      const currentUser = userInfoDto.userId;
+      const currentUser = followListDto.userId;
+      const pageSize = followListDto.pageSize || 10;
+      const offset = (followListDto.page - 1) * pageSize;
 
-      const followingList: FollowingListUser[] = await db.query(
-        // 유저가 팔로우하는(following) 유저, followed_id를 속성으로 가짐
-        // following : 팔로우 되는 사람
-        // followed : 팔로우 하는 사람
+      const followingsList: FollowingListUser[] = await db.query(
         `
-        SELECT DISTINCT f.followed_id, u.user_nickname, u.user_email, u.user_image, 
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.followed_id AND deleted_at IS NULL
-            ) THEN true
-            ELSE false
-          END AS areYouFollowing,
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.followed_id AND deleted_at IS NULL
-            ) THEN true 
-            ELSE false
-          END AS areYouFollowed
-        FROM Follow f
-        JOIN User u ON f.followed_id = u.user_id
-        WHERE f.following_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
-        `,
-        [currentUser, currentUser, thisUser]
+      SELECT DISTINCT f.followed_id, u.user_nickname, u.user_email, u.user_image, 
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.followed_id AND deleted_at IS NULL
+          ) THEN true
+          ELSE false
+        END AS areYouFollowing,
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.followed_id AND deleted_at IS NULL
+          ) THEN true 
+          ELSE false
+        END AS areYouFollowed
+      FROM Follow f
+      JOIN User u ON f.followed_id = u.user_id
+      WHERE f.following_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL
+      LIMIT ? OFFSET ?;
+      `,
+        [currentUser, currentUser, thisUser, pageSize, offset]
       );
 
-      const followedList: FollowedListUser[] = await db.query(
-        // 유저가 팔로우되는(followed) 유저, following_id를 속성으로 가짐
+      const followersList: FollowedListUser[] = await db.query(
         `
-        SELECT DISTINCT f.following_id, u.user_nickname, u.user_email, u.user_image, 
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
-            ) THEN true
-            ELSE false
-          END AS areYouFollowing, 
-          CASE 
-            WHEN EXISTS (
-              SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.following_id AND deleted_at IS NULL
-            ) THEN true 
-            ELSE false
-          END AS areYouFollowed
-        FROM Follow f
-        JOIN User u ON f.following_id = u.user_id
-        WHERE f.followed_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL;
-        `,
-        [currentUser, currentUser, thisUser]
+      SELECT DISTINCT f.following_id, u.user_nickname, u.user_email, u.user_image, 
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE following_id = ? AND followed_id = f.following_id AND deleted_at IS NULL
+          ) THEN true
+          ELSE false
+        END AS areYouFollowing, 
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = f.following_id AND deleted_at IS NULL
+          ) THEN true 
+          ELSE false
+        END AS areYouFollowed
+      FROM Follow f
+      JOIN User u ON f.following_id = u.user_id
+      WHERE f.followed_id = ? AND f.deleted_at IS NULL AND u.deleted_at IS NULL
+      LIMIT ? OFFSET ?;
+      `,
+        [currentUser, currentUser, thisUser, pageSize, offset]
       );
 
-      const mutualFollowList = followingList
+      // 상호 팔로우 목록 생성
+      const mutualFollowList = followingsList
         .filter((followingUser: FollowingListUser) =>
-          followedList.some(
+          followersList.some(
             (followedUser: FollowedListUser) =>
               followingUser.followed_id === followedUser.following_id
           )
         )
         .map((user: FollowingListUser) => {
-          const { followed_id, ...rest } = user; // followed_id를 rest에서 제거
+          const { followed_id, ...rest } = user;
           return {
-            mutual_id: followed_id, // mutual_id로 설정
-            ...rest // 나머지 속성 복사
+            mutual_id: followed_id,
+            ...rest
           };
         });
 
       return {
         result: true,
         data: {
-          followingsList: followingList, // 유저가 팔로우하는(following) 유저, followed_id를 속성으로 가짐
-          followersList: followedList, // 유저가 팔로우되는(followed) 유저, following_id를 속성으로 가짐
-          mutualFollowList: mutualFollowList
+          followingsList: followingsList, // 유저가 팔로우하는 유저 목록
+          followersList: followersList, // 유저를 팔로우하는 팔로워 유저 목록
+          mutualFollowList: mutualFollowList // 상호 팔로우 목록
         },
         message: '유저의 팔로우/팔로워 목록 조회 성공'
       };
@@ -103,81 +110,88 @@ export class FollowService {
     }
   };
 
-  static addfollow = async (userInfoDto: UserInfoDto) => {
-    let followed: string = '';
-    const currentUser = userInfoDto.userId!;
+  static addfollow = async (
+    userInfoDto: UserInfoDto
+  ): Promise<SingleNotificationResponse> => {
     try {
       // 먼저 팔로우하려는 사용자가 존재하는지 확인
-      const followedQuery = `SELECT user_id FROM User WHERE user_email = ? AND deleted_at IS NULL;`;
-
-      const [followedUser] = await db.query(followedQuery, [userInfoDto.email]);
+      const [followedUser] = await db.query(
+        `SELECT user_id, user_email, user_nickname, user_image FROM User WHERE user_email = ? AND deleted_at IS NULL;`,
+        [userInfoDto.email]
+      );
 
       if (!followedUser) {
-        return { result: false, message: '팔로우할 유저를 찾을 수 없습니다.' };
+        return {
+          result: false,
+          message: '팔로우할 유저를 찾을 수 없습니다.'
+        };
       }
 
-      followed = followedUser.user_id!;
+      const [currentUser] = await db.query(
+        `SELECT user_id, user_email, user_nickname, user_image FROM User WHERE user_id = ? AND deleted_at IS NULL;`,
+        [userInfoDto.userId]
+      );
 
-      if (followed === currentUser) {
+      if (followedUser.user_id === currentUser.user_id) {
         return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
       }
-      const query = `INSERT INTO Follow (followed_id, following_id) VALUES (?, ?)`;
 
       const values = [
-        followed, // 팔로우하려는 사용자의 ID
-        currentUser // 팔로우하는 사용자의 ID
+        followedUser.user_id, // 팔로우하려는 사용자의 ID
+        currentUser.user_id // 팔로우하는 사용자의 ID
       ];
+
+      // 기존 팔로우 관계 확인
+      const [existingFollow] = await db.query(
+        `SELECT deleted_at FROM Follow WHERE followed_id = ? AND following_id = ?`,
+        values
+      );
+
+      if (existingFollow && !existingFollow.deleted_at) {
+        // 이미 팔로우된 경우
+        return {
+          result: false,
+          message: '이미 팔로우된 유저입니다.'
+        };
+      }
+
+      let query: string;
+
+      if (existingFollow) {
+        // 기존 팔로우가 존재하고 soft delete 상태인 경우, deleted_at을 NULL로 업데이트
+        query = `UPDATE Follow SET deleted_at = NULL WHERE followed_id = ? AND following_id = ?`;
+      } else {
+        // 새로운 팔로우 관계 추가
+        query = `INSERT INTO Follow (followed_id, following_id) VALUES (?, ?)`;
+      }
 
       const { affectedRows: addedCount } = await db.query(query, values);
 
-      if (addedCount === 1) {
-        return { result: true, message: '팔로우 추가 성공' };
-      } else {
-        return { result: false, message: '팔로우 추가 실패' };
-      }
+      return addedCount > 0
+        ? {
+            result: true,
+            message: existingFollow
+              ? 'soft delete한 팔로우 복구 성공'
+              : '팔로우 추가 성공',
+            notifications: {
+              recipient: followedUser.user_id,
+              type: 'new-follower',
+              trigger: {
+                id: currentUser.user_id,
+                nickname: currentUser.user_nickname,
+                email: currentUser.user_email,
+                image: currentUser.user_image
+              }
+            }
+          }
+        : {
+            result: false,
+            message: '팔로우 추가 실패'
+          };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
-      if ('errno' in error && error.errno === 1062) {
-        return await FollowService._restoreFollow(followed, currentUser);
-      }
       return { result: false, message: error.message };
-    }
-  };
-
-  private static _restoreFollow = async (
-    followedId: string,
-    followingId: string
-  ) => {
-    try {
-      const query = `UPDATE Follow 
-               SET deleted_at = NULL 
-               WHERE followed_id = ? AND following_id = ? AND deleted_at IS NOT NULL;`;
-
-      const values = [
-        followedId, // 팔로우하려는 사용자의 ID
-        followingId // 팔로우하는 사용자의 ID
-      ];
-
-      const { affectedRows: restoredCount } = await db.query(query, values);
-
-      if (restoredCount === 1) {
-        return { result: true, message: '삭제했던 팔로우 복구 성공' };
-      } else {
-        const [alreadyFollow] = await db.query(
-          `SELECT 1 FROM Follow WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL;`,
-          values
-        );
-        console.log('alreadyFollow : ', alreadyFollow);
-        return alreadyFollow
-          ? { result: false, message: '이미 팔로우된 유저' }
-          : { result: false, message: '팔로우 실패' };
-      }
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error);
-
-      return { result: false, message: error };
     }
   };
 
