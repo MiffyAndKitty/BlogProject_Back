@@ -55,18 +55,34 @@ export class saveNotificationService {
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
     try {
+      let location;
+
+      switch (notificationDto.type) {
+        case 'reply-to-comment':
+        case 'comment-on-board':
+          location = notificationDto.location?.commentId;
+          break;
+        case 'following-new-board':
+        case 'board-new-like':
+          location = notificationDto.location?.boardId;
+          break;
+        case 'new-follower':
+        default:
+          location = undefined;
+          break;
+      }
+
       notificationDto.id = uuidv4().replace(/-/g, '');
       // 단일 사용자에게 알림 저장
       const { affectedRows: savedCount } = await db.query(
-        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_board, notification_comment)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
+         VALUES (?, ?, ?, ?, ?)`,
         [
           notificationDto.id,
           notificationDto.recipient,
           notificationDto.trigger.id,
           notificationDto.type,
-          notificationDto.location?.boardId || null,
-          notificationDto.location?.commentId || null
+          location
         ]
       );
 
@@ -111,6 +127,23 @@ export class saveNotificationService {
         );
       }
 
+      let location;
+
+      switch (notificationDto.type) {
+        case 'reply-to-comment':
+        case 'comment-on-board':
+          location = notificationDto.location?.commentId;
+          break;
+        case 'following-new-board':
+        case 'board-new-like':
+          location = notificationDto.location?.boardId;
+          break;
+        case 'new-follower':
+        default:
+          location = undefined;
+          break;
+      }
+
       // 각 팔로워에게 알림 저장 및 전송
       for (const user of userList) {
         if (!user) continue;
@@ -124,15 +157,14 @@ export class saveNotificationService {
 
         // DB에 알림 저장
         const { affectedRows: savedCount } = await db.query(
-          `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_board, notification_comment)
+          `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
          VALUES (?, ?, ?, ?, ?, ?);`,
           [
             userNotificationDto.id,
             userNotificationDto.recipient,
             userNotificationDto.trigger.id,
             userNotificationDto.type,
-            notificationDto.location?.boardId || null,
-            notificationDto.location?.commentId || null
+            location
           ]
         );
 
@@ -195,15 +227,14 @@ export class saveNotificationService {
       };
 
       const { affectedRows: retrySavedCount } = await db.query(
-        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_board, notification_comment) 
+        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location) 
            VALUES (?, ?, ?, ?, ?, ?);`,
         [
           retryNotificationDto.id,
           retryNotificationDto.recipient,
           retryNotificationDto.trigger.id,
           retryNotificationDto.type,
-          retryNotificationDto.location?.boardId || null,
-          retryNotificationDto.location?.commentId || null
+          location
         ]
       );
 

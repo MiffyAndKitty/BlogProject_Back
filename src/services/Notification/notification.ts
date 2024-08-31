@@ -28,16 +28,32 @@ export class NotificationService {
 
       let query = `
       SELECT 
-        Notifications.*, 
+        Notifications.notification_id, 
+        Notifications.notification_recipient, 
+        Notifications.notification_type, 
+        Notifications.notification_read, 
+        Notifications.notification_trigger, 
+        Notifications.created_at, 
+        Notifications.updated_at, 
+        Notifications.notification_order,     
         User.user_nickname AS trigger_nickname, 
         User.user_email AS trigger_email, 
         User.user_image AS trigger_image,
+        CASE
+          WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Notifications.notification_location
+          ELSE NULL
+        END AS notification_comment,
+        CASE
+          WHEN Notifications.notification_type IN ('following-new-board', 'board-new-like') THEN Notifications.notification_location
+          WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Comment.board_id
+          ELSE NULL
+        END AS notification_board,
         Board.board_title AS board_title,
         Comment.comment_content AS comment_content 
       FROM Notifications
       JOIN User ON Notifications.notification_trigger = User.user_id
-      LEFT JOIN Board ON Notifications.notification_board = Board.board_id 
-      LEFT JOIN Comment ON Notifications.notification_comment = Comment.comment_id 
+      LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id
+      LEFT JOIN Board ON Comment.board_id = Board.board_id
       WHERE Notifications.notification_recipient = ? 
         ${sortQuery}
         AND Notifications.deleted_at IS NULL
