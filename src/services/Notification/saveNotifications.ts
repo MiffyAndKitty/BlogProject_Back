@@ -7,7 +7,7 @@ import { NotificationDto } from '../../interfaces/notification';
 import { ensureError } from '../../errors/ensureError';
 import { BasicResponse } from '../../interfaces/response';
 export class saveNotificationService {
-  static async sendNotification(
+  private static async _sendNotification(
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
     try {
@@ -55,22 +55,10 @@ export class saveNotificationService {
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
     try {
-      let location;
-
-      switch (notificationDto.type) {
-        case 'reply-to-comment':
-        case 'comment-on-board':
-          location = notificationDto.location?.commentId;
-          break;
-        case 'following-new-board':
-        case 'board-new-like':
-          location = notificationDto.location?.boardId;
-          break;
-        case 'new-follower':
-        default:
-          location = undefined;
-          break;
-      }
+      const location = this._selectLocation(
+        notificationDto.type,
+        notificationDto.location
+      );
 
       notificationDto.id = uuidv4().replace(/-/g, '');
       // 단일 사용자에게 알림 저장
@@ -86,7 +74,7 @@ export class saveNotificationService {
         ]
       );
 
-      const sent = await this.sendNotification(notificationDto);
+      const sent = await this._sendNotification(notificationDto);
 
       return savedCount > 0 && sent.result
         ? { result: true, message: '단일 사용자에게 알림 전송 성공' }
@@ -127,22 +115,10 @@ export class saveNotificationService {
         );
       }
 
-      let location;
-
-      switch (notificationDto.type) {
-        case 'reply-to-comment':
-        case 'comment-on-board':
-          location = notificationDto.location?.commentId;
-          break;
-        case 'following-new-board':
-        case 'board-new-like':
-          location = notificationDto.location?.boardId;
-          break;
-        case 'new-follower':
-        default:
-          location = undefined;
-          break;
-      }
+      const location = this._selectLocation(
+        notificationDto.type,
+        notificationDto.location
+      );
 
       // 각 팔로워에게 알림 저장 및 전송
       for (const user of userList) {
@@ -174,7 +150,7 @@ export class saveNotificationService {
         }
 
         // SSE 또는 Redis로 알림 전송
-        const sent = await this.sendNotification(userNotificationDto);
+        const sent = await this._sendNotification(userNotificationDto);
 
         if (!sent.result) {
           notificationFailedUserIds.push(user); // 실패한 유저 ID 저장
@@ -250,7 +226,7 @@ export class saveNotificationService {
         recipient: failedUser
       };
 
-      const retrySended = await this.sendNotification(retryNotificationDto);
+      const retrySended = await this._sendNotification(retryNotificationDto);
 
       if (!retrySended.result) {
         finalFailedUserIds.push(failedUser);
@@ -258,5 +234,28 @@ export class saveNotificationService {
     }
 
     return finalFailedUserIds;
+  }
+
+  private static _selectLocation(
+    type: NotificationDto['type'],
+    location: NotificationDto['location']
+  ): string | undefined {
+    let seletedLocation;
+
+    switch (type) {
+      case 'reply-to-comment':
+      case 'comment-on-board':
+        seletedLocation = location?.commentId;
+        break;
+      case 'following-new-board':
+      case 'board-new-like':
+        seletedLocation = location?.boardId;
+        break;
+      case 'new-follower':
+      default:
+        location = undefined;
+        break;
+    }
+    return seletedLocation;
   }
 }
