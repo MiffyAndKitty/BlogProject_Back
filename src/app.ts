@@ -13,10 +13,9 @@ import { boardRouter } from './routes/board';
 import { categoryRouter } from './routes/category';
 import { tagRouter } from './routes/tag';
 import { commentRouter } from './routes/comment';
-import { tagCacheJob } from './loaders/scheduler/tagCacheJob';
-import { boardUpdateJob } from './loaders/scheduler/boardUpdateJob';
 import { userIdentifier } from './middleware/userIdentifier';
 import { notificationsRouter } from './routes/notifications';
+import { dailyUpdateJob, tagCacheJob } from './loaders/scheduler';
 
 const app = express();
 
@@ -35,8 +34,7 @@ redisConnector;
 await dbConnector();
 
 tagCacheJob(10);
-boardUpdateJob;
-
+dailyUpdateJob;
 app.use(passport.initialize());
 await passportLoader();
 
