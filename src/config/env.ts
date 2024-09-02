@@ -9,6 +9,9 @@ switch (process.env.NODE_ENV) {
   case 'production':
     path = '.env.prod';
     break;
+  case 'test':
+    path = '.env.test';
+    break;
   default:
     throw new Error('환경 변수 설정이 되지 않았습니다.');
 }

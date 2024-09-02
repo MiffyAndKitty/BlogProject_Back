@@ -18,7 +18,7 @@ import { boardUpdateJob } from './loaders/scheduler/boardUpdateJob';
 import { userIdentifier } from './middleware/userIdentifier';
 import { notificationsRouter } from './routes/notifications';
 
-const app = express();
+export const app = express();
 
 app.use(
   cors({
