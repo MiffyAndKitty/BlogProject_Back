@@ -15,6 +15,8 @@ export class BoardCommentListService {
           c.comment_content,
           c.user_id,
           c.parent_comment_id,
+          c.comment_like,
+          c.comment_dislike,
           c.comment_order,
           c.created_at,
           u.user_email,
@@ -86,8 +88,8 @@ export class BoardCommentListService {
             }
           }
 
-          const dbLikes = Number(row.likes ?? 0);
-          const dbDislikes = Number(row.dislikes ?? 0);
+          const dbLikes = Number(row.comment_like ?? 0);
+          const dbDislikes = Number(row.comment_dislike ?? 0);
 
           // DB에서 가져온 값과 캐시에서 계산한 값을 합산
           const totalLikes = dbLikes + cachedLikes;
