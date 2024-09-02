@@ -42,24 +42,26 @@ export class TagCacheJobService {
       const numberOfAdditionalTags = limit - flatTags.length / 2;
       if (numberOfAdditionalTags > 0) {
         console.log(`${numberOfAdditionalTags}개의 추가 태그를 선택합니다.`);
-        // flatTags에서 태그 이름만 추출
         const existingTagNames = flatTags.filter((_, index) => index % 2 !== 0);
-        const placeholders = existingTagNames.map(() => '?').join(',');
 
+        const params =
+          existingTagNames.length > 0
+            ? [...existingTagNames, numberOfAdditionalTags]
+            : [numberOfAdditionalTags];
         const additionalTags = await db.query(
           `SELECT tag_name FROM Board_Tag
-            WHERE tag_name NOT IN (${placeholders})
+            ${existingTagNames.length > 0 ? `WHERE tag_name NOT IN (${existingTagNames.map(() => '?').join(',')})` : ''}
            GROUP BY tag_name
            ORDER BY RAND()
            LIMIT ?`,
-          [...existingTagNames, numberOfAdditionalTags]
+          params
         );
 
         for (const tag of additionalTags) {
           flatTags.push(0, tag.tag_name); // 추가된 태그는 score를 0으로 설정하여 식별
         }
       }
-
+      console.log(flatTags);
       if (flatTags.length === 0) {
         console.log('게시글에 사용된 태그가 존재하지 않습니다.');
         return false;
