@@ -39,7 +39,7 @@ export class CommentUpdateJobService {
 
               if (updated.affectedRows === 1) {
                 likeStatus === '1' ? (totalLikes += 1) : (totalDislikes += 1);
-                await redis.del(key);
+                await redis.unlink(key);
               } else {
                 console.log(
                   `Comment_Like 테이블 업데이트 실패: user_id=${userId}, comment_id=${commentId}`

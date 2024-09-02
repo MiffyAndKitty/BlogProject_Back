@@ -33,7 +33,7 @@ export class BoardUpdateJobService {
             );
 
             if (updated.affectedRows > 0) {
-              await redis.del(key);
+              await redis.unlink(key);
             } else {
               console.log(
                 `${keyname} : Board 테이블 업데이트 실패: board_id=${boardId}`

@@ -66,7 +66,7 @@ export class TagCacheJobService {
       }
 
       const result = await Promise.all([
-        await redis.del(key),
+        await redis.unlink(key),
         await redis.zadd(key, ...flatTags)
       ]);
       console.log('인기 태그 캐싱 결과 :', result);

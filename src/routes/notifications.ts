@@ -82,7 +82,7 @@ notificationsRouter.get(
         });
 
         // 알림 전송 후 Redis에서 삭제
-        const deleted = await redis.del(key);
+        const deleted = await redis.unlink(key);
         deleted > 0
           ? console.log(`Redis에 캐시된 알림 전송 후, ${key} 삭제 완료`)
           : console.log(`Redis에 캐시된 알림 전송 후, ${key} 삭제 실패`);

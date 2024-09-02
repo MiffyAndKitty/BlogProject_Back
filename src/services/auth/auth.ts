@@ -6,7 +6,7 @@ import { redis } from '../../loaders/redis';
 export class AuthService {
   static deleteToken = async (userId: string) => {
     try {
-      const deleted = await redis.del(`refreshToken:${userId}`);
+      const deleted = await redis.unlink(`refreshToken:${userId}`);
       if (deleted === 1) {
         return { result: true, message: '로그아웃 성공' };
       } else {
