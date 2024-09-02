@@ -42,13 +42,17 @@ export class TagCacheJobService {
       const numberOfAdditionalTags = limit - flatTags.length / 2;
       if (numberOfAdditionalTags > 0) {
         console.log(`${numberOfAdditionalTags}개의 추가 태그를 선택합니다.`);
+        // flatTags에서 태그 이름만 추출
+        const existingTagNames = flatTags.filter((_, index) => index % 2 !== 0);
+        const placeholders = existingTagNames.map(() => '?').join(',');
 
         const additionalTags = await db.query(
           `SELECT tag_name FROM Board_Tag
+            WHERE tag_name NOT IN (${placeholders})
            GROUP BY tag_name
            ORDER BY RAND()
            LIMIT ?`,
-          [numberOfAdditionalTags]
+          [...existingTagNames, numberOfAdditionalTags]
         );
 
         for (const tag of additionalTags) {
