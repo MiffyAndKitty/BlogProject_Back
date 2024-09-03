@@ -178,12 +178,12 @@ export class commentService {
   static like = async (commentLikeDto: CommentLikeDto) => {
     try {
       // DB에서 사용자가 이미 좋아요를 눌렀는지 확인
-      const [likedInDB] = await db.query(
+      const likedInDB = await db.query(
         'SELECT comment_like FROM Comment_Like WHERE comment_id = ? AND user_id = ? AND deleted_at IS NULL',
         [commentLikeDto.commentId, commentLikeDto.userId]
       );
 
-      if (!likedInDB) {
+      if (likedInDB.length === 0) {
         // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
         const likedInRedis = await redis.hset(
           `comment_like:${commentLikeDto.commentId}`,
@@ -210,7 +210,7 @@ export class commentService {
         return { result: false, message: '좋아요 추가 실패 ( 캐시 실패 )' };
       }
 
-      if (likedInDB.comment_like === commentLikeDto.isLike) {
+      if (Boolean(likedInDB[0].comment_like) === commentLikeDto.isLike) {
         return {
           result: true,
           message: commentLikeDto.isLike
@@ -228,9 +228,26 @@ export class commentService {
         commentLikeDto.isLike ? 1 : 0
       ];
 
-      const { affectedRows: likeCount } = await db.query(query, params);
+      const { affectedRows: updatedLike } = await db.query(query, params);
 
-      return likeCount > 0
+      if (updatedLike === 0) {
+        return {
+          result: false,
+          message: '댓글 좋아요 실패'
+        };
+      }
+
+      const updateLikeQuery = commentLikeDto.isLike
+        ? `UPDATE Comment SET comment_like = comment_like + 1, comment_dislike = comment_dislike - 1 WHERE comment_id = ?`
+        : `UPDATE Comment SET comment_like = comment_like - 1, comment_dislike = comment_dislike + 1 WHERE comment_id = ?`;
+
+      // 좋아요 또는 싫어요 추가 시 Comment 테이블의 필드를 업데이트
+      const { affectedRows: updatedLikeCounts } = await db.query(
+        updateLikeQuery,
+        [commentLikeDto.commentId]
+      );
+
+      return updatedLikeCounts > 0
         ? {
             result: true,
             message: commentLikeDto.isLike
@@ -270,7 +287,29 @@ export class commentService {
 
       const { affectedRows: deletedLikeCount } = await db.query(query, params);
 
-      return deletedLikeCount > 0
+      if (deletedLikeCount === 0) {
+        return {
+          result: false,
+          message: '데이터 베이스의 댓글 좋아요/싫어요 삭제 실패'
+        };
+      }
+      // 방금 업데이트된 레코드 조회
+      const [{ comment_like: isLiked }] = await db.query(
+        `SELECT comment_like 
+        FROM Comment_Like 
+        WHERE comment_id = ? AND user_id = ? AND deleted_at IS NOT NULL`,
+        params
+      );
+
+      // UPDATE Comment SET comment_like -1 또는 comment_dislike -1 WHERE comment_id =?
+      const { affectedRows: updatedLikeCount } = await db.query(
+        `UPDATE Comment 
+        SET ${isLiked ? 'comment_like = comment_like - 1' : 'comment_dislike = comment_dislike - 1'}
+        WHERE comment_id = ?`,
+        params
+      );
+
+      return updatedLikeCount > 0
         ? { result: true, message: '댓글 좋아요/싫어요 삭제 성공' }
         : { result: false, message: '댓글 좋아요/싫어요 삭제 실패' };
     } catch (err) {
