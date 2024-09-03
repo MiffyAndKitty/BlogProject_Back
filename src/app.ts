@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { dbConnector } from './loaders/mariadb';
 import { redisConnector } from './loaders/redis';
+import { swaggerConnector } from './loaders/swagger';
 import passport from 'passport';
 import { passportLoader } from './passport';
 import { authRouter } from './routes/auth';
@@ -38,6 +39,7 @@ dailyUpdateJob;
 app.use(passport.initialize());
 await passportLoader();
 
+app.use('/api-docs', ...swaggerConnector());
 app.use('/api', userIdentifier());
 
 app.use('/api/auth', authRouter);
