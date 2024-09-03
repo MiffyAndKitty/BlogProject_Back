@@ -10,7 +10,6 @@ import { header, param, query, body } from 'express-validator';
 import { validate } from '../middleware/express-validation';
 import { DbColumnDto } from '../interfaces/dbColumn';
 import {
-  CommentListDto,
   FollowListDto,
   UserInfoDto,
   UserEmailDto,
@@ -21,7 +20,6 @@ import {
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
-import { UserCommentService } from '../services/comment/userCommentList';
 export const usersRouter = Router();
 
 usersRouter.post(
@@ -74,69 +72,6 @@ usersRouter.post(
         return res.status(200).send(result);
       } else {
         return res.status(400).send(result);
-      }
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
-    }
-  }
-);
-
-// 유저의 댓글 목록 조회 (GET : /users/comments)
-usersRouter.get(
-  '/comments',
-  validate([
-    header('Authorization')
-      .optional({ checkFalsy: true })
-      .matches(/^Bearer\s[^\s]+$/)
-      .withMessage('올바른 토큰 형식이 아닙니다.'),
-    query('email')
-      .optional({ checkFalsy: true })
-      .matches(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
-      .withMessage('올바른 이메일 형식이 아닙니다.'),
-    query('sort')
-      .optional({ checkFalsy: true })
-      .isIn(['oldest'])
-      .withMessage('sort의 값이 존재한다면 "oldest" 이어야합니다.'),
-    query('cursor').optional({ checkFalsy: true }).isString(),
-    query('page-size')
-      .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
-      .isInt({ min: 1 })
-      .withMessage(
-        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
-      ),
-    query('is-before')
-      .optional({ checkFalsy: true })
-      .custom((value) => {
-        if (value !== 'true' && value !== 'false') {
-          throw new Error(
-            'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
-          );
-        }
-        return true;
-      })
-  ]),
-  jwtAuth,
-  async (req: Request, res: Response) => {
-    try {
-      const commentList: CommentListDto = {
-        userId: req.id,
-        email: !req.params.email ? undefined : req.params.email.split(':')[1],
-        sort: req.query.sort as string,
-        pageSize: req.query['page-size'] as unknown as number,
-        cursor: req.query.cursor as string,
-        isBefore: req.query['is-before'] === 'true' ? true : false
-      };
-
-      const result: BasicResponse =
-        await UserCommentService.getAllCommentsByUserId(commentList);
-
-      if (result.result === true) {
-        return res.status(200).send(result);
-      } else {
-        return res.status(500).send(result);
       }
     } catch (err) {
       const error = ensureError(err);
