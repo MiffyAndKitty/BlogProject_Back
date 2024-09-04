@@ -257,13 +257,21 @@ export class BoardListService {
   ): Promise<BoardInDBDto[]> {
     // 1. 전체 게시글 반환
     let data = await db.query(
-      `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name 
+      `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name, 
+      (SELECT COUNT(*) FROM Comment WHERE Comment.board_id = Board.board_id AND Comment.deleted_at IS NULL) as board_comment 
         FROM Board 
         LEFT JOIN User ON Board.user_id = User.user_id
         LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
         query,
       params
     );
+
+    data = data.map((row: BoardInDBDto) => {
+      return {
+        ...row,
+        board_comment: parseInt(row.board_comment as string)
+      };
+    });
 
     // 2. 캐시된 좋아요/ 조회수 반영
     data = await this._reflectCashed(data);
@@ -333,13 +341,21 @@ export class BoardListService {
     }
 
     let data = await db.query(
-      `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name 
+      `SELECT DISTINCT Board.*, User.user_nickname, User.user_email, Board_Category.category_name, 
+      (SELECT COUNT(*) FROM Comment WHERE Comment.board_id = Board.board_id AND Comment.deleted_at IS NULL) as board_comment 
         FROM Board 
         LEFT JOIN User ON Board.user_id = User.user_id
         LEFT JOIN Board_Category ON Board.category_id = Board_Category.category_id` +
         query,
       params
     );
+
+    data = data.map((row: any) => {
+      return {
+        ...row,
+        board_comment: parseInt(row.board_comment)
+      };
+    });
 
     //커서가 있고, 이전 페이지를 조회하는 경우
     if (options.cursor && options.isBefore === true) data = data.reverse();

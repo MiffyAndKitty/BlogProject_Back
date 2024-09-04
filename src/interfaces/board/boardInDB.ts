@@ -12,7 +12,7 @@ export interface BoardInDBDto {
   updated_at: Date;
   deleted_at: Date | null;
   board_order: number;
-  board_comment: number;
+  board_comment: number | string;
   user_nickname: string;
   tags: string[];
   isLike: boolean;
