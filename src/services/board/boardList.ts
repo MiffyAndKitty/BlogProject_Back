@@ -9,6 +9,7 @@ import {
 } from '../../interfaces/board/listDto';
 import { BoardInDBDto } from '../../interfaces/board/boardInDB';
 import { ListResponse, UserListResponse } from '../../interfaces/response';
+import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
 
 export class BoardListService {
   static getList = async (listDto: ListDto): Promise<ListResponse> => {
@@ -266,12 +267,7 @@ export class BoardListService {
       params
     );
 
-    data = data.map((row: BoardInDBDto) => {
-      return {
-        ...row,
-        board_comment: parseInt(row.board_comment as string)
-      };
-    });
+    data = parseFieldToNumber(data, 'board_comment');
 
     // 2. 캐시된 좋아요/ 조회수 반영
     data = await this._reflectCashed(data);
@@ -350,12 +346,7 @@ export class BoardListService {
       params
     );
 
-    data = data.map((row: any) => {
-      return {
-        ...row,
-        board_comment: parseInt(row.board_comment)
-      };
-    });
+    data = parseFieldToNumber(data, 'board_comment');
 
     //커서가 있고, 이전 페이지를 조회하는 경우
     if (options.cursor && options.isBefore === true) data = data.reverse();

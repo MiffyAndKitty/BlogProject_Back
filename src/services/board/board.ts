@@ -3,6 +3,7 @@ import { ensureError } from '../../errors/ensureError';
 import { BoardIdInfoDto } from '../../interfaces/board/IdInfo';
 import { redis } from '../../loaders/redis';
 import { SingleNotificationResponse } from '../../interfaces/response';
+import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
@@ -18,10 +19,7 @@ export class BoardService {
       );
       if (!data) throw new Error('존재하지 않는 게시글입니다.');
 
-      data = {
-        ...data,
-        board_comment: parseInt(data.board_comment)
-      };
+      data = parseFieldToNumber(data, 'board_comment');
 
       if (!data.category_id) data.category_name = '기본 카테고리';
 
