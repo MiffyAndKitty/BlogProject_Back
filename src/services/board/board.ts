@@ -3,12 +3,14 @@ import { ensureError } from '../../errors/ensureError';
 import { BoardIdInfoDto } from '../../interfaces/board/IdInfo';
 import { redis } from '../../loaders/redis';
 import { SingleNotificationResponse } from '../../interfaces/response';
+import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
     try {
-      const [data] = await db.query(
-        `SELECT Board.*, User.user_nickname , User.user_email
+      let [data] = await db.query(
+        `SELECT Board.*, User.user_nickname , User.user_email,
+      (SELECT COUNT(*) FROM Comment WHERE Comment.board_id = Board.board_id AND Comment.deleted_at IS NULL) AS board_comment
        FROM Board 
        JOIN User ON Board.user_id = User.user_id
        WHERE Board.board_id = ? AND Board.deleted_at IS NULL 
@@ -16,6 +18,8 @@ export class BoardService {
         [boardIdInfoDto.boardId]
       );
       if (!data) throw new Error('존재하지 않는 게시글입니다.');
+
+      data = parseFieldToNumber(data, 'board_comment');
 
       if (!data.category_id) data.category_name = '기본 카테고리';
 
