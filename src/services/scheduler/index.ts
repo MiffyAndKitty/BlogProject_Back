@@ -2,6 +2,7 @@ import { TagCacheJobService } from './tagCacheJob';
 import { BoardUpdateJobService } from './boardUpdateJob';
 import { CommentUpdateJobService } from './commentUpdateJob';
 import { TopFollowersCacheJobService } from './topFollowerCacheJob';
+import { CacheKeys } from '../../constants/cacheKeys';
 
 export class JobScheduler {
   private static _logJobResult(jobName: string, isSuccess: boolean) {
@@ -44,7 +45,7 @@ export class JobScheduler {
     const jobName = '인기 태그 캐싱';
     try {
       const isSuccess = await TagCacheJobService.cacheTags(
-        'tag_popular',
+        CacheKeys.POPULAR_TAGS,
         limit
       );
       this._logJobResult(jobName, isSuccess);
@@ -57,7 +58,7 @@ export class JobScheduler {
     const jobName = '최다 팔로워 보유 블로거 캐싱';
     try {
       const isSuccess = await TopFollowersCacheJobService.cacheTopFollowers(
-        'top-followers',
+        CacheKeys.TOP_FOLLOWERS,
         limit
       );
       this._logJobResult(jobName, isSuccess);
