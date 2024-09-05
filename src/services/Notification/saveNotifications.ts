@@ -134,7 +134,7 @@ export class saveNotificationService {
         // DB에 알림 저장
         const { affectedRows: savedCount } = await db.query(
           `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
-         VALUES (?, ?, ?, ?, ?, ?);`,
+         VALUES (?, ?, ?, ?, ?);`,
           [
             userNotificationDto.id,
             userNotificationDto.recipient,
@@ -204,7 +204,7 @@ export class saveNotificationService {
 
       const { affectedRows: retrySavedCount } = await db.query(
         `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location) 
-           VALUES (?, ?, ?, ?, ?, ?);`,
+           VALUES (?, ?, ?, ?, ?);`,
         [
           retryNotificationDto.id,
           retryNotificationDto.recipient,
