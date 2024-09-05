@@ -3,6 +3,8 @@ import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
 import { FollowListDto } from '../../interfaces/user/userInfo';
 import { SingleNotificationResponse } from '../../interfaces/response';
+import { redis } from '../../loaders/redis';
+import { LimitRequestDto } from '../../interfaces/LimitRequestDto';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -107,6 +109,49 @@ export class FollowService {
       const error = ensureError(err);
       console.log(error.message);
       return { result: false, message: error.message };
+    }
+  };
+
+  // 최다 팔로워 보유 블로거 리스트 조회
+  static getTopFollowersList = async (topFollowersDto: LimitRequestDto) => {
+    try {
+      const key = 'top-followers';
+      const cachedTopFollowers = await redis.zrevrange(
+        key,
+        0,
+        topFollowersDto.limit - 1,
+        'WITHSCORES'
+      );
+
+      if (!cachedTopFollowers || cachedTopFollowers.length === 0) {
+        return {
+          result: false,
+          data: [],
+          message: '최다 팔로워 보유 블로거 조회 실패'
+        };
+      }
+
+      const topFollowersWithScores = [];
+      for (let i = 0; i < cachedTopFollowers.length; i += 2) {
+        topFollowersWithScores.push({
+          userName: cachedTopFollowers[i],
+          score: Number(cachedTopFollowers[i + 1])
+        });
+      }
+
+      return {
+        result: true,
+        data: topFollowersWithScores,
+        message: '최다 팔로워 보유 블로거 조회 성공'
+      };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return {
+        result: false,
+        data: null,
+        message: error.message
+      };
     }
   };
 
