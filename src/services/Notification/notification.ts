@@ -82,7 +82,7 @@ export class NotificationService {
       query += ` ORDER BY notification_order ${order} LIMIT ?`;
       params.push(pageSize);
 
-      let result = await db.query(query, params);
+      const result = await db.query(query, params);
       if (listDto.cursor && listDto.isBefore) result.reverse();
 
       return {

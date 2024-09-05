@@ -92,8 +92,8 @@ export class saveNotificationService {
   ): Promise<BasicResponse> {
     try {
       let userList: string[] = [];
-      let dbSaveFailedUserIds: string[] = []; // 데이터베이스에 저장 실패한 사용자 ID 저장
-      let notificationFailedUserIds: string[] = []; // 알림 전송 실패한 사용자 ID 저장
+      const dbSaveFailedUserIds: string[] = []; // 데이터베이스에 저장 실패한 사용자 ID 저장
+      const notificationFailedUserIds: string[] = []; // 알림 전송 실패한 사용자 ID 저장
 
       if (notificationDto.type === 'following-new-board') {
         const followers = await db.query(
@@ -193,7 +193,7 @@ export class saveNotificationService {
     dbSaveFailedUserIds: string[],
     notificationFailedUserIds: string[]
   ): Promise<string[]> {
-    let finalFailedUserIds: string[] = []; // 최종 실패한 사용자 ID 저장
+    const finalFailedUserIds: string[] = []; // 최종 실패한 사용자 ID 저장
 
     for (const failedUser of dbSaveFailedUserIds) {
       const retryNotificationDto = {

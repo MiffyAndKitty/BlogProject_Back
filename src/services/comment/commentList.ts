@@ -8,7 +8,8 @@ export class CommentListService {
     commentIdDto: ParentCommentIdDto
   ) => {
     try {
-      let cursorQuery = '';
+      const cursorQuery = '';
+      // let cursorQuery = '';
       // if (commentIdDto.cursor) {
       //   const [cursor] = await db.query(
       //     `SELECT comment_order FROM Comment WHERE comment_id = ? AND deleted_at IS NULL`,

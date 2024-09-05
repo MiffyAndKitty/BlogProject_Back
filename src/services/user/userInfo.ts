@@ -101,7 +101,7 @@ export class UsersService {
 
   static getUserInfoByNickname = async (userNicknameDto: UserNicknameDto) => {
     try {
-      let query = `SELECT user_email, user_image, user_message FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`;
+      const query = `SELECT user_email, user_image, user_message FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`;
       const params = [decodeURIComponent(userNicknameDto.nickname)];
 
       const [userInfo] = await db.query(query, params);

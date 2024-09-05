@@ -188,7 +188,7 @@ export class BoardListService {
     queryValue?: string,
     tag?: string
   ): { query: string; params: (string | string[] | number)[] } {
-    let queryParts: string[] = [];
+    const queryParts: string[] = [];
     const params: (string | string[] | number)[] = [];
 
     queryParts.push(
