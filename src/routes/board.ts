@@ -259,8 +259,12 @@ boardRouter.post(
     body('public').isString(), // 폼 데이터의 필드는 텍스트로 전송
     body('tagNames')
       .optional({ checkFalsy: true })
-      .isArray()
       .custom((tags) => {
+        if (typeof tags === 'string') tags = [tags];
+
+        if (!Array.isArray(tags))
+          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
+
         if (tags.length > 10) {
           throw new Error('태그는 최대 10개까지 허용됩니다.');
         }
@@ -337,8 +341,12 @@ boardRouter.put(
     body('public').isString(),
     body('tagNames')
       .optional({ checkFalsy: true })
-      .isArray()
       .custom((tags) => {
+        if (typeof tags === 'string') tags = [tags];
+
+        if (!Array.isArray(tags))
+          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
+
         if (tags.length > 10) {
           throw new Error('태그는 최대 10개까지 허용됩니다.');
         }
