@@ -39,9 +39,14 @@ export class AccountService {
 
       const sent: boolean = await sendEMail(
         userInfoDto.email,
-        temporaryPassword,
-        '임시 비밀번호 발급'
+        '임시 비밀번호 발급',
+        'passwordResetTemplate',
+        {
+          password: temporaryPassword,
+          loginUrl: `${process.env.ORIGIN_URL}/login`
+        }
       );
+
       return sent
         ? {
             result: true,
@@ -80,7 +85,7 @@ export class AccountService {
     userInfoDto: UserEmailDto
   ): Promise<BasicResponse> {
     try {
-      const query = `UPDATE Users SET deleted_at = NULL WHERE email = ? AND deleted_at IS NOT NULL`;
+      const query = `UPDATE User SET deleted_at = NULL WHERE user_email = ? AND deleted_at IS NOT NULL`;
       const result = await db.query(query, [userInfoDto.email]);
 
       return result.affectedRows === 1
