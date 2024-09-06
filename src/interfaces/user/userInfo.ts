@@ -1,3 +1,7 @@
+export interface UserEmailDto {
+  email: string;
+}
+
 export interface UserIdDto {
   userId: string;
 }
