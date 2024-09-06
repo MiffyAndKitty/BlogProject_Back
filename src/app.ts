@@ -17,6 +17,7 @@ import { commentRouter } from './routes/comment';
 import { userIdentifier } from './middleware/userIdentifier';
 import { notificationsRouter } from './routes/notifications';
 import { dailyUpdateJob, tagCacheJob } from './loaders/scheduler';
+import { accountRouter } from './routes/account';
 
 export const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/category', categoryRouter);
 app.use('/api/tag', tagRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/comment', commentRouter);
+app.use('/api/account', accountRouter);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.log('[ 에러 핸들러 입니다! ]', err);
