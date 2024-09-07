@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
 import { query } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
-import { TagDto } from '../interfaces/tag';
+import { LimitRequestDto } from '../interfaces/LimitRequestDto';
 import { tagService } from '../services/tag';
 
 export const tagRouter = Router();
@@ -18,7 +18,7 @@ tagRouter.get(
   ]),
   async (req: Request, res: Response) => {
     try {
-      const tagDto: TagDto = {
+      const tagDto: LimitRequestDto = {
         limit: (req.query.limit as unknown as number) || 10
       };
 

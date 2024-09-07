@@ -17,7 +17,7 @@ import { tagRouter } from './routes/tag';
 import { commentRouter } from './routes/comment';
 import { userIdentifier } from './middleware/userIdentifier';
 import { notificationsRouter } from './routes/notifications';
-import { dailyUpdateJob, tagCacheJob } from './loaders/scheduler';
+import { loadAllSchedules } from './loaders/scheduler';
 
 export const app = express();
 
@@ -36,8 +36,8 @@ redisConnector;
 await mongoDbConnector();
 await dbConnector();
 
-tagCacheJob(10);
-dailyUpdateJob;
+loadAllSchedules(10, 10);
+
 app.use(passport.initialize());
 await passportLoader();
 
