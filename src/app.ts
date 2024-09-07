@@ -4,6 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { dbConnector } from './loaders/mariadb';
+import { mongoDbConnector } from './loaders/mongodb';
 import { redisConnector } from './loaders/redis';
 import { swaggerConnector } from './loaders/swagger';
 import passport from 'passport';
@@ -33,6 +34,7 @@ app.use(morgan('dev'));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
 redisConnector;
+await mongoDbConnector();
 await dbConnector();
 
 loadAllSchedules();
