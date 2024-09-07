@@ -20,6 +20,7 @@ import {
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
+import { LimitRequestDto } from '../interfaces/LimitRequestDto';
 export const usersRouter = Router();
 
 usersRouter.post(
@@ -128,6 +129,38 @@ usersRouter.get(
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
+      return res.status(500).send({ result: false, message: error.message });
+    }
+  }
+);
+
+// 이번 주 최다 팔로워 보유 블로거 리스트 조회 (GET: /users/top-followers)
+usersRouter.get(
+  '/top-followers',
+  validate([
+    query('limit')
+      .optional()
+      .toInt()
+      .isInt({ min: 1 })
+      .withMessage('limit 값은 1 이상의 양수여야 합니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const topFollowersDto: LimitRequestDto = {
+        limit: req.query.limit as unknown as number
+      };
+      const result: BasicResponse =
+        await FollowService.getTopFollowersList(topFollowersDto);
+
+      if (result.result === true) {
+        return res.status(200).send(result);
+      } else {
+        return res.status(500).send(result);
+      }
+    } catch (err) {
+      const error = ensureError(err);
+      console.error(error.message);
       return res.status(500).send({ result: false, message: error.message });
     }
   }

@@ -1,9 +1,9 @@
 import { ensureError } from '../errors/ensureError';
-import { TagDto } from '../interfaces/tag';
+import { LimitRequestDto } from '../interfaces/LimitRequestDto';
 import { redis } from '../loaders/redis';
 
 export class tagService {
-  static getPopularList = async (tagDto: TagDto) => {
+  static getPopularList = async (tagDto: LimitRequestDto) => {
     try {
       const key = 'tag_popular';
       // 태그 이름과 함께 점수를 반환
