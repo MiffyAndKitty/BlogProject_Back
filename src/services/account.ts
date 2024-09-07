@@ -1,15 +1,18 @@
 import { db } from '../loaders/mariadb';
-import { BasicResponse } from '../interfaces/response';
+import { BasicResponse, SingleDataResponse } from '../interfaces/response';
 import { ensureError } from '../errors/ensureError';
-import { UserEmailDto, UserIdDto } from '../interfaces/user/userInfo';
+import {
+  UserEmailDto,
+  UserIdDto,
+  UserLoginDto
+} from '../interfaces/user/userInfo';
 import { getHashed } from '../utils/getHashed';
 import { generatePassword } from '../utils/passwordGenerator';
 import { sendEMail } from '../utils/sendEmail';
 export class AccountService {
-  // 비밀번호 재설정 링크 전송
-  static async sendPasswordResetLink(
+  static async setTemporaryPassword(
     userInfoDto: UserEmailDto
-  ): Promise<BasicResponse> {
+  ): Promise<SingleDataResponse> {
     try {
       const temporaryPassword = generatePassword();
 
@@ -21,7 +24,7 @@ export class AccountService {
       );
 
       if (user.deleted_at !== null) {
-        return { result: false, message: '이미 탈퇴한 유저입니다.' };
+        return { result: false, data: '', message: '이미 탈퇴한 유저입니다.' };
       }
 
       const query = `UPDATE User SET user_password = ? WHERE user_email = ? AND deleted_at IS NULL`;
@@ -33,16 +36,33 @@ export class AccountService {
       if (updatedCount !== 1) {
         return {
           result: false,
+          data: '',
           message: '임시 발급된 비밀번호 저장 실패'
         };
       }
 
+      return {
+        result: true,
+        data: temporaryPassword,
+        message: '임시 발급된 비밀번호 저장 성공'
+      };
+    } catch (err) {
+      const error = ensureError(err);
+      return { result: false, data: '', message: error.message };
+    }
+  }
+
+  // 비밀번호 재설정 링크 전송
+  static async sendPasswordResetLink(
+    userLoginDto: UserLoginDto
+  ): Promise<BasicResponse> {
+    try {
       const sent: boolean = await sendEMail(
-        userInfoDto.email,
+        userLoginDto.email,
         '임시 비밀번호 발급',
         'passwordResetTemplate',
         {
-          password: temporaryPassword,
+          password: userLoginDto.password,
           loginUrl: `${process.env.ORIGIN_URL}/login`
         }
       );

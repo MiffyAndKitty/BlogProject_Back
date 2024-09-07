@@ -4,8 +4,12 @@ import { header, body } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AccountService } from '../services/account';
 import { ensureError } from '../errors/ensureError';
-import { BasicResponse } from '../interfaces/response';
-import { UserEmailDto, UserIdDto } from '../interfaces/user/userInfo';
+import { BasicResponse, SingleDataResponse } from '../interfaces/response';
+import {
+  UserEmailDto,
+  UserIdDto,
+  UserLoginDto
+} from '../interfaces/user/userInfo';
 
 export const accountRouter = Router();
 
@@ -26,12 +30,23 @@ accountRouter.post(
       const userInfoDto: UserEmailDto = {
         email: req.body.email
       };
-      const result: BasicResponse =
-        await AccountService.sendPasswordResetLink(userInfoDto);
+      const result: SingleDataResponse =
+        await AccountService.setTemporaryPassword(userInfoDto);
 
-      return res.status(result.result ? 200 : 500).send({
+      res.status(result.result ? 200 : 500).send({
+        result: result.result,
         message: result.message
       });
+
+      const userLoginDto: UserLoginDto = {
+        email: req.body.email,
+        password: result.data
+      };
+
+      const sentResult =
+        await AccountService.sendPasswordResetLink(userLoginDto);
+
+      console.log(`${sentResult.message} : ${userLoginDto.email}`);
     } catch (err) {
       const error = ensureError(err);
       return res.status(500).send({ result: false, message: error.message });

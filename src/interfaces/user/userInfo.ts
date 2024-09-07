@@ -14,6 +14,11 @@ export interface UserPwDto extends UserIdDto {
   password: string;
 }
 
+export interface UserLoginDto {
+  email: string;
+  password: string;
+}
+
 // 사용자 정보 상세 조회 UserEmailDto, UserNicknameDto
 export interface UserEmailDto {
   userId?: string;
