@@ -1,7 +1,7 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
-import { FollowListDto } from '../../interfaces/user/userInfo';
+import { FollowListDto } from '../../interfaces/user/follow';
 import { SingleNotificationResponse } from '../../interfaces/response';
 import { redis } from '../../loaders/redis';
 import { LimitRequestDto } from '../../interfaces/limitRequestDto';
