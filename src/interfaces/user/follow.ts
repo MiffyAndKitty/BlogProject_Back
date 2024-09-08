@@ -13,3 +13,10 @@ export interface FollowedListUser extends FollowListUser {
 export interface FollowingListUser extends FollowListUser {
   followed_id: string;
 }
+
+export interface FollowListDto {
+  userId?: string;
+  email: string;
+  pageSize: number;
+  page: number;
+}

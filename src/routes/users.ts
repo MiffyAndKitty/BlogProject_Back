@@ -10,17 +10,17 @@ import { header, param, query, body } from 'express-validator';
 import { validate } from '../middleware/express-validation';
 import { DbColumnDto } from '../interfaces/dbColumn';
 import {
-  FollowListDto,
   UserInfoDto,
   UserEmailDto,
   UserNicknameDto,
   UserProfileDto,
   UserPwDto
 } from '../interfaces/user/userInfo';
+import { FollowListDto } from '../interfaces/user/follow';
+import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
-import { LimitRequestDto } from '../interfaces/limitRequestDto';
 export const usersRouter = Router();
 
 usersRouter.post(
