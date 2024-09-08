@@ -10,8 +10,8 @@ import {
   BasicResponse,
   MultipleUserDataResponse
 } from '../interfaces/response';
-import { AuthUserDto } from '../interfaces/user/authUser';
-import { LoginUserDto, LoginServiceDto } from '../interfaces/user/loginUser';
+import { AuthUserDto } from '../interfaces/auth/authUser';
+import { LoginUserDto, LoginServiceDto } from '../interfaces/auth/loginUser';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 

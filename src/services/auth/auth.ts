@@ -1,6 +1,6 @@
 import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
-import { AuthUserDto } from '../../interfaces/user/authUser';
+import { AuthUserDto } from '../../interfaces/auth/authUser';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';

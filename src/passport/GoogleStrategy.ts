@@ -4,7 +4,7 @@ import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
 import { isGoogleProfile } from '../utils/typegaurd/isGoogleProfile';
 import { ensureError } from '../errors/ensureError';
-import { LoginUserDto } from '../interfaces/user/loginUser';
+import { LoginUserDto } from '../interfaces/auth/loginUser';
 export const google = (passport: PassportStatic) => {
   passport.use('google', new GoogleStrategy(passportConfig, passportVerify));
 };

@@ -2,7 +2,7 @@ import { newToken } from '../../utils/token/newToken';
 import { MultipleUserDataResponse } from '../../interfaces/response';
 import { setRefreshToken } from '../../utils/redis/refreshToken';
 import { ensureError } from '../../errors/ensureError';
-import { LoginServiceDto } from '../../interfaces/user/loginUser';
+import { LoginServiceDto } from '../../interfaces/auth/loginUser';
 export const localAuthService = async (
   user: LoginServiceDto
 ): Promise<MultipleUserDataResponse> => {
