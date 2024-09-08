@@ -6,6 +6,7 @@ import { clientsService } from '../../utils/notification/clients';
 import { NotificationDto } from '../../interfaces/notification';
 import { ensureError } from '../../errors/ensureError';
 import { BasicResponse } from '../../interfaces/response';
+import { CacheKeys } from '../../constants/cacheKeys';
 export class saveNotificationService {
   private static async _sendNotification(
     notificationDto: NotificationDto
@@ -30,7 +31,7 @@ export class saveNotificationService {
       }
       // 클라이언트가 연결되지 않은 경우 Redis에 알림 캐싱
       const cashed = await redis.lpush(
-        `notification:${notificationDto.recipient}`,
+        `${CacheKeys.NOTIFICATION}${notificationDto.recipient}`,
         JSON.stringify(notificationDto)
       );
 

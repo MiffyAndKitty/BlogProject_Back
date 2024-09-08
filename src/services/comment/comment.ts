@@ -10,6 +10,7 @@ import {
 import { redis } from '../../loaders/redis';
 import { MultipleNotificationResponse } from '../../interfaces/response';
 import { NotificationDto } from '../../interfaces/notification';
+import { CacheKeys } from '../../constants/cacheKeys';
 export class commentService {
   // 댓글 생성
   static create = async (
@@ -186,7 +187,7 @@ export class commentService {
       if (likedInDB.length === 0) {
         // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
         const likedInRedis = await redis.hset(
-          `comment_like:${commentLikeDto.commentId}`,
+          `${CacheKeys.COMMENT_LIKE}${commentLikeDto.commentId}`,
           commentLikeDto.userId,
           Number(commentLikeDto.isLike)
         );
@@ -196,7 +197,7 @@ export class commentService {
           likedInRedis === 1 ||
           (likedInRedis === 0 &&
             (await redis.hexists(
-              `comment_like:${commentLikeDto.commentId}`,
+              `${CacheKeys.COMMENT_LIKE}${commentLikeDto.commentId}`,
               commentLikeDto.userId
             )))
         ) {
@@ -271,7 +272,7 @@ export class commentService {
     try {
       // Redis에서 캐시 확인 후 삭제 시도
       const isCashed = await redis.hdel(
-        `comment_like:${commentIdDto.commentId}`,
+        `${CacheKeys.COMMENT_LIKE}${commentIdDto.commentId}`,
         commentIdDto.userId
       );
 

@@ -1,3 +1,4 @@
+import { CacheKeys } from '../../constants/cacheKeys';
 import { db } from '../../loaders/mariadb';
 import { cacheToRedisWithScores } from '../../utils/redis/cacheToRedisWithScores';
 import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
@@ -5,7 +6,7 @@ import moment from 'moment';
 
 export class TopFollowersCacheJobService {
   static async cacheTopFollowers(
-    key: string,
+    key: typeof CacheKeys.TOP_FOLLOWERS,
     limit: number = 10
   ): Promise<boolean> {
     try {

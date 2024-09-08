@@ -1,9 +1,13 @@
+import { CacheKeys } from '../../constants/cacheKeys';
 import { db } from '../../loaders/mariadb';
 import { cacheToRedisWithScores } from '../../utils/redis/cacheToRedisWithScores';
 import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
 
 export class TagCacheJobService {
-  static async cacheTags(key: string, limit: number): Promise<boolean> {
+  static async cacheTags(
+    key: typeof CacheKeys.POPULAR_TAGS,
+    limit: number
+  ): Promise<boolean> {
     try {
       const { startTime, endTime } = this._getCurrentHourPeriod();
 
@@ -19,7 +23,7 @@ export class TagCacheJobService {
       }
 
       const flatTags = transformToZaddEntries(tags, 'tag_name', 'count');
-      console.log('flatTags', flatTags);
+
       return await cacheToRedisWithScores(key, flatTags);
     } catch (err) {
       console.error('태그 캐싱 중 오류 발생:', err);

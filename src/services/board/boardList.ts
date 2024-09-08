@@ -10,6 +10,7 @@ import {
 import { BoardInDBDto } from '../../interfaces/board/boardInDB';
 import { ListResponse, UserListResponse } from '../../interfaces/response';
 import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
+import { CacheKeys } from '../../constants/cacheKeys';
 
 export class BoardListService {
   static getList = async (listDto: ListDto): Promise<ListResponse> => {
@@ -232,10 +233,10 @@ export class BoardListService {
 
   private static async _reflectCashed(data: BoardInDBDto[]) {
     const viewKeys = data.map(
-      (board: { board_id: string }) => `board_view:${board.board_id}`
+      (board: { board_id: string }) => CacheKeys.BOARD_VIEW + board.board_id
     );
     const likeKeys = data.map(
-      (board: { board_id: string }) => `board_like:${board.board_id}`
+      (board: { board_id: string }) => CacheKeys.BOARD_LIKE + board.board_id
     );
 
     const [viewCounts, likeCounts] = await Promise.all([

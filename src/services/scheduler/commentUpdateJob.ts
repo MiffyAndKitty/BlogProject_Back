@@ -1,8 +1,11 @@
 import { redis } from '../../loaders/redis';
 import { db } from '../../loaders/mariadb';
+import { CacheKeys } from '../../constants/cacheKeys';
 
 export class CommentUpdateJobService {
-  static async updateComment(keyname: 'comment_like'): Promise<boolean> {
+  static async updateComment(
+    keyname: typeof CacheKeys.COMMENT_LIKE
+  ): Promise<boolean> {
     try {
       let isSuccess: boolean = true;
       let cursor = '0';
@@ -11,7 +14,7 @@ export class CommentUpdateJobService {
         const [nextCursor, keys] = await redis.scan(
           cursor,
           'MATCH',
-          `${keyname}:*`,
+          `${keyname}*`,
           'COUNT',
           100
         );

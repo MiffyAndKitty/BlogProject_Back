@@ -10,6 +10,7 @@ import {
   NotificationListDto,
   UserNotificationDto
 } from '../interfaces/notification';
+import { CacheKeys } from '../constants/cacheKeys';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
@@ -67,7 +68,7 @@ notificationsRouter.get(
     });
 
     try {
-      const key = 'notification:' + req.id;
+      const key = CacheKeys.NOTIFICATION + req.id;
       const isExistCached = await redis.exists(key); // 캐시된 알림 존재하는지 확인
 
       if (isExistCached) {

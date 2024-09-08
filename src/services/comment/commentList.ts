@@ -2,6 +2,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis'; // Redis 클라이언트 가져오기
 import { ParentCommentIdDto } from '../../interfaces/comment';
+import { CacheKeys } from '../../constants/cacheKeys';
 export class CommentListService {
   // 특정 부모 댓글의 대댓글을 조회하는 함수 (작성된 순으로 정렬)
   static getChildCommentsByParentId = async (
@@ -66,7 +67,7 @@ export class CommentListService {
         comments.map(async (row: any) => {
           // Redis에서 캐시된 좋아요/싫어요 수 가져오기
           const cachedVotes = await redis.hgetall(
-            `comment_like:${row.comment_id}`
+            `${CacheKeys.COMMENT_LIKE}${row.comment_id}`
           );
 
           // 좋아요와 싫어요 카운트를 초기화
