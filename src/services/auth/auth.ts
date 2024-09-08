@@ -1,6 +1,6 @@
 import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
-import { AuthUserDto } from '../../interfaces/auth/authUser';
+import { SignUpDto } from '../../interfaces/auth';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
@@ -20,7 +20,7 @@ export class AuthService {
     }
   };
 
-  static saveUser = async (userDto: AuthUserDto) => {
+  static saveUser = async (userDto: SignUpDto) => {
     try {
       let column;
       const params = [userDto.email, userDto.nickname];
