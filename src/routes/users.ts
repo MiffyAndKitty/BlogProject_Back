@@ -11,8 +11,8 @@ import { validate } from '../middleware/express-validation';
 import { DbColumnDto } from '../interfaces/dbColumn';
 import {
   UserInfoDto,
-  UserEmailDto,
-  UserNicknameDto,
+  UserEmailLookupDto,
+  UserNicknameLookupDto,
   UserProfileDto,
   UserPwDto
 } from '../interfaces/user/userInfo';
@@ -269,13 +269,13 @@ usersRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      const userEmailDto: UserEmailDto = {
+      const userEmailLookupDto: UserEmailLookupDto = {
         userId: req.id,
         email: req.params.email.split(':')[1]
       };
 
       const result: BasicResponse =
-        await UsersService.getUserInfoByEmail(userEmailDto);
+        await UsersService.getUserInfoByEmail(userEmailLookupDto);
 
       if (result.result === true) {
         return res.status(200).send(result);
@@ -305,13 +305,14 @@ usersRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      const userNicknameDto: UserNicknameDto = {
+      const userNicknameLookupDto: UserNicknameLookupDto = {
         userId: req.id,
         nickname: req.params.nickname.split(':')[1]
       };
 
-      const result: BasicResponse =
-        await UsersService.getUserInfoByNickname(userNicknameDto);
+      const result: BasicResponse = await UsersService.getUserInfoByNickname(
+        userNicknameLookupDto
+      );
 
       if (result.result === true) {
         return res.status(200).send(result);

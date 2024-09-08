@@ -3,12 +3,12 @@ export interface UserInfoDto {
   email: string;
 }
 
-export interface UserEmailDto {
+export interface UserEmailLookupDto {
   userId?: string;
   email: string;
 }
 
-export interface UserNicknameDto {
+export interface UserNicknameLookupDto {
   userId?: string;
   nickname: string;
 }
