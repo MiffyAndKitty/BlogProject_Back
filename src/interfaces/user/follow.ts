@@ -6,14 +6,10 @@ interface FollowListUser {
   IsFollowedMe: number;
 }
 
-interface FollowedListUser extends FollowListUser {
+export interface FollowedListUser extends FollowListUser {
   following_id: string;
 }
 
-interface FollowingListUser extends FollowListUser {
+export interface FollowingListUser extends FollowListUser {
   followed_id: string;
-}
-
-interface multerListUser extends FollowListUser {
-  mutual_id: string;
 }

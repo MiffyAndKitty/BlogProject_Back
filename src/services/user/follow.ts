@@ -6,6 +6,10 @@ import { SingleNotificationResponse } from '../../interfaces/response';
 import { redis } from '../../loaders/redis';
 import { LimitRequestDto } from '../../interfaces/limitRequestDto';
 import { CacheKeys } from '../../constants/cacheKeys';
+import {
+  FollowedListUser,
+  FollowingListUser
+} from '../../interfaces/user/follow';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
