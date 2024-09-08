@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
 import { query } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
-import { LimitRequestDto } from '../interfaces/LimitRequestDto';
+import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { tagService } from '../services/tag';
 
 export const tagRouter = Router();

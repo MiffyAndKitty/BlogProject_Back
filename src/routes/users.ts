@@ -20,7 +20,7 @@ import {
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
-import { LimitRequestDto } from '../interfaces/LimitRequestDto';
+import { LimitRequestDto } from '../interfaces/limitRequestDto';
 export const usersRouter = Router();
 
 usersRouter.post(
