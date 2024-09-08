@@ -25,8 +25,7 @@ import { BoardCommentListService } from '../services/comment/boardCommentList';
 
 export const boardRouter = Router();
 
-// 게시글 리스트 조회
-// GET : /board/list?sort=&tag=&cursor=&page-size=&is-before=
+// 게시글 리스트 조회 (GET : /board/list?sort=&tag=&cursor=&page-size=&is-before=)
 boardRouter.get(
   '/list',
   validate([
@@ -82,9 +81,8 @@ boardRouter.get(
   }
 );
 
-// 유저의 유니크한 값인 닉네임을 이용하여 특정 유저의 게시글 리스트 반환
-// 자기 자신의 게시글을 조회할 경우에만 비공개된 글까지 조회 가능
-// GET : /board/list/:{nickname}?sort=&tag=&cursor=&pageSize=&categoryId=&isBefore=
+// 특정 유저의 게시글 리스트 반환 (GET : /board/list/:{nickname}?sort=&tag=&cursor=&pageSize=&categoryId=&isBefore=)
+// 유저의 유니크한 값인 닉네임을 이용, 자기 자신의 게시글을 조회할 경우에만 비공개된 글까지 조회 가능
 boardRouter.get(
   '/list/:nickname',
   validate([
@@ -172,7 +170,7 @@ boardRouter.get(
     query('cursor').optional({ checkFalsy: true }).isString(),
     query('page-size')
       .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
+      .toInt()
       .isInt({ min: 1 })
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
@@ -212,7 +210,7 @@ boardRouter.get(
   }
 );
 
-// 게시글 데이터 조회 ( GET : /board)
+// 게시글 데이터 조회 (GET : /board)
 boardRouter.get(
   '/:boardId',
   validate([
@@ -232,7 +230,6 @@ boardRouter.get(
         boardId: req.params.boardId.split(':')[1]
       };
 
-      // 게시글 데이터 조회 서비스 호출
       const result = await BoardService.getBoard(boardIdInfo);
 
       return res
@@ -271,7 +268,7 @@ boardRouter.post(
         return true;
       }),
     body('categoryId')
-      .optional({ checkFalsy: true }) //빈 문자열, null, undefined 등)이면 검사를 건너뛴다
+      .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('카테고리 id는 32자리의 문자열이어야합니다.')
   ]),
@@ -361,7 +358,6 @@ boardRouter.put(
   checkWriter(),
   async (req: Request, res: Response) => {
     try {
-      // 작성자와 동일하지 않은 경우
       if (!req.isWriter) {
         return res.status(403).send({
           message: '해당 유저가 작성한 게시글이 아닙니다.'
@@ -416,7 +412,6 @@ boardRouter.delete(
   checkWriter(),
   async (req: Request, res: Response) => {
     try {
-      // 작성자와 동일하지 않은 경우
       if (!req.isWriter) {
         return res.status(403).send({
           message: '해당 유저가 작성한 게시글이 아닙니다.'
@@ -428,10 +423,8 @@ boardRouter.delete(
         boardId: req.body.boardId
       };
 
-      // 게시글 삭제 서비스 호출
       const result = await BoardService.deleteBoard(boardIdInfo);
 
-      // 삭제 결과 전송
       return res
         .status(result.result ? 200 : 500)
         .send({ message: result.message });

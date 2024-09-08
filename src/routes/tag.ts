@@ -12,7 +12,7 @@ tagRouter.get(
   validate([
     query('limit')
       .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
+      .toInt()
       .isInt({ min: 1, max: 10 })
       .withMessage('limit의 값이 존재한다면 1보다 큰 양수여야합니다.')
   ]),

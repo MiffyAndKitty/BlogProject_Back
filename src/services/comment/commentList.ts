@@ -1,6 +1,6 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
-import { redis } from '../../loaders/redis'; // Redis 클라이언트 가져오기
+import { redis } from '../../loaders/redis';
 import { ParentCommentIdDto } from '../../interfaces/comment';
 import { CacheKeys } from '../../constants/cacheKeys';
 export class CommentListService {
@@ -38,7 +38,7 @@ export class CommentListService {
           AND c.deleted_at IS NULL
           ${cursorQuery}
         ORDER BY c.comment_order ASC -- 오래된 순으로 정렬
-        -- LIMIT ?;  // 페이지네이션을 위한 LIMIT 제거
+        -- LIMIT ?;  페이지네이션을 위한 LIMIT 제거
       `;
 
       // const pageSize = commentIdDto.pageSize || 30;

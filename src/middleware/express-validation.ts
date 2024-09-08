@@ -7,7 +7,6 @@ export const validate = (validations: ContextRunner[]) => {
     res: express.Response,
     next: express.NextFunction
   ) => {
-    // sequential processing, stops running validations chain if one fails.
     for (const validation of validations) {
       const result = await validation.run(req);
       if (!result.isEmpty()) {

@@ -44,7 +44,7 @@ authRouter.post(
 
           const result: MultipleUserDataResponse = await localAuthService(
             user as LoginServiceDto
-          ); //userid, userEmail
+          );
           if (result.result === true) {
             return res
               .set('Authorization', `Bearer ${result.data.accessToken}`)

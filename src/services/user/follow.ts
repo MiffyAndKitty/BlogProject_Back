@@ -249,7 +249,6 @@ export class FollowService {
     try {
       // following하던 사람이 followed되던 사람을 팔로우 취소
       const [followedUser] = await db.query(
-        // 팔로우 하던 사람
         `
         SELECT *
         FROM User
@@ -263,7 +262,7 @@ export class FollowService {
       }
 
       const followed = followedUser.user_id!;
-      const currentUser = userInfoDto.userId; // following하던 사람
+      const currentUser = userInfoDto.userId; // 팔로워 (현재 유저)
 
       const query = `UPDATE Follow SET deleted_at = CURRENT_TIMESTAMP
                      WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL;

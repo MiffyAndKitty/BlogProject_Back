@@ -219,7 +219,7 @@ export class commentService {
             : '이미 싫어요한 댓글입니다'
         };
       }
-      // likedInDB.comment_like !== commentLikeDto.isLike
+      // 사용자가 좋아요/싫어요를 눌렀을 때, 데이터베이스에는 반대되는 상태가 저장된 경우 처리
       const query = `INSERT INTO Comment_Like (comment_id, user_id, comment_like) VALUES (?,?,?) 
                      ON DUPLICATE KEY UPDATE comment_like = ?, deleted_at = NULL`;
       const params = [

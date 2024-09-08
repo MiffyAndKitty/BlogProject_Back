@@ -195,7 +195,7 @@ export class saveBoardService {
         pattern,
         (match, p1, p2, p3) => {
           if (p2.startsWith(skipUrlPrefix)) {
-            return match; // Return the original match without modification
+            return match;
           }
           const imageUrl = fileUrls[index];
           index++;

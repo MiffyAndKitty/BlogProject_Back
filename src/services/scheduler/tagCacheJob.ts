@@ -82,7 +82,7 @@ export class TagCacheJobService {
     for (const tag of additionalTags) {
       tags.push({
         tag_name: tag.tag_name,
-        count: '0' // 추가된 태그의 count는 0으로 설정
+        count: '0' // 추가된 태그의 count는 0으로 설정하여 구분
       });
     }
 

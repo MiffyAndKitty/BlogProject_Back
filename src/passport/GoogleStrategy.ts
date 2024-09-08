@@ -41,7 +41,6 @@ const passportVerify = async (
     }
     if (exUser[0].deleted_at) {
       const { affectedRows: restoredCount } = await db.query(
-        // DB에서 구글 유저 존재 유무 확인
         `UPDATE User SET deleted_at = NULL WHERE user_id = ? LIMIT 1;`,
         [exUser[0].user_id]
       );
