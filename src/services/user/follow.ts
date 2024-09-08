@@ -5,6 +5,7 @@ import { FollowListDto } from '../../interfaces/user/userInfo';
 import { SingleNotificationResponse } from '../../interfaces/response';
 import { redis } from '../../loaders/redis';
 import { LimitRequestDto } from '../../interfaces/LimitRequestDto';
+import { CacheKeys } from '../../constants/cacheKeys';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -115,9 +116,8 @@ export class FollowService {
   // 최다 팔로워 보유 블로거 리스트 조회
   static getTopFollowersList = async (topFollowersDto: LimitRequestDto) => {
     try {
-      const key = 'top-followers';
       const cachedTopFollowers = await redis.zrevrange(
-        key,
+        CacheKeys.TOP_FOLLOWERS,
         0,
         topFollowersDto.limit - 1,
         'WITHSCORES'
