@@ -7,6 +7,8 @@ import {
 } from '../../interfaces/notification';
 import { NotificationName } from '../../constants/notificationName';
 import { isNotificationNameType } from '../../utils/typegaurd/isNotificationNameType';
+import { CacheKeys } from '../../constants/cacheKeys';
+import { redis } from '../../loaders/redis';
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
     try {
@@ -33,6 +35,28 @@ export class NotificationService {
       const error = ensureError(err);
       console.log(error.message);
       return { result: false, data: [], total: null, message: error.message };
+    }
+  }
+
+  static async getCached(userId: string): Promise<string[]> {
+    const key = CacheKeys.NOTIFICATION + userId;
+    const isExistCached = await redis.exists(key);
+
+    if (isExistCached) {
+      const cachedNotifications = await redis.lrange(key, 0, -1);
+      return cachedNotifications;
+    }
+
+    return [];
+  }
+
+  static deleteCashed(userId: string) {
+    try {
+      const key = CacheKeys.NOTIFICATION + userId;
+      redis.unlink(key);
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
     }
   }
 
