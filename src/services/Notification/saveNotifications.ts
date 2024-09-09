@@ -3,7 +3,10 @@ import { db } from '../../loaders/mariadb';
 import { v4 as uuidv4 } from 'uuid';
 import { redis } from '../../loaders/redis';
 import { clientsService } from '../../utils/notification/clients';
-import { NotificationDto } from '../../interfaces/notification';
+import {
+  NotificationDto,
+  RetryFailedUsersResult
+} from '../../interfaces/notification';
 import { ensureError } from '../../errors/ensureError';
 import { BasicResponse } from '../../interfaces/response';
 import { CacheKeys } from '../../constants/cacheKeys';
@@ -166,13 +169,13 @@ export class saveNotificationService {
         return { result: true, message: '다수의 유저들에게 알림 전달 성공' };
       }
 
-      const retryResult = await this._retryFailedUsers(
+      const retryResult: RetryFailedUsersResult = await this._retryFailedUsers(
         notificationDto,
         dbSaveFailedUserIds,
         notificationFailedUserIds
       );
 
-      if (retryResult.length > 0) {
+      if (retryResult.dbSaveFails.length || retryResult.notifyFails.length) {
         return {
           result: false,
           message: `일부 유저 혹은 전체 유저에게 알림 전달 실패\n실패한 유저 id : ${retryResult}`
@@ -194,8 +197,9 @@ export class saveNotificationService {
     notificationDto: NotificationDto,
     dbSaveFailedUserIds: string[],
     notificationFailedUserIds: string[]
-  ): Promise<string[]> {
-    const finalFailedUserIds: string[] = []; // 최종 실패한 사용자 ID 저장
+  ): Promise<RetryFailedUsersResult> {
+    const dbSaveFails: string[] = [];
+    const notifyFails: string[] = [];
 
     for (const failedUser of dbSaveFailedUserIds) {
       const retryNotificationDto = {
@@ -217,8 +221,9 @@ export class saveNotificationService {
       );
 
       if (retrySavedCount === 0) {
-        finalFailedUserIds.push(failedUser);
+        notificationFailedUserIds.push(failedUser);
       }
+      notifyFails.push(failedUser);
     }
 
     for (const failedUser of notificationFailedUserIds) {
@@ -231,11 +236,14 @@ export class saveNotificationService {
       const retrySended = await this._sendNotification(retryNotificationDto);
 
       if (!retrySended.result) {
-        finalFailedUserIds.push(failedUser);
+        notifyFails.push(failedUser);
       }
     }
 
-    return finalFailedUserIds;
+    return {
+      dbSaveFails: dbSaveFails,
+      notifyFails: notifyFails
+    };
   }
 
   private static _selectLocation(
