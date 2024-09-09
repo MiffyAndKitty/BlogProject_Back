@@ -11,9 +11,11 @@ export interface NotificationDto {
   };
   location?: {
     boardId?: string;
+    parentCommentId?: string;
     commentId?: string;
     boardTitle?: string;
     commentContent?: string;
+    boardWriterNickname?: string;
   };
   id?: string;
 }

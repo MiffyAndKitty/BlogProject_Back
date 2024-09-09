@@ -19,13 +19,24 @@ export class commentService {
   ): Promise<MultipleNotificationResponse> => {
     try {
       const boardId = commentDto.boardId;
-      const boardWriterQuery = `SELECT user_id FROM Board WHERE board_id = ? AND deleted_at IS NULL LIMIT 1;`;
+      const boardWriterQuery = `
+          SELECT u.user_id, u.user_nickname, b.board_title 
+          FROM Board b
+          JOIN User u ON b.user_id = u.user_id
+          WHERE b.board_id = ? 
+            AND b.deleted_at IS NULL
+          LIMIT 1;
+        `;
 
-      const [{ user_id: boardWriter }] = await db.query(boardWriterQuery, [
-        boardId
-      ]);
+      const [
+        {
+          user_id: boardWriterId,
+          user_nickname: boardWriterNickname,
+          board_title: boardTitle
+        }
+      ] = await db.query(boardWriterQuery, [boardId]);
 
-      if (!boardWriter)
+      if (!boardWriterId)
         return { result: false, message: '존재하지 않거나 삭제된 게시글' };
 
       const commentId = uuidv4().replace(/-/g, '');
@@ -75,9 +86,11 @@ export class commentService {
             },
             location: {
               boardId: boardId,
+              parentCommentId: commentDto.parentCommentId,
               commentId: commentId,
-              boardTitle: undefined,
-              commentContent: commentContent
+              boardTitle: boardTitle,
+              commentContent: commentContent,
+              boardWriterNickname: boardWriterNickname
             }
           };
         }
@@ -85,7 +98,7 @@ export class commentService {
       // 2. 게시글 작성자에게 부모 댓글 알림
       else if (
         !commentDto.parentCommentId &&
-        boardWriter !== commentDto.userId
+        boardWriterId !== commentDto.userId
       ) {
         const [commenter] = await db.query(
           `SELECT user_nickname, user_email, user_image FROM User WHERE user_id = ?`,
@@ -105,7 +118,7 @@ export class commentService {
         );
 
         commentOnBoard = {
-          recipient: boardWriter,
+          recipient: boardWriterId,
           type: NotificationName.COMMENT_ON_BOARD,
           trigger: {
             id: commentDto.userId,

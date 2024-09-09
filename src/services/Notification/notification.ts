@@ -44,6 +44,7 @@ export class NotificationService {
           WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Notifications.notification_location
           ELSE NULL
         END AS notification_comment,
+        Comment.parent_comment_id AS parent_comment_id,
         CASE
           WHEN Notifications.notification_type IN ('${NotificationName.FOLLOWING_NEW_BOARD}', '${NotificationName.BOARD_NEW_LIKE}') THEN Notifications.notification_location
           WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Comment.board_id
@@ -90,10 +91,8 @@ export class NotificationService {
 
       query += ` ORDER BY notification_order ${order} LIMIT ?`;
       params.push(pageSize);
-      console.log(query, params);
       const result = await db.query(query, params);
       if (listDto.cursor && listDto.isBefore) result.reverse();
-      console.log(result);
       return {
         result: true,
         data: result,
