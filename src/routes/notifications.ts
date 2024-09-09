@@ -11,6 +11,7 @@ import {
   UserNotificationDto
 } from '../interfaces/notification';
 import { CacheKeys } from '../constants/cacheKeys';
+import { NotificationName } from '../constants/notificationName';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
@@ -125,14 +126,7 @@ notificationsRouter.get(
       }),
     query('sort')
       .optional({ checkFalsy: true })
-      .isIn([
-        'new-follower',
-        'following-new-board',
-        'comment-on-board',
-        'board-new-like',
-        'reply-to-comment',
-        'broadcast'
-      ])
+      .isIn(Object.values(NotificationName))
       .withMessage(
         'sort의 값이 존재한다면 알림 타입값 중 하나의 값이어야합니다.'
       )

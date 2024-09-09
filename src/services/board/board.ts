@@ -5,6 +5,7 @@ import { redis } from '../../loaders/redis';
 import { SingleNotificationResponse } from '../../interfaces/response';
 import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
 import { CacheKeys } from '../../constants/cacheKeys';
+import { NotificationName } from '../../constants/notificationName';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
@@ -150,7 +151,7 @@ export class BoardService {
             result: true,
             notifications: {
               recipient: board.user_id,
-              type: 'board-new-like',
+              type: NotificationName.BOARD_NEW_LIKE,
               trigger: {
                 id: currentUser.user_id,
                 nickname: currentUser.user_nickname,

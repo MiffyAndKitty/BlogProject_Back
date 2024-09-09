@@ -5,6 +5,7 @@ import {
   NotificationListDto,
   UserNotificationDto
 } from '../../interfaces/notification';
+import { NotificationName } from '../../constants/notificationName';
 
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
@@ -40,12 +41,12 @@ export class NotificationService {
         User.user_email AS trigger_email, 
         User.user_image AS trigger_image,
         CASE
-          WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Notifications.notification_location
+          WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Notifications.notification_location
           ELSE NULL
         END AS notification_comment,
         CASE
-          WHEN Notifications.notification_type IN ('following-new-board', 'board-new-like') THEN Notifications.notification_location
-          WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Comment.board_id
+          WHEN Notifications.notification_type IN ('${NotificationName.FOLLOWING_NEW_BOARD}', '${NotificationName.BOARD_NEW_LIKE}') THEN Notifications.notification_location
+          WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Comment.board_id
           ELSE NULL
         END AS notification_board,
         Board.board_title AS board_title,
@@ -57,8 +58,8 @@ export class NotificationService {
       LEFT JOIN Board ON 
          -- CASE 문에서 반환한 notification_board 값을 통해 Board와 조인
           (CASE 
-              WHEN Notifications.notification_type IN ('following-new-board', 'board-new-like') THEN Notifications.notification_location
-              WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Comment.board_id
+              WHEN Notifications.notification_type IN ('${NotificationName.FOLLOWING_NEW_BOARD}', '${NotificationName.BOARD_NEW_LIKE}') THEN Notifications.notification_location
+              WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Comment.board_id
               ELSE NULL
           END) = Board.board_id
       LEFT JOIN User AS BoardUser ON Board.user_id = BoardUser.user_id 

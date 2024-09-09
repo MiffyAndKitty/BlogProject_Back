@@ -1,12 +1,8 @@
+import { NotificationNameType } from '../types/notification';
+
 export interface NotificationDto {
   recipient?: string;
-  type:
-    | 'new-follower'
-    | 'following-new-board'
-    | 'comment-on-board'
-    | 'board-new-like'
-    | 'reply-to-comment'
-    | 'broadcast';
+  type: NotificationNameType;
   trigger: {
     id: string;
     nickname: string;

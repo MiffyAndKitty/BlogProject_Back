@@ -7,6 +7,9 @@ import { NotificationDto } from '../../interfaces/notification';
 import { ensureError } from '../../errors/ensureError';
 import { BasicResponse } from '../../interfaces/response';
 import { CacheKeys } from '../../constants/cacheKeys';
+import { NotificationName } from '../../constants/notificationName';
+import { NotificationNameType } from '../../types/notification';
+
 export class saveNotificationService {
   private static async _sendNotification(
     notificationDto: NotificationDto
@@ -51,7 +54,6 @@ export class saveNotificationService {
     }
   }
 
-  //  'new-follower',  'reply-to-comment', 'comment-on-board'
   static async createSingleUserNotification(
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
@@ -87,7 +89,6 @@ export class saveNotificationService {
     }
   }
 
-  // 'following-new-board'
   static async createMultiUserNotification(
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
@@ -96,7 +97,7 @@ export class saveNotificationService {
       const dbSaveFailedUserIds: string[] = []; // 데이터베이스에 저장 실패한 사용자 ID 저장
       const notificationFailedUserIds: string[] = []; // 알림 전송 실패한 사용자 ID 저장
 
-      if (notificationDto.type === 'following-new-board') {
+      if (notificationDto.type === NotificationName.FOLLOWING_NEW_BOARD) {
         const followers = await db.query(
           `SELECT following_id 
          FROM Follow
@@ -238,25 +239,25 @@ export class saveNotificationService {
   }
 
   private static _selectLocation(
-    type: NotificationDto['type'],
+    type: NotificationNameType,
     location: NotificationDto['location']
   ): string | undefined {
-    let seletedLocation;
+    let selectedLocation;
 
     switch (type) {
-      case 'reply-to-comment':
-      case 'comment-on-board':
-        seletedLocation = location?.commentId;
+      case NotificationName.REPLY_TO_COMMENT:
+      case NotificationName.COMMENT_ON_BOARD:
+        selectedLocation = location?.commentId;
         break;
-      case 'following-new-board':
-      case 'board-new-like':
-        seletedLocation = location?.boardId;
+      case NotificationName.FOLLOWING_NEW_BOARD:
+      case NotificationName.BOARD_NEW_LIKE:
+        selectedLocation = location?.boardId;
         break;
-      case 'new-follower':
+      case NotificationName.NEW_FOLLOWER:
       default:
-        location = undefined;
+        selectedLocation = undefined;
         break;
     }
-    return seletedLocation;
+    return selectedLocation;
   }
 }

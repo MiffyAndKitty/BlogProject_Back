@@ -10,6 +10,7 @@ import {
   FollowedListUser,
   FollowingListUser
 } from '../../interfaces/user/follow';
+import { NotificationName } from '../../constants/notificationName';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -224,7 +225,7 @@ export class FollowService {
               : '팔로우 추가 성공',
             notifications: {
               recipient: followedUser.user_id,
-              type: 'new-follower',
+              type: NotificationName.NEW_FOLLOWER,
               trigger: {
                 id: currentUser.user_id,
                 nickname: currentUser.user_nickname,

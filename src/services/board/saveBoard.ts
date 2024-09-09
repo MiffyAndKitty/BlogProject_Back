@@ -4,6 +4,7 @@ import { ensureError } from '../../errors/ensureError';
 import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
 import { v4 as uuidv4 } from 'uuid';
 import { SingleNotificationResponse } from '../../interfaces/response';
+import { NotificationName } from '../../constants/notificationName';
 
 export class saveBoardService {
   static modifyBoard = async (
@@ -134,7 +135,7 @@ export class saveBoardService {
       return {
         result: true,
         notifications: {
-          type: 'following-new-board',
+          type: NotificationName.FOLLOWING_NEW_BOARD,
           trigger: {
             id: writer.user_id,
             nickname: writer.user_nickname,

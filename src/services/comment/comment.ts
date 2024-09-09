@@ -11,6 +11,7 @@ import { redis } from '../../loaders/redis';
 import { MultipleNotificationResponse } from '../../interfaces/response';
 import { NotificationDto } from '../../interfaces/notification';
 import { CacheKeys } from '../../constants/cacheKeys';
+import { NotificationName } from '../../constants/notificationName';
 export class commentService {
   // 댓글 생성
   static create = async (
@@ -65,7 +66,7 @@ export class commentService {
 
           replyToComment = {
             recipient: parentCommenter,
-            type: 'reply-to-comment',
+            type: NotificationName.REPLY_TO_COMMENT,
             trigger: {
               id: commentDto.userId,
               nickname: replier.user_nickname,
@@ -105,7 +106,7 @@ export class commentService {
 
         commentOnBoard = {
           recipient: boardWriter,
-          type: 'comment-on-board',
+          type: NotificationName.COMMENT_ON_BOARD,
           trigger: {
             id: commentDto.userId,
             nickname: commenter.user_nickname,
