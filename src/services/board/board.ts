@@ -146,6 +146,10 @@ export class BoardService {
         currentUser.user_id
       ); // 추가될 시 1, 추가되지 않으면 0
 
+      if (board.user_id === userId && likedInRedis === 1) {
+        return { result: true, message: '자신의 게시물에 좋아요 추가 성공' };
+      }
+
       return likedInRedis === 1
         ? {
             result: true,
