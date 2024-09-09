@@ -64,25 +64,21 @@ export class SaveNotificationService {
         return { result: true, message: '다수의 유저들에게 알림 전달 성공' };
       }
 
-      const retryResult: RetryFailedUsersResult = await this._retryFailedUsers(
+      const retryResult: boolean = await this._retryFailedUsers(
         notificationDto,
         dbSaveFailedUserIds,
         notificationFailedUserIds
       );
 
-      if (retryResult.dbSaveFails.length || retryResult.notifyFails.length) {
-        console.log(`DB에 저장 실패한 알림 : ${retryResult.dbSaveFails}`);
-        console.log(`유저에게 전송 실패한 : ${retryResult.notifyFails}`);
-        return {
-          result: false,
-          message: `일부 유저 혹은 전체 유저에게 알림 전달 실패`
-        };
-      }
-
-      return {
-        result: true,
-        message: '오류 발생 후 다수의 유저들에게 알림 재전달 성공'
-      };
+      return retryResult
+        ? {
+            result: true,
+            message: '오류 발생 후 다수의 유저들에게 알림 재전달 성공'
+          }
+        : {
+            result: false,
+            message: `일부 유저 혹은 전체 유저에게 알림 전달 실패`
+          };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
@@ -249,16 +245,48 @@ export class SaveNotificationService {
     notificationDto: NotificationDto,
     dbSaveFailedUserIds: string[],
     notificationFailedUserIds: string[]
-  ): Promise<RetryFailedUsersResult> {
+  ): Promise<boolean> {
+    const retryResult: RetryFailedUsersResult = {
+      dbSaveFails: await this._retryDbSave(
+        notificationDto,
+        dbSaveFailedUserIds
+      ),
+      notifyFails: await this._retryNotify(
+        notificationDto,
+        notificationFailedUserIds
+      )
+    };
+
+    if (retryResult.dbSaveFails.length || retryResult.notifyFails.length) {
+      console.log(
+        '[알림 전달 재시도] DB 알림 저장 실패한 유저 : ',
+        retryResult.dbSaveFails
+      );
+      console.log(
+        '[알림 전달 재시도] 알림을 전달 받지 못한 유저 : ',
+        retryResult.notifyFails
+      );
+      return false;
+    }
+
+    return true;
+  }
+
+  private static async _retryDbSave(
+    notificationDto: NotificationDto,
+    dbSaveFailedUserIds: string[]
+  ): Promise<string[]> {
     const dbSaveFails: string[] = [];
-    const notifyFails: string[] = [];
+    const location = this._selectLocation(
+      notificationDto.type,
+      notificationDto.location
+    );
 
     for (const failedUser of dbSaveFailedUserIds) {
-      const retryNotificationDto = {
-        ...notificationDto,
-        id: uuidv4().replace(/-/g, ''),
-        recipient: failedUser
-      };
+      const retryNotificationDto = this._createRetryNotification(
+        notificationDto,
+        failedUser
+      );
 
       const { affectedRows: retrySavedCount } = await db.query(
         `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location) 
@@ -273,28 +301,41 @@ export class SaveNotificationService {
       );
 
       if (retrySavedCount === 0) {
-        notificationFailedUserIds.push(failedUser);
+        dbSaveFails.push(failedUser);
       }
-      notifyFails.push(failedUser);
     }
+    return dbSaveFails;
+  }
 
-    for (const failedUser of notificationFailedUserIds) {
-      const retryNotificationDto = {
-        ...notificationDto,
-        id: uuidv4().replace(/-/g, ''),
-        recipient: failedUser
-      };
+  private static async _retryNotify(
+    notificationDto: NotificationDto,
+    FailedUserIds: string[]
+  ): Promise<string[]> {
+    const notifyFails: string[] = [];
 
-      const retrySended = await this._sendNotification(retryNotificationDto);
+    for (const failedUser of FailedUserIds) {
+      const retryNotificationDto = this._createRetryNotification(
+        notificationDto,
+        failedUser
+      );
 
-      if (!retrySended.result) {
+      const retrySent = await this._sendNotification(retryNotificationDto);
+
+      if (!retrySent.result) {
         notifyFails.push(failedUser);
       }
     }
+    return notifyFails;
+  }
 
+  private static _createRetryNotification(
+    notificationDto: NotificationDto,
+    userId: string
+  ): NotificationDto {
     return {
-      dbSaveFails: dbSaveFails,
-      notifyFails: notifyFails
+      ...notificationDto,
+      id: this._generateId(),
+      recipient: userId
     };
   }
 }
