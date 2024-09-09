@@ -1,4 +1,4 @@
-const NotificationType = {
+export const NotificationName = {
   NEW_FOLLOWER: 'new-follower',
   FOLLOWING_NEW_BOARD: 'following-new-board',
   COMMENT_ON_BOARD: 'comment-on-board',

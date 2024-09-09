@@ -1,4 +1,4 @@
-import { NotificationType } from '../constants/notificationType';
+import { NotificationName } from '../constants/notificationName';
 
-export type NotificationType =
-  (typeof NotificationType)[keyof typeof NotificationType];
+export type NotificationNameType =
+  (typeof NotificationName)[keyof typeof NotificationName];
