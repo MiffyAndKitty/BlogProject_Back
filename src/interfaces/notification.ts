@@ -32,3 +32,8 @@ export interface NotificationListDto {
   isBefore: boolean;
   sort: string;
 }
+
+export interface RetryFailedUsersResult {
+  dbSaveFails: string[];
+  notifyFails: string[];
+}
