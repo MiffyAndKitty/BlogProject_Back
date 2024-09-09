@@ -6,4 +6,4 @@ export const CacheKeys = {
   BOARD_VIEW: 'board_view:',
   COMMENT_LIKE: 'comment_like:',
   REFRESHTOKEN: 'refreshToken:'
-};
+} as const;
