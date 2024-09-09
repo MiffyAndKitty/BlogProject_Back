@@ -5,10 +5,7 @@ import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
 import moment from 'moment';
 
 export class TopFollowersCacheJobService {
-  static async cacheTopFollowers(
-    key: typeof CacheKeys.TOP_FOLLOWERS,
-    limit: number = 10
-  ): Promise<boolean> {
+  static async cacheTopFollowers(limit: number = 10): Promise<boolean> {
     try {
       const { startDate, endDate } = this._getLastWeekPeriod();
 
@@ -29,7 +26,10 @@ export class TopFollowersCacheJobService {
         'follower_count'
       );
 
-      return await cacheToRedisWithScores(key, flatFollowers);
+      return await cacheToRedisWithScores(
+        CacheKeys.TOP_FOLLOWERS,
+        flatFollowers
+      );
     } catch (err) {
       console.error('최다 팔로워 보유 블로거 캐싱 중 오류 발생:', err);
       return false;
