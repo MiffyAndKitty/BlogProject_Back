@@ -6,25 +6,14 @@ import {
   UserNotificationDto
 } from '../../interfaces/notification';
 import { NotificationName } from '../../constants/notificationName';
-
+import { isNotificationNameType } from '../../utils/typegaurd/isNotificationNameType';
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
     try {
-      const sortQuery = listDto.sort
-        ? `AND notification_type = '${listDto.sort}'`
-        : ``;
-      const [countResult] = await db.query(
-        `SELECT COUNT(*) AS totalCount 
-       FROM Notifications 
-       WHERE notification_recipient = ? 
-         ${sortQuery}
-         AND deleted_at IS NULL;`,
-        [listDto.userId]
-      );
+      const sortQuery = this._buildSortQuery(listDto.sort);
 
+      const totalCount = await this._getTotalCount(listDto.userId, sortQuery);
       const pageSize = listDto.pageSize || 10;
-
-      const totalCount = Number(countResult.totalCount.toString());
       const totalPageCount = Math.ceil(totalCount / pageSize);
 
       let query = `
@@ -128,5 +117,28 @@ export class NotificationService {
       console.log(error.message);
       return { result: false, message: error.message };
     }
+  }
+
+  // 정렬 쿼리 빌드
+  private static _buildSortQuery(sort: string): string {
+    return isNotificationNameType(sort)
+      ? `AND notification_type = '${sort}'`
+      : '';
+  }
+
+  // 총 알림 수 조회
+  private static async _getTotalCount(
+    userId: string,
+    sortQuery: string
+  ): Promise<number> {
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) AS totalCount 
+       FROM Notifications 
+       WHERE notification_recipient = ? 
+         ${sortQuery}
+         AND deleted_at IS NULL;`,
+      [userId]
+    );
+    return Number(countResult.totalCount.toString());
   }
 }
