@@ -80,11 +80,13 @@ export class saveNotificationService {
         ]
       );
 
-      const sent = await this._sendNotification(notificationDto);
-
-      return savedCount > 0 && sent.result
-        ? { result: true, message: '단일 사용자에게 알림 전송 성공' }
-        : { result: false, message: '단일 사용자에게 알림 전송 실패' };
+      if (savedCount > 0) {
+        const sent = await this._sendNotification(notificationDto);
+        return sent.result
+          ? { result: true, message: '단일 사용자에게 알림 전송 성공' }
+          : { result: false, message: '단일 사용자에게 알림 전송 실패' };
+      }
+      return { result: false, message: '단일 사용자에게 알림 저장 실패' };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
@@ -176,9 +178,11 @@ export class saveNotificationService {
       );
 
       if (retryResult.dbSaveFails.length || retryResult.notifyFails.length) {
+        console.log(`DB에 저장 실패한 알림 : ${retryResult.dbSaveFails}`);
+        console.log(`유저에게 전송 실패한 : ${retryResult.notifyFails}`);
         return {
           result: false,
-          message: `일부 유저 혹은 전체 유저에게 알림 전달 실패\n실패한 유저 id : ${retryResult}`
+          message: `일부 유저 혹은 전체 유저에게 알림 전달 실패`
         };
       }
 
