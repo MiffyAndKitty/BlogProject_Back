@@ -63,7 +63,7 @@ export class SaveNotificationService {
         notificationDto.location
       );
 
-      notificationDto.id = uuidv4().replace(/-/g, '');
+      notificationDto.id = this._generateId();
       // 단일 사용자에게 알림 저장
       const { affectedRows: savedCount } = await db.query(
         `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
@@ -92,29 +92,13 @@ export class SaveNotificationService {
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
     try {
-      let userList: string[] = [];
+      const userList = await this._getUserList(notificationDto);
+      if (userList.length === 0) {
+        return { result: true, message: '알림을 전달할 유저가 없음' };
+      }
+
       const dbSaveFailedUserIds: string[] = []; // 데이터베이스에 저장 실패한 사용자 ID 저장
       const notificationFailedUserIds: string[] = []; // 알림 전송 실패한 사용자 ID 저장
-
-      if (notificationDto.type === NotificationName.FOLLOWING_NEW_BOARD) {
-        const followers = await db.query(
-          `SELECT following_id 
-         FROM Follow
-         WHERE followed_id = ? AND deleted_at IS NULL;`,
-          [notificationDto.trigger.id]
-        );
-
-        if (followers.length === 0) {
-          return {
-            result: true,
-            message: '알림을 전달할 유저가 존재하지 않음'
-          };
-        }
-
-        userList = followers.map(
-          (follower: { following_id: string }) => follower.following_id
-        );
-      }
 
       const location = this._selectLocation(
         notificationDto.type,
@@ -207,6 +191,25 @@ export class SaveNotificationService {
       JSON.stringify(notificationDto)
     );
     return cached > 0;
+  }
+
+  private static async _getUserList(
+    notificationDto: NotificationDto
+  ): Promise<string[]> {
+    if (notificationDto.type === NotificationName.FOLLOWING_NEW_BOARD) {
+      const followers = await db.query(
+        `SELECT following_id FROM Follow WHERE followed_id = ? AND deleted_at IS NULL;`,
+        [notificationDto.trigger.id]
+      );
+      return followers.map(
+        (follower: { following_id: string }) => follower.following_id
+      );
+    }
+    return [];
+  }
+
+  private static _generateId(): string {
+    return uuidv4().replace(/-/g, '');
   }
 
   private static async _retryFailedUsers(
