@@ -13,7 +13,7 @@ import { CacheKeys } from '../../constants/cacheKeys';
 import { NotificationName } from '../../constants/notificationName';
 import { NotificationNameType } from '../../types/notification';
 
-export class saveNotificationService {
+export class SaveNotificationService {
   private static async _sendNotification(
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {

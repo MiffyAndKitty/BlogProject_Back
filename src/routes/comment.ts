@@ -12,7 +12,7 @@ import {
   ParentCommentIdDto
 } from '../interfaces/comment';
 import { MultipleNotificationResponse } from '../interfaces/response';
-import { saveNotificationService } from '../services/Notification/saveNotifications';
+import { SaveNotificationService } from '../services/Notification/saveNotifications';
 import { CommentListService } from '../services/comment/commentList';
 
 export const commentRouter = Router();
@@ -58,7 +58,7 @@ commentRouter.post(
 
         if (result.notifications.replyToComment) {
           promises.push(
-            saveNotificationService.createSingleUserNotification(
+            SaveNotificationService.createSingleUserNotification(
               result.notifications.replyToComment
             )
           );
@@ -66,7 +66,7 @@ commentRouter.post(
 
         if (result.notifications.commentOnBoard) {
           promises.push(
-            saveNotificationService.createSingleUserNotification(
+            SaveNotificationService.createSingleUserNotification(
               result.notifications.commentOnBoard
             )
           );

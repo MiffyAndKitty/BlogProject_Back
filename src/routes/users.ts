@@ -20,7 +20,7 @@ import { FollowListDto } from '../interfaces/user/follow';
 import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
-import { saveNotificationService } from '../services/Notification/saveNotifications';
+import { SaveNotificationService } from '../services/Notification/saveNotifications';
 export const usersRouter = Router();
 
 // 특정 이메일/닉네임의 중복 여부 확인 (POST : /users/duplication)
@@ -198,7 +198,7 @@ usersRouter.post(
 
       if (result.result === true && result.notifications) {
         const notified =
-          await saveNotificationService.createSingleUserNotification(
+          await SaveNotificationService.createSingleUserNotification(
             result.notifications
           );
         return notified.result

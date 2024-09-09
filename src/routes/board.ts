@@ -15,7 +15,7 @@ import {
 } from '../interfaces/board/listDto';
 import { upload } from '../middleware/multer';
 import { checkWriter } from '../middleware/checkWriter';
-import { saveNotificationService } from '../services/Notification/saveNotifications';
+import { SaveNotificationService } from '../services/Notification/saveNotifications';
 import {
   ListResponse,
   SingleNotificationResponse,
@@ -305,7 +305,7 @@ boardRouter.post(
 
       if (result.result === true && result.notifications) {
         const notified =
-          await saveNotificationService.createMultiUserNotification(
+          await SaveNotificationService.createMultiUserNotification(
             result.notifications
           );
         return res.status(notified.result ? 200 : 500).send(notified);
@@ -466,7 +466,7 @@ boardRouter.post(
 
       if (result.result === true && result.notifications) {
         const notified =
-          await saveNotificationService.createSingleUserNotification(
+          await SaveNotificationService.createSingleUserNotification(
             result.notifications
           );
         return res.status(notified.result ? 200 : 500).send(notified);
