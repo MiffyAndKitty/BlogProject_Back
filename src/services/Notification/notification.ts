@@ -49,11 +49,19 @@ export class NotificationService {
           ELSE NULL
         END AS notification_board,
         Board.board_title AS board_title,
+        BoardUser.user_nickname AS board_writer,
         Comment.comment_content AS comment_content 
       FROM Notifications
       JOIN User ON Notifications.notification_trigger = User.user_id
       LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id
-      LEFT JOIN Board ON Comment.board_id = Board.board_id
+      LEFT JOIN Board ON 
+         -- CASE 문에서 반환한 notification_board 값을 통해 Board와 조인
+          (CASE 
+              WHEN Notifications.notification_type IN ('following-new-board', 'board-new-like') THEN Notifications.notification_location
+              WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Comment.board_id
+              ELSE NULL
+          END) = Board.board_id
+      LEFT JOIN User AS BoardUser ON Board.user_id = BoardUser.user_id 
       WHERE Notifications.notification_recipient = ? 
         ${sortQuery}
         AND Notifications.deleted_at IS NULL
@@ -81,10 +89,10 @@ export class NotificationService {
 
       query += ` ORDER BY notification_order ${order} LIMIT ?`;
       params.push(pageSize);
-
+      console.log(query, params);
       const result = await db.query(query, params);
       if (listDto.cursor && listDto.isBefore) result.reverse();
-
+      console.log(result);
       return {
         result: true,
         data: result,
