@@ -14,46 +14,6 @@ import { NotificationName } from '../../constants/notificationName';
 import { NotificationNameType } from '../../types/notification';
 
 export class SaveNotificationService {
-  private static async _sendNotification(
-    notificationDto: NotificationDto
-  ): Promise<BasicResponse> {
-    try {
-      if (!notificationDto.recipient) {
-        throw new Error('알림 수신인이 정의되어 있지 않습니다');
-      }
-
-      // 클라이언트가 SSE로 연결되어 있는지 확인
-      const client: Response | undefined = clientsService.get(
-        notificationDto.recipient
-      );
-
-      if (client) {
-        // client가 정의되어 있으면 알림 전송
-        this._sendViaSSE(client, notificationDto);
-        return {
-          result: true,
-          message: '실시간 알림 전송됨'
-        };
-      }
-      // 클라이언트가 연결되지 않은 경우 Redis에 알림 캐싱
-      const cashed = await this._cacheNotification(notificationDto);
-
-      return cashed
-        ? {
-            result: true,
-            message: 'Redis에 알림을 저장 완료'
-          }
-        : {
-            result: false,
-            message: 'Redis에 알림을 저장 실패'
-          };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
-    }
-  }
-
   static async createSingleUserNotification(
     notificationDto: NotificationDto
   ): Promise<BasicResponse> {
@@ -130,6 +90,46 @@ export class SaveNotificationService {
     }
   }
 
+  private static async _sendNotification(
+    notificationDto: NotificationDto
+  ): Promise<BasicResponse> {
+    try {
+      if (!notificationDto.recipient) {
+        throw new Error('알림 수신인이 정의되어 있지 않습니다');
+      }
+
+      // 클라이언트가 SSE로 연결되어 있는지 확인
+      const client: Response | undefined = clientsService.get(
+        notificationDto.recipient
+      );
+
+      if (client) {
+        // client가 정의되어 있으면 알림 전송
+        this._sendViaSSE(client, notificationDto);
+        return {
+          result: true,
+          message: '실시간 알림 전송됨'
+        };
+      }
+      // 클라이언트가 연결되지 않은 경우 Redis에 알림 캐싱
+      const cashed = await this._cacheNotification(notificationDto);
+
+      return cashed
+        ? {
+            result: true,
+            message: 'Redis에 알림을 저장 완료'
+          }
+        : {
+            result: false,
+            message: 'Redis에 알림을 저장 실패'
+          };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return { result: false, message: error.message };
+    }
+  }
+
   private static _sendViaSSE(
     client: Response,
     notificationDto: NotificationDto
@@ -148,6 +148,10 @@ export class SaveNotificationService {
     return cached > 0;
   }
 
+  private static _generateId(): string {
+    return uuidv4().replace(/-/g, '');
+  }
+
   private static async _getUserList(
     notificationDto: NotificationDto
   ): Promise<string[]> {
@@ -161,10 +165,6 @@ export class SaveNotificationService {
       );
     }
     return [];
-  }
-
-  private static _generateId(): string {
-    return uuidv4().replace(/-/g, '');
   }
 
   private static async _notifyMultipleUsers(
@@ -222,6 +222,29 @@ export class SaveNotificationService {
     return affectedRows;
   }
 
+  private static _selectLocation(
+    type: NotificationNameType,
+    location: NotificationDto['location']
+  ): string | undefined {
+    let selectedLocation;
+
+    switch (type) {
+      case NotificationName.REPLY_TO_COMMENT:
+      case NotificationName.COMMENT_ON_BOARD:
+        selectedLocation = location?.commentId;
+        break;
+      case NotificationName.FOLLOWING_NEW_BOARD:
+      case NotificationName.BOARD_NEW_LIKE:
+        selectedLocation = location?.boardId;
+        break;
+      case NotificationName.NEW_FOLLOWER:
+      default:
+        selectedLocation = undefined;
+        break;
+    }
+    return selectedLocation;
+  }
+
   private static async _retryFailedUsers(
     notificationDto: NotificationDto,
     dbSaveFailedUserIds: string[],
@@ -273,28 +296,5 @@ export class SaveNotificationService {
       dbSaveFails: dbSaveFails,
       notifyFails: notifyFails
     };
-  }
-
-  private static _selectLocation(
-    type: NotificationNameType,
-    location: NotificationDto['location']
-  ): string | undefined {
-    let selectedLocation;
-
-    switch (type) {
-      case NotificationName.REPLY_TO_COMMENT:
-      case NotificationName.COMMENT_ON_BOARD:
-        selectedLocation = location?.commentId;
-        break;
-      case NotificationName.FOLLOWING_NEW_BOARD:
-      case NotificationName.BOARD_NEW_LIKE:
-        selectedLocation = location?.boardId;
-        break;
-      case NotificationName.NEW_FOLLOWER:
-      default:
-        selectedLocation = undefined;
-        break;
-    }
-    return selectedLocation;
   }
 }
