@@ -29,26 +29,23 @@ export class SaveNotificationService {
 
       if (client) {
         // client가 정의되어 있으면 알림 전송
-        client.write(`data: ${JSON.stringify(notificationDto)}\n\n`);
+        this._sendViaSSE(client, notificationDto);
         return {
           result: true,
-          message: 'client가 로그인되어 있어 실시간 알림 전송됨'
+          message: '실시간 알림 전송됨'
         };
       }
       // 클라이언트가 연결되지 않은 경우 Redis에 알림 캐싱
-      const cashed = await redis.lpush(
-        `${CacheKeys.NOTIFICATION}${notificationDto.recipient}`,
-        JSON.stringify(notificationDto)
-      );
+      const cashed = await this._cacheNotification(notificationDto);
 
       return cashed
         ? {
             result: true,
-            message: '클라이언트가 연결되어 있지 않음, Redis에 알림을 저장 완료'
+            message: 'Redis에 알림을 저장 완료'
           }
         : {
             result: false,
-            message: '클라이언트가 연결되어 있지 않음, Redis에 알림을 저장 실패'
+            message: 'Redis에 알림을 저장 실패'
           };
     } catch (err) {
       const error = ensureError(err);
@@ -81,10 +78,7 @@ export class SaveNotificationService {
       );
 
       if (savedCount > 0) {
-        const sent = await this._sendNotification(notificationDto);
-        return sent.result
-          ? { result: true, message: '단일 사용자에게 알림 전송 성공' }
-          : { result: false, message: '단일 사용자에게 알림 전송 실패' };
+        return await this._sendNotification(notificationDto);
       }
       return { result: false, message: '단일 사용자에게 알림 저장 실패' };
     } catch (err) {
@@ -195,6 +189,24 @@ export class SaveNotificationService {
       console.log(error.message);
       return { result: false, message: error.message };
     }
+  }
+
+  private static _sendViaSSE(
+    client: Response,
+    notificationDto: NotificationDto
+  ): void {
+    client.write(`data: ${JSON.stringify(notificationDto)}\n\n`);
+  }
+
+  private static async _cacheNotification(
+    notificationDto: NotificationDto
+  ): Promise<boolean> {
+    const cached = await redis.lpush(
+      // 추가 후 리스트의 새로운 길이 반환
+      `${CacheKeys.NOTIFICATION}${notificationDto.recipient}`,
+      JSON.stringify(notificationDto)
+    );
+    return cached > 0;
   }
 
   private static async _retryFailedUsers(
