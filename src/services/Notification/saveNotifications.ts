@@ -65,16 +65,9 @@ export class SaveNotificationService {
 
       notificationDto.id = this._generateId();
       // 단일 사용자에게 알림 저장
-      const { affectedRows: savedCount } = await db.query(
-        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
-         VALUES (?, ?, ?, ?, ?)`,
-        [
-          notificationDto.id,
-          notificationDto.recipient,
-          notificationDto.trigger.id,
-          notificationDto.type,
-          location
-        ]
+      const savedCount = await this._saveNotificationToDb(
+        notificationDto,
+        location
       );
 
       if (savedCount > 0) {
@@ -97,50 +90,12 @@ export class SaveNotificationService {
         return { result: true, message: '알림을 전달할 유저가 없음' };
       }
 
-      const dbSaveFailedUserIds: string[] = []; // 데이터베이스에 저장 실패한 사용자 ID 저장
-      const notificationFailedUserIds: string[] = []; // 알림 전송 실패한 사용자 ID 저장
-
       const location = this._selectLocation(
         notificationDto.type,
         notificationDto.location
       );
-
-      // 각 팔로워에게 알림 저장 및 전송
-      for (const user of userList) {
-        if (!user) continue;
-
-        const userNotificationId = uuidv4().replace(/-/g, '');
-        const userNotificationDto: NotificationDto = {
-          recipient: user,
-          ...notificationDto,
-          id: userNotificationId
-        };
-
-        // DB에 알림 저장
-        const { affectedRows: savedCount } = await db.query(
-          `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
-         VALUES (?, ?, ?, ?, ?);`,
-          [
-            userNotificationDto.id,
-            userNotificationDto.recipient,
-            userNotificationDto.trigger.id,
-            userNotificationDto.type,
-            location
-          ]
-        );
-
-        if (savedCount === 0) {
-          dbSaveFailedUserIds.push(user); // 실패한 유저 ID 저장
-          continue; // 데이터베이스에 저장 실패 시 알림 전송 시도하지 않음
-        }
-
-        // SSE 또는 Redis로 알림 전송
-        const sent = await this._sendNotification(userNotificationDto);
-
-        if (!sent.result) {
-          notificationFailedUserIds.push(user); // 실패한 유저 ID 저장
-        }
-      }
+      const { dbSaveFailedUserIds, notificationFailedUserIds } =
+        await this._notifyMultipleUsers(userList, notificationDto, location);
 
       if (
         dbSaveFailedUserIds.length === 0 &&
@@ -210,6 +165,61 @@ export class SaveNotificationService {
 
   private static _generateId(): string {
     return uuidv4().replace(/-/g, '');
+  }
+
+  private static async _notifyMultipleUsers(
+    userList: string[],
+    notificationDto: NotificationDto,
+    location?: string
+  ) {
+    const dbSaveFailedUserIds: string[] = [];
+    const notificationFailedUserIds: string[] = [];
+
+    for (const user of userList) {
+      if (!user) continue;
+
+      const userNotificationDto: NotificationDto = {
+        recipient: user,
+        ...notificationDto,
+        id: uuidv4().replace(/-/g, '')
+      };
+
+      const savedCount = await this._saveNotificationToDb(
+        userNotificationDto,
+        location
+      );
+
+      if (savedCount === 0) {
+        dbSaveFailedUserIds.push(user);
+        continue;
+      }
+
+      const sent = await this._sendNotification(userNotificationDto);
+
+      if (!sent.result) {
+        notificationFailedUserIds.push(user);
+      }
+    }
+
+    return { dbSaveFailedUserIds, notificationFailedUserIds };
+  }
+
+  private static async _saveNotificationToDb(
+    notificationDto: NotificationDto,
+    location?: string
+  ): Promise<number> {
+    const { affectedRows } = await db.query(
+      `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        notificationDto.id,
+        notificationDto.recipient,
+        notificationDto.trigger.id,
+        notificationDto.type,
+        location
+      ]
+    );
+    return affectedRows;
   }
 
   private static async _retryFailedUsers(
