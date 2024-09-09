@@ -10,6 +10,8 @@ import {
 import { redis } from '../../loaders/redis';
 import { MultipleNotificationResponse } from '../../interfaces/response';
 import { NotificationDto } from '../../interfaces/notification';
+import { CacheKeys } from '../../constants/cacheKeys';
+import { NotificationName } from '../../constants/notificationName';
 export class commentService {
   // 댓글 생성
   static create = async (
@@ -64,7 +66,7 @@ export class commentService {
 
           replyToComment = {
             recipient: parentCommenter,
-            type: 'reply-to-comment',
+            type: NotificationName.REPLY_TO_COMMENT,
             trigger: {
               id: commentDto.userId,
               nickname: replier.user_nickname,
@@ -104,7 +106,7 @@ export class commentService {
 
         commentOnBoard = {
           recipient: boardWriter,
-          type: 'comment-on-board',
+          type: NotificationName.COMMENT_ON_BOARD,
           trigger: {
             id: commentDto.userId,
             nickname: commenter.user_nickname,
@@ -186,7 +188,7 @@ export class commentService {
       if (likedInDB.length === 0) {
         // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
         const likedInRedis = await redis.hset(
-          `comment_like:${commentLikeDto.commentId}`,
+          `${CacheKeys.COMMENT_LIKE}${commentLikeDto.commentId}`,
           commentLikeDto.userId,
           Number(commentLikeDto.isLike)
         );
@@ -196,7 +198,7 @@ export class commentService {
           likedInRedis === 1 ||
           (likedInRedis === 0 &&
             (await redis.hexists(
-              `comment_like:${commentLikeDto.commentId}`,
+              `${CacheKeys.COMMENT_LIKE}${commentLikeDto.commentId}`,
               commentLikeDto.userId
             )))
         ) {
@@ -218,7 +220,7 @@ export class commentService {
             : '이미 싫어요한 댓글입니다'
         };
       }
-      // likedInDB.comment_like !== commentLikeDto.isLike
+      // 사용자가 좋아요/싫어요를 눌렀을 때, 데이터베이스에는 반대되는 상태가 저장된 경우 처리
       const query = `INSERT INTO Comment_Like (comment_id, user_id, comment_like) VALUES (?,?,?) 
                      ON DUPLICATE KEY UPDATE comment_like = ?, deleted_at = NULL`;
       const params = [
@@ -271,7 +273,7 @@ export class commentService {
     try {
       // Redis에서 캐시 확인 후 삭제 시도
       const isCashed = await redis.hdel(
-        `comment_like:${commentIdDto.commentId}`,
+        `${CacheKeys.COMMENT_LIKE}${commentIdDto.commentId}`,
         commentIdDto.userId
       );
 

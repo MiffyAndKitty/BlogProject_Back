@@ -10,6 +10,8 @@ import {
   NotificationListDto,
   UserNotificationDto
 } from '../interfaces/notification';
+import { CacheKeys } from '../constants/cacheKeys';
+import { NotificationName } from '../constants/notificationName';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
@@ -67,12 +69,12 @@ notificationsRouter.get(
     });
 
     try {
-      const key = 'notification:' + req.id;
+      const key = CacheKeys.NOTIFICATION + req.id;
       const isExistCached = await redis.exists(key); // 캐시된 알림 존재하는지 확인
 
       if (isExistCached) {
         // 캐시된 알림이 있다면 클라이언트로 전송
-        const cachedNotifications = await redis.lrange(key, 0, -1); // Redis 리스트 사용
+        const cachedNotifications = await redis.lrange(key, 0, -1);
 
         // 클라이언트로 캐시된 알림 전송
         cachedNotifications.forEach((notification, index) => {
@@ -106,7 +108,7 @@ notificationsRouter.get(
       .withMessage('올바른 토큰 형식이 아닙니다.'),
     query('page-size')
       .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
+      .toInt()
       .isInt({ min: 1 })
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
@@ -124,14 +126,7 @@ notificationsRouter.get(
       }),
     query('sort')
       .optional({ checkFalsy: true })
-      .isIn([
-        'new-follower',
-        'following-new-board',
-        'comment-on-board',
-        'board-new-like',
-        'reply-to-comment',
-        'broadcast'
-      ])
+      .isIn(Object.values(NotificationName))
       .withMessage(
         'sort의 값이 존재한다면 알림 타입값 중 하나의 값이어야합니다.'
       )

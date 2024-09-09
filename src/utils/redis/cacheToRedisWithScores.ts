@@ -1,7 +1,8 @@
 import { redis } from '../../loaders/redis';
+import { CacheKeys } from '../../constants/cacheKeys';
 
 export const cacheToRedisWithScores = async (
-  key: string,
+  key: typeof CacheKeys.POPULAR_TAGS | typeof CacheKeys.TOP_FOLLOWERS,
   data: Array<string | number>
 ): Promise<boolean> => {
   try {

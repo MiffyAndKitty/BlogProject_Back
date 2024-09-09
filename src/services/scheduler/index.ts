@@ -15,8 +15,8 @@ export class JobScheduler {
     try {
       const jobNames = ['게시글 조회수 업데이트', '게시글 좋아요 업데이트'];
       const results = await Promise.allSettled([
-        BoardUpdateJobService.updateBoard('board_view'),
-        BoardUpdateJobService.updateBoard('board_like')
+        BoardUpdateJobService.updateBoard(CacheKeys.BOARD_VIEW),
+        BoardUpdateJobService.updateBoard(CacheKeys.BOARD_LIKE)
       ]);
 
       results.forEach((result, index) => {
@@ -33,8 +33,7 @@ export class JobScheduler {
   public static updateCommentMetrics = async () => {
     try {
       const jobName = '댓글 좋아요 업데이트';
-      const result =
-        await CommentUpdateJobService.updateComment('comment_like');
+      const result = await CommentUpdateJobService.updateCommentLikes();
       this._logJobResult(jobName, result);
     } catch (err) {
       console.error('[ERROR] 댓글 메트릭 업데이트 중 에러 발생:', err);
@@ -44,10 +43,7 @@ export class JobScheduler {
   public static cachePopularTags = async (limit: number = 10) => {
     const jobName = '인기 태그 캐싱';
     try {
-      const isSuccess = await TagCacheJobService.cacheTags(
-        CacheKeys.POPULAR_TAGS,
-        limit
-      );
+      const isSuccess = await TagCacheJobService.cacheTags(limit);
       this._logJobResult(jobName, isSuccess);
     } catch (err) {
       console.error(`[ERROR] ${jobName} 작업 중 에러 발생:`, err);
@@ -57,10 +53,8 @@ export class JobScheduler {
   public static cacheTopFollowersWeekly = async (limit: number = 10) => {
     const jobName = '최다 팔로워 보유 블로거 캐싱';
     try {
-      const isSuccess = await TopFollowersCacheJobService.cacheTopFollowers(
-        CacheKeys.TOP_FOLLOWERS,
-        limit
-      );
+      const isSuccess =
+        await TopFollowersCacheJobService.cacheTopFollowers(limit);
       this._logJobResult(jobName, isSuccess);
     } catch (err) {
       console.error(`[ERROR] ${jobName} 작업 중 에러 발생:`, err);

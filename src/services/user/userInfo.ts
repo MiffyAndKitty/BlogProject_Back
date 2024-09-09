@@ -2,8 +2,8 @@ import { db } from '../../loaders/mariadb';
 import { DbColumnDto } from '../../interfaces/dbColumn';
 import { ensureError } from '../../errors/ensureError';
 import {
-  UserEmailDto,
-  UserNicknameDto,
+  UserEmailLookupDto,
+  UserNicknameLookupDto,
   UserProfileDto,
   UserPwDto
 } from '../../interfaces/user/userInfo';
@@ -48,21 +48,23 @@ export class UsersService {
     }
   };
 
-  static getUserInfoByEmail = async (userEmailDto: UserEmailDto) => {
+  static getUserInfoByEmail = async (
+    userEmailLookupDto: UserEmailLookupDto
+  ) => {
     try {
       const query = `SELECT * FROM User WHERE user_email = ? AND  deleted_at IS NULL LIMIT 1;`;
-      const values = [userEmailDto.email];
+      const values = [userEmailLookupDto.email];
       const [userInfo] = await db.query(query, values);
 
       if (!userInfo)
         return { result: false, data: [], message: '존재하지 않는 사용자' };
 
       userInfo.isSelf = false;
-      if (userInfo.user_id === userEmailDto.userId) {
+      if (userInfo.user_id === userEmailLookupDto.userId) {
         userInfo.isSelf = true;
       }
 
-      const currentUser = userEmailDto.userId;
+      const currentUser = userEmailLookupDto.userId;
       const thisUser = userInfo.user_id;
 
       const followQuery = `
@@ -99,10 +101,12 @@ export class UsersService {
     }
   };
 
-  static getUserInfoByNickname = async (userNicknameDto: UserNicknameDto) => {
+  static getUserInfoByNickname = async (
+    userNicknameLookupDto: UserNicknameLookupDto
+  ) => {
     try {
       const query = `SELECT user_email, user_image, user_message FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`;
-      const params = [decodeURIComponent(userNicknameDto.nickname)];
+      const params = [decodeURIComponent(userNicknameLookupDto.nickname)];
 
       const [userInfo] = await db.query(query, params);
 

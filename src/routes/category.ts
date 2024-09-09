@@ -14,7 +14,7 @@ import { categoryService } from '../services/category';
 
 export const categoryRouter = Router();
 
-// 특정 유저의 카테고리 리스트 조회 ( GET : /category/list/:nickname)
+// 특정 유저의 카테고리 리스트 조회 (GET : /category/list/:nickname)
 categoryRouter.get(
   '/list/:nickname',
   validate([
@@ -52,7 +52,7 @@ categoryRouter.get(
   }
 );
 
-// 카테고리 생성
+// 카테고리 생성 (POST : /category)
 categoryRouter.post(
   '/',
   validate([
@@ -92,7 +92,7 @@ categoryRouter.post(
   }
 );
 
-// 카테고리명 수정
+// 카테고리명 수정 (PUT : /category/name)
 categoryRouter.put(
   '/name',
   validate([
@@ -132,7 +132,7 @@ categoryRouter.put(
   }
 );
 
-// 카테고리 레벨 수정
+// 카테고리 레벨 수정 (PUT : /category/level)
 categoryRouter.put(
   '/level',
   validate([
@@ -175,7 +175,7 @@ categoryRouter.put(
   }
 );
 
-// 카테고리 삭제
+// 카테고리 삭제 (DELETE : /category)
 categoryRouter.delete(
   '/',
   validate([

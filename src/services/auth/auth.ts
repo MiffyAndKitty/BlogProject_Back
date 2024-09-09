@@ -1,12 +1,13 @@
 import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
-import { AuthUserDto } from '../../interfaces/user/authUser';
+import { SignUpDto } from '../../interfaces/auth';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis';
+import { CacheKeys } from '../../constants/cacheKeys';
 export class AuthService {
   static deleteToken = async (userId: string) => {
     try {
-      const deleted = await redis.unlink(`refreshToken:${userId}`);
+      const deleted = await redis.unlink(`${CacheKeys.REFRESHTOKEN}${userId}`);
       if (deleted === 1) {
         return { result: true, message: '로그아웃 성공' };
       } else {
@@ -19,7 +20,7 @@ export class AuthService {
     }
   };
 
-  static saveUser = async (userDto: AuthUserDto) => {
+  static saveUser = async (userDto: SignUpDto) => {
     try {
       let column;
       const params = [userDto.email, userDto.nickname];

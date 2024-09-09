@@ -1,8 +1,9 @@
 import { redis } from '../../loaders/redis';
 import { db } from '../../loaders/mariadb';
+import { CacheKeys } from '../../constants/cacheKeys';
 
 export class CommentUpdateJobService {
-  static async updateComment(keyname: 'comment_like'): Promise<boolean> {
+  static async updateCommentLikes(): Promise<boolean> {
     try {
       let isSuccess: boolean = true;
       let cursor = '0';
@@ -11,7 +12,7 @@ export class CommentUpdateJobService {
         const [nextCursor, keys] = await redis.scan(
           cursor,
           'MATCH',
-          `${keyname}:*`,
+          `${CacheKeys.COMMENT_LIKE}*`,
           'COUNT',
           100
         );
@@ -83,7 +84,7 @@ export class CommentUpdateJobService {
 
       return isSuccess;
     } catch (err) {
-      console.log(`${keyname} 업데이트 중 전체적인 오류 발생:`, err);
+      console.log(`댓글 좋아요/싫어요 업데이트 중 전체적인 오류 발생:`, err);
       return false;
     }
   }

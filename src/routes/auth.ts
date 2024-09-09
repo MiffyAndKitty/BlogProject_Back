@@ -10,8 +10,7 @@ import {
   BasicResponse,
   MultipleUserDataResponse
 } from '../interfaces/response';
-import { AuthUserDto } from '../interfaces/user/authUser';
-import { LoginUserDto, LoginServiceDto } from '../interfaces/user/loginUser';
+import { LoginUserDto, LoginServiceDto, SignUpDto } from '../interfaces/auth';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 
@@ -45,7 +44,7 @@ authRouter.post(
 
           const result: MultipleUserDataResponse = await localAuthService(
             user as LoginServiceDto
-          ); //userid, userEmail
+          );
           if (result.result === true) {
             return res
               .set('Authorization', `Bearer ${result.data.accessToken}`)
@@ -169,7 +168,7 @@ authRouter.post(
   ]),
   async (req: Request, res: Response) => {
     try {
-      const newUser: AuthUserDto = req.body;
+      const newUser: SignUpDto = req.body;
       const result: BasicResponse = await AuthService.saveUser(newUser);
 
       if (result.result === true) {

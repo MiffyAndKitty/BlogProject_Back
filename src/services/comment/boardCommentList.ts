@@ -2,6 +2,7 @@ import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { BoardCommentListDto } from '../../interfaces/board/listDto';
 import { redis } from '../../loaders/redis';
+import { CacheKeys } from '../../constants/cacheKeys';
 export class BoardCommentListService {
   // 특정 게시판의 최상위 댓글을 조회하고 사용자 정보와 함께 반환
   static getTopLevelCommentsByPostId = async (
@@ -64,7 +65,7 @@ export class BoardCommentListService {
         comments.map(async (row: any) => {
           // Redis에서 캐시된 좋아요/싫어요 수 가져오기
           const cachedVotes = await redis.hgetall(
-            `comment_like:${row.comment_id}`
+            `${CacheKeys.COMMENT_LIKE}${row.comment_id}`
           );
 
           // 좋아요와 싫어요 카운트를 초기화

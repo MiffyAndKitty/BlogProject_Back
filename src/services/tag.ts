@@ -1,5 +1,5 @@
 import { ensureError } from '../errors/ensureError';
-import { LimitRequestDto } from '../interfaces/LimitRequestDto';
+import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { redis } from '../loaders/redis';
 import { CacheKeys } from '../constants/cacheKeys';
 

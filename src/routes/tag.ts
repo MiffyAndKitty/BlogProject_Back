@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
 import { query } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
-import { LimitRequestDto } from '../interfaces/LimitRequestDto';
+import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { tagService } from '../services/tag';
 
 export const tagRouter = Router();
@@ -12,7 +12,7 @@ tagRouter.get(
   validate([
     query('limit')
       .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
+      .toInt()
       .isInt({ min: 1, max: 10 })
       .withMessage('limit의 값이 존재한다면 1보다 큰 양수여야합니다.')
   ]),

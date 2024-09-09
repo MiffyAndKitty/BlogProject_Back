@@ -10,19 +10,20 @@ import { header, param, query, body } from 'express-validator';
 import { validate } from '../middleware/express-validation';
 import { DbColumnDto } from '../interfaces/dbColumn';
 import {
-  FollowListDto,
   UserInfoDto,
-  UserEmailDto,
-  UserNicknameDto,
+  UserEmailLookupDto,
+  UserNicknameLookupDto,
   UserProfileDto,
   UserPwDto
 } from '../interfaces/user/userInfo';
+import { FollowListDto } from '../interfaces/user/follow';
+import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { saveNotificationService } from '../services/Notification/saveNotifications';
-import { LimitRequestDto } from '../interfaces/LimitRequestDto';
 export const usersRouter = Router();
 
+// 특정 이메일/닉네임의 중복 여부 확인 (POST : /users/duplication)
 usersRouter.post(
   '/duplication',
   validate([
@@ -47,6 +48,7 @@ usersRouter.post(
   }
 );
 
+// 사용자의 비밀번호 일치 여부 조회 (POST : /users/duplication/password)
 usersRouter.post(
   '/duplication/password',
   validate([
@@ -92,14 +94,14 @@ usersRouter.get(
       .withMessage('올바른 토큰 형식이 아닙니다.'),
     query('page')
       .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
+      .toInt()
       .isInt({ min: 1 })
       .withMessage(
         'page의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
       ),
     query('page-size')
       .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
+      .toInt()
       .isInt({ min: 1 })
       .withMessage(
         'page-size의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
@@ -254,7 +256,7 @@ usersRouter.delete(
   }
 );
 
-// 사용자 상세 정보 조회 (GET : /users/:email)
+// 이메일을 이용하여 사용자 상세 정보 조회 (GET : /users/:email)
 usersRouter.get(
   '/:email',
   validate([
@@ -269,13 +271,13 @@ usersRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      const userEmailDto: UserEmailDto = {
+      const userEmailLookupDto: UserEmailLookupDto = {
         userId: req.id,
         email: req.params.email.split(':')[1]
       };
 
       const result: BasicResponse =
-        await UsersService.getUserInfoByEmail(userEmailDto);
+        await UsersService.getUserInfoByEmail(userEmailLookupDto);
 
       if (result.result === true) {
         return res.status(200).send(result);
@@ -292,7 +294,7 @@ usersRouter.get(
   }
 );
 
-// 닉네임으로 사용자 기본 정보 조회 (GET : /users/nickname/:nickname)
+// 닉네임을 이용하여 사용자 기본 정보 조회 (GET : /users/nickname/:nickname)
 usersRouter.get(
   '/nickname/:nickname',
   validate([
@@ -305,13 +307,14 @@ usersRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      const userNicknameDto: UserNicknameDto = {
+      const userNicknameLookupDto: UserNicknameLookupDto = {
         userId: req.id,
         nickname: req.params.nickname.split(':')[1]
       };
 
-      const result: BasicResponse =
-        await UsersService.getUserInfoByNickname(userNicknameDto);
+      const result: BasicResponse = await UsersService.getUserInfoByNickname(
+        userNicknameLookupDto
+      );
 
       if (result.result === true) {
         return res.status(200).send(result);

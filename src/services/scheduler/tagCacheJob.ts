@@ -1,9 +1,10 @@
+import { CacheKeys } from '../../constants/cacheKeys';
 import { db } from '../../loaders/mariadb';
 import { cacheToRedisWithScores } from '../../utils/redis/cacheToRedisWithScores';
 import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
 
 export class TagCacheJobService {
-  static async cacheTags(key: string, limit: number): Promise<boolean> {
+  static async cacheTags(limit: number): Promise<boolean> {
     try {
       const { startTime, endTime } = this._getCurrentHourPeriod();
 
@@ -19,8 +20,8 @@ export class TagCacheJobService {
       }
 
       const flatTags = transformToZaddEntries(tags, 'tag_name', 'count');
-      console.log('flatTags', flatTags);
-      return await cacheToRedisWithScores(key, flatTags);
+
+      return await cacheToRedisWithScores(CacheKeys.POPULAR_TAGS, flatTags);
     } catch (err) {
       console.error('태그 캐싱 중 오류 발생:', err);
       return false;
@@ -78,7 +79,7 @@ export class TagCacheJobService {
     for (const tag of additionalTags) {
       tags.push({
         tag_name: tag.tag_name,
-        count: '0' // 추가된 태그의 count는 0으로 설정
+        count: '0' // 추가된 태그의 count는 0으로 설정하여 구분
       });
     }
 
