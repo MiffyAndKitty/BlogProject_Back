@@ -11,9 +11,11 @@ export interface NotificationDto {
   };
   location?: {
     boardId?: string;
+    parentCommentId?: string;
     commentId?: string;
     boardTitle?: string;
     commentContent?: string;
+    boardWriterNickname?: string;
   };
   id?: string;
 }
@@ -29,4 +31,9 @@ export interface NotificationListDto {
   cursor: string;
   isBefore: boolean;
   sort: string;
+}
+
+export interface RetryFailedUsersResult {
+  dbSaveFails: string[];
+  notifyFails: string[];
 }

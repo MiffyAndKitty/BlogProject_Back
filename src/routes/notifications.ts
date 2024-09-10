@@ -12,6 +12,8 @@ import {
 } from '../interfaces/notification';
 import { CacheKeys } from '../constants/cacheKeys';
 import { NotificationName } from '../constants/notificationName';
+import { setSSEHeaders } from '../utils/sse/setSSEHeaders';
+import { handleClientClose } from '../utils/sse/handleClientClose';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
@@ -31,19 +33,7 @@ notificationsRouter.get(
       });
     }
 
-    // SSE 헤더 설정
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    if (res.flushHeaders) {
-      res.flushHeaders();
-    } else {
-      return res.status(500).send({
-        result: false,
-        message: 'SSE 헤더 설정 후 플러시하여 연결을 열어두기에 실패했습니다.'
-      });
-    }
+    setSSEHeaders(res);
 
     // 클라이언트 저장
     clientsService.add(req.id, res);
@@ -55,40 +45,19 @@ notificationsRouter.get(
       );
     }, 30000);
 
-    // 연결이 닫힐 때 처리
-    req.on('close', () => {
-      clearInterval(intervalId); // 인터벌 중지
-      if (req.id) clientsService.delete(req.id);
-      console.log('연결이 닫혀서 클라이언트를 제거');
-    });
-
-    req.on('timeout', () => {
-      clearInterval(intervalId); // 인터벌 중지
-      if (req.id) clientsService.delete(req.id);
-      console.log('연결이 timeout되어 클라이언트를 제거');
-    });
+    handleClientClose(req, res, intervalId);
 
     try {
-      const key = CacheKeys.NOTIFICATION + req.id;
-      const isExistCached = await redis.exists(key); // 캐시된 알림 존재하는지 확인
+      const cachedNotifications = await NotificationService.getCached(req.id);
 
-      if (isExistCached) {
-        // 캐시된 알림이 있다면 클라이언트로 전송
-        const cachedNotifications = await redis.lrange(key, 0, -1);
+      // 클라이언트로 캐시된 알림 전송
+      cachedNotifications.forEach((notification, index) => {
+        res.write(`id: ${index}\n`);
+        res.write(`event: cashed-notification\n`);
+        res.write(`data: ${notification}\n\n`);
+      });
 
-        // 클라이언트로 캐시된 알림 전송
-        cachedNotifications.forEach((notification, index) => {
-          res.write(`id: ${index}\n`);
-          res.write(`event: cashed-notification\n`);
-          res.write(`data: ${notification}\n\n`);
-        });
-
-        // 알림 전송 후 Redis에서 삭제
-        const deleted = await redis.unlink(key);
-        deleted > 0
-          ? console.log(`Redis에 캐시된 알림 전송 후, ${key} 삭제 완료`)
-          : console.log(`Redis에 캐시된 알림 전송 후, ${key} 삭제 실패`);
-      }
+      NotificationService.deleteCashed(req.id);
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
