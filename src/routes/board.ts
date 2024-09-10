@@ -22,6 +22,7 @@ import {
   UserListResponse
 } from '../interfaces/response';
 import { BoardCommentListService } from '../services/comment/boardCommentList';
+import { stripHtmlTags } from '../utils/string/stripHtmlTags';
 
 export const boardRouter = Router();
 
@@ -252,7 +253,18 @@ boardRouter.post(
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
     body('title').notEmpty(),
-    body('content').notEmpty(),
+    body('content')
+      .notEmpty()
+      .withMessage('내용을 입력해 주세요.')
+      .custom((value) => {
+        const strippedContent = stripHtmlTags(value); // 유틸리티 함수 사용
+        if (strippedContent.length === 0) {
+          throw new Error(
+            '내용에 HTML 태그를 제외한 실제 텍스트가 있어야 합니다.'
+          );
+        }
+        return true;
+      }),
     body('public').isString(), // 폼 데이터의 필드는 텍스트로 전송
     body('tagNames')
       .optional({ checkFalsy: true })
@@ -334,7 +346,18 @@ boardRouter.put(
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 형식의 게시글 id가 아닙니다.'),
     body('title').notEmpty(),
-    body('content').notEmpty(),
+    body('content')
+      .notEmpty()
+      .withMessage('내용을 입력해 주세요.')
+      .custom((value) => {
+        const strippedContent = stripHtmlTags(value);
+        if (strippedContent.length === 0) {
+          throw new Error(
+            '내용에 HTML 태그를 제외한 실제 텍스트가 있어야 합니다.'
+          );
+        }
+        return true;
+      }),
     body('public').isString(),
     body('tagNames')
       .optional({ checkFalsy: true })
