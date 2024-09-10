@@ -23,6 +23,8 @@ import {
 } from '../interfaces/response';
 import { BoardCommentListService } from '../services/comment/boardCommentList';
 import { stripHtmlTags } from '../utils/string/stripHtmlTags';
+import { BOARD_TITLE_MAX, USER_NICKNAME_MAX } from '../constants/validation';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 
 export const boardRouter = Router();
 
@@ -38,7 +40,9 @@ boardRouter.get(
       ),
     query('query').optional({ checkFalsy: true }).isString(),
     query('tag').optional({ checkFalsy: true }).isString(),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -87,7 +91,9 @@ boardRouter.get(
 boardRouter.get(
   '/list/:nickname',
   validate([
-    param('nickname').isString(),
+    param('nickname').custom((nickname) =>
+      validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+    ),
     query('query').optional({ checkFalsy: true }).isString(),
     query('sort')
       .optional({ checkFalsy: true })
@@ -96,7 +102,9 @@ boardRouter.get(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
     query('tag').optional({ checkFalsy: true }).isString(),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -168,7 +176,9 @@ boardRouter.get(
       .optional({ checkFalsy: true })
       .isIn(['like', 'dislike'])
       .withMessage('sort의 값이 존재한다면 "like" 또는 "dislike"이어야합니다.'),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt()
@@ -252,7 +262,9 @@ boardRouter.post(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    body('title').notEmpty(),
+    body('title').custom((title) =>
+      validateFieldByteLength('title', title, BOARD_TITLE_MAX)
+    ),
     body('content')
       .notEmpty()
       .withMessage('내용을 입력해 주세요.')
@@ -345,7 +357,9 @@ boardRouter.put(
     body('boardId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 형식의 게시글 id가 아닙니다.'),
-    body('title').notEmpty(),
+    body('title').custom((title) =>
+      validateFieldByteLength('title', title, BOARD_TITLE_MAX)
+    ),
     body('content')
       .notEmpty()
       .withMessage('내용을 입력해 주세요.')

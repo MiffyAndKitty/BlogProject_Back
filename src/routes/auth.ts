@@ -13,6 +13,8 @@ import {
 import { LoginUserDto, LoginServiceDto, SignUpDto } from '../interfaces/auth';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
+import { USER_NICKNAME_MAX } from '../constants/validation';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 
 export const authRouter = Router();
 
@@ -163,7 +165,11 @@ authRouter.post(
       .if(body('provider').not().equals('google')) // 'provider'가 'google'이 아닌 경우에만 비밀번호 검증
       .isLength({ min: 8 })
       .matches(/(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])/),
-    body('nickname').notEmpty(),
+    body('nickname')
+      .notEmpty()
+      .custom((nickname) =>
+        validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+      ),
     body('provider').if(body('provider').exists()).isIn(['google']) // 'provider'가 존재하면 'google'인지 확인
   ]),
   async (req: Request, res: Response) => {
