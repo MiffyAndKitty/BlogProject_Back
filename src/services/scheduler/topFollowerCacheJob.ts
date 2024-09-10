@@ -1,18 +1,19 @@
 import { CacheKeys } from '../../constants/cacheKeys';
+import { FOLLOWER_CASH_LIMIT } from '../../constants/cashLimit';
 import { db } from '../../loaders/mariadb';
 import { cacheToRedisWithScores } from '../../utils/redis/cacheToRedisWithScores';
 import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
 import moment from 'moment';
 
 export class TopFollowersCacheJobService {
-  static async cacheTopFollowers(limit: number = 10): Promise<boolean> {
+  static async cacheTopFollowers(): Promise<boolean> {
     try {
       const { startDate, endDate } = this._getLastWeekPeriod();
 
-      let topFollowers = await this._getTopFollowers(startDate, endDate, limit);
+      let topFollowers = await this._getTopFollowers(startDate, endDate);
 
-      if (topFollowers.length < limit) {
-        topFollowers = await this._addRandomFollowers(topFollowers, limit);
+      if (topFollowers.length < FOLLOWER_CASH_LIMIT) {
+        topFollowers = await this._addRandomFollowers(topFollowers);
       }
 
       if (topFollowers.length === 0) {
@@ -47,11 +48,7 @@ export class TopFollowersCacheJobService {
     };
   }
 
-  private static async _getTopFollowers(
-    startDate: string,
-    endDate: string,
-    limit: number
-  ) {
+  private static async _getTopFollowers(startDate: string, endDate: string) {
     return db.query(
       `
       SELECT u.user_nickname, COUNT(f.followed_id) AS follower_count
@@ -64,15 +61,15 @@ export class TopFollowersCacheJobService {
       ORDER BY follower_count DESC
       LIMIT ?;
       `,
-      [startDate, endDate, limit]
+      [startDate, endDate, FOLLOWER_CASH_LIMIT]
     );
   }
 
   private static async _addRandomFollowers(
-    topFollowers: { user_nickname: string; follower_count: string }[],
-    limit: number
+    topFollowers: { user_nickname: string; follower_count: string }[]
   ) {
-    const numberOfAdditionalFollowers = limit - topFollowers.length;
+    const numberOfAdditionalFollowers =
+      FOLLOWER_CASH_LIMIT - topFollowers.length;
 
     const existingFollowerNames = topFollowers.map(
       (follower) => follower.user_nickname

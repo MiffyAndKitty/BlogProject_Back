@@ -1,17 +1,18 @@
 import { CacheKeys } from '../../constants/cacheKeys';
+import { TAG_CASH_LIMIT } from '../../constants/cashLimit';
 import { db } from '../../loaders/mariadb';
 import { cacheToRedisWithScores } from '../../utils/redis/cacheToRedisWithScores';
 import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
 
 export class TagCacheJobService {
-  static async cacheTags(limit: number): Promise<boolean> {
+  static async cacheTags(): Promise<boolean> {
     try {
       const { startTime, endTime } = this._getCurrentHourPeriod();
 
-      let tags = await this._getTags(startTime, endTime, limit);
+      let tags = await this._getTags(startTime, endTime);
 
-      if (tags.length < limit) {
-        tags = await this._addRandomTags(tags, limit);
+      if (tags.length < TAG_CASH_LIMIT) {
+        tags = await this._addRandomTags(tags);
       }
 
       if (tags.length === 0) {
@@ -37,7 +38,7 @@ export class TagCacheJobService {
     return { startTime, endTime };
   }
 
-  private static async _getTags(startTime: Date, endTime: Date, limit: number) {
+  private static async _getTags(startTime: Date, endTime: Date) {
     return db.query(
       `SELECT tag_name, COUNT(*) AS count
        FROM Board_Tag
@@ -45,14 +46,13 @@ export class TagCacheJobService {
        GROUP BY tag_name
        ORDER BY count DESC, MAX(created_at) DESC
        LIMIT ?`,
-      [startTime, endTime, limit]
+      [startTime, endTime, TAG_CASH_LIMIT]
     );
   }
   private static async _addRandomTags(
-    tags: { tag_name: string; count: string }[],
-    limit: number
+    tags: { tag_name: string; count: string }[]
   ) {
-    const numberOfAdditionalTags = limit - tags.length;
+    const numberOfAdditionalTags = TAG_CASH_LIMIT - tags.length;
 
     // 기존 태그 이름들을 배열로 추출
     const existingTagNames = tags.map((tag) => tag.tag_name);

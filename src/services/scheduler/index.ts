@@ -40,21 +40,20 @@ export class JobScheduler {
     }
   };
 
-  public static cachePopularTags = async (limit: number = 10) => {
+  public static cachePopularTags = async () => {
     const jobName = '인기 태그 캐싱';
     try {
-      const isSuccess = await TagCacheJobService.cacheTags(limit);
+      const isSuccess = await TagCacheJobService.cacheTags();
       this._logJobResult(jobName, isSuccess);
     } catch (err) {
       console.error(`[ERROR] ${jobName} 작업 중 에러 발생:`, err);
     }
   };
 
-  public static cacheTopFollowersWeekly = async (limit: number = 10) => {
+  public static cacheTopFollowersWeekly = async () => {
     const jobName = '최다 팔로워 보유 블로거 캐싱';
     try {
-      const isSuccess =
-        await TopFollowersCacheJobService.cacheTopFollowers(limit);
+      const isSuccess = await TopFollowersCacheJobService.cacheTopFollowers();
       this._logJobResult(jobName, isSuccess);
     } catch (err) {
       console.error(`[ERROR] ${jobName} 작업 중 에러 발생:`, err);
