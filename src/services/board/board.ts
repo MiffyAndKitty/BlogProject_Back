@@ -164,7 +164,7 @@ export class BoardService {
               },
               location: {
                 boardId: boardId,
-                boardTitle: board.board_title
+                boardTitle: board.board_title.substring(0, 30)
               }
             },
             message: '좋아요 추가 성공'

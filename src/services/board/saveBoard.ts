@@ -144,7 +144,7 @@ export class saveBoardService {
           },
           location: {
             boardId: boardId,
-            boardTitle: boardDto.title
+            boardTitle: boardDto.title.substring(0, 30)
           }
         },
         message: '게시글 저장 성공'
