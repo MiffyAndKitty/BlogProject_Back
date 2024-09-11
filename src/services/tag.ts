@@ -2,15 +2,17 @@ import { ensureError } from '../errors/ensureError';
 import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { redis } from '../loaders/redis';
 import { CacheKeys } from '../constants/cacheKeys';
+import { POPULAR_TAG_LIMIT } from '../constants/cashedListSizeLimit';
 
 export class tagService {
   static getPopularList = async (tagDto: LimitRequestDto) => {
     try {
+      const tagLimit = tagDto.limit || POPULAR_TAG_LIMIT;
       // 태그 이름과 함께 점수를 반환
       const cashedTags = await redis.zrevrange(
         CacheKeys.POPULAR_TAGS,
         0,
-        tagDto.limit - 1,
+        tagLimit - 1,
         'WITHSCORES'
       );
 

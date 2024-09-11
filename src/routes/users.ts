@@ -21,6 +21,11 @@ import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { upload } from '../middleware/multer';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { SaveNotificationService } from '../services/Notification/saveNotifications';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import {
+  USER_NICKNAME_MAX,
+  USER_STATUS_MESSAGE_MAX
+} from '../constants/validation';
 export const usersRouter = Router();
 
 // 특정 이메일/닉네임의 중복 여부 확인 (POST : /users/duplication)
@@ -302,7 +307,9 @@ usersRouter.get(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    param('nickname').notEmpty().withMessage('닉네임은 비어 있을 수 없습니다.')
+    param('nickname').custom((nickname) =>
+      validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+    )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -341,8 +348,9 @@ usersRouter.put(
       .withMessage('올바른 토큰 형식이 아닙니다.'),
     body('nickname')
       .optional({ checkFalsy: true })
-      .isString()
-      .withMessage('닉네임은 문자열이어야 합니다.'),
+      .custom((nickname) =>
+        validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+      ),
     body('password')
       .optional({ checkFalsy: true })
       .isLength({ min: 8 })
@@ -350,8 +358,13 @@ usersRouter.put(
       .withMessage('비밀번호는 문자열이어야 합니다.'),
     body('statusMessage')
       .optional({ checkFalsy: true })
-      .isString()
-      .withMessage('상태 메시지는 문자열이어야 합니다.')
+      .custom((statusMessage) =>
+        validateFieldByteLength(
+          'statusMessage',
+          statusMessage,
+          USER_STATUS_MESSAGE_MAX
+        )
+      )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {

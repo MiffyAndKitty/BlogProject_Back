@@ -11,6 +11,8 @@ import {
   UpdateCategoryNameDto
 } from '../interfaces/category';
 import { categoryService } from '../services/category';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import { CATEGORY_NAME_MAX, USER_NICKNAME_MAX } from '../constants/validation';
 
 export const categoryRouter = Router();
 
@@ -22,7 +24,9 @@ categoryRouter.get(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
-    param('nickname').notEmpty(),
+    param('nickname').custom((nickname) =>
+      validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+    ),
     query('topcategory-id')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
@@ -59,7 +63,9 @@ categoryRouter.post(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
-    body('categoryName').notEmpty(),
+    body('categoryName').custom((categoryName) =>
+      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+    ),
     body('topcategoryId')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
@@ -102,7 +108,9 @@ categoryRouter.put(
     body('categoryId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 카테고리 id 형식이 아닙니다.'),
-    body('categoryName').notEmpty().withMessage('categoryName은 필수입니다.')
+    body('categoryName').custom((categoryName) =>
+      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+    )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {

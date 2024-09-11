@@ -11,6 +11,8 @@ import {
   FollowingListUser
 } from '../../interfaces/user/follow';
 import { NotificationName } from '../../constants/notificationName';
+import { FOLLOW_PAGESIZE_LIMIT } from '../../constants/pageSizeLimit';
+import { TOP_FOLLOW_LIMIT } from '../../constants/cashedListSizeLimit';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -37,7 +39,7 @@ export class FollowService {
 
       const thisUser = user.user_id;
       const currentUser = followListDto.userId;
-      const pageSize = followListDto.pageSize || 10;
+      const pageSize = followListDto.pageSize || FOLLOW_PAGESIZE_LIMIT;
       const offset = (followListDto.page - 1) * pageSize;
 
       const followingsList: FollowingListUser[] = await db.query(
@@ -121,10 +123,11 @@ export class FollowService {
   // 최다 팔로워 보유 블로거 리스트 조회
   static getTopFollowersList = async (topFollowersDto: LimitRequestDto) => {
     try {
+      const followerLimit = topFollowersDto.limit || TOP_FOLLOW_LIMIT;
       const cachedTopFollowers = await redis.zrevrange(
         CacheKeys.TOP_FOLLOWERS,
         0,
-        topFollowersDto.limit - 1,
+        followerLimit - 1,
         'WITHSCORES'
       );
 

@@ -34,7 +34,7 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 redisConnector;
 await dbConnector();
 
-loadAllSchedules(10, 10);
+loadAllSchedules();
 
 app.use(passport.initialize());
 await passportLoader();

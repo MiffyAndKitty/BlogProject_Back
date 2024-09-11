@@ -28,13 +28,8 @@ export class commentService {
           LIMIT 1;
         `;
 
-      const [
-        {
-          user_id: boardWriterId,
-          user_nickname: boardWriterNickname,
-          board_title: boardTitle
-        }
-      ] = await db.query(boardWriterQuery, [boardId]);
+      const [{ user_id: boardWriterId, user_nickname: boardWriterNickname }] =
+        await db.query(boardWriterQuery, [boardId]);
 
       if (!boardWriterId)
         return { result: false, message: '존재하지 않거나 삭제된 게시글' };
@@ -70,8 +65,18 @@ export class commentService {
             [commentDto.userId]
           );
 
-          const [{ comment_content: commentContent }] = await db.query(
-            `SELECT comment_content FROM Comment WHERE comment_id = ?`,
+          const [
+            {
+              comment_content: commentContent,
+              board_title: commentedBoardTitle
+            }
+          ] = await db.query(
+            `SELECT 
+              SUBSTRING(C.comment_content, 1, 30) as comment_content, 
+              SUBSTRING(B.board_title, 1, 30) as board_title
+            FROM Comment C
+            JOIN Board B ON C.board_id = B.board_id
+            WHERE C.comment_id = ?`,
             [commentId]
           );
 
@@ -88,7 +93,7 @@ export class commentService {
               boardId: boardId,
               parentCommentId: commentDto.parentCommentId,
               commentId: commentId,
-              boardTitle: boardTitle,
+              boardTitle: commentedBoardTitle,
               commentContent: commentContent,
               boardWriterNickname: boardWriterNickname
             }
@@ -109,8 +114,8 @@ export class commentService {
           { comment_content: commentContent, board_title: commentedBoardTitle }
         ] = await db.query(
           `SELECT 
-            C.comment_content, 
-            B.board_title 
+            SUBSTRING(C.comment_content, 1, 30) as comment_content, 
+            SUBSTRING(B.board_title, 1, 30) as board_title
           FROM Comment C
           JOIN Board B ON C.board_id = B.board_id
           WHERE C.comment_id = ?`,

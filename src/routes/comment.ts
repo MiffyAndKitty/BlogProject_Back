@@ -14,6 +14,8 @@ import {
 import { MultipleNotificationResponse } from '../interfaces/response';
 import { SaveNotificationService } from '../services/Notification/saveNotifications';
 import { CommentListService } from '../services/comment/commentList';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import { COMMENT_CONTENT_MAX } from '../constants/validation';
 
 export const commentRouter = Router();
 
@@ -27,7 +29,13 @@ commentRouter.post(
     body('boardId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('유효한 게시글 ID 형식이 아닙니다.'),
-    body('commentContent').notEmpty().withMessage('댓글 내용은 필수입니다.'),
+    body('commentContent').custom((commentContent) =>
+      validateFieldByteLength(
+        'commentContent',
+        commentContent,
+        COMMENT_CONTENT_MAX
+      )
+    ),
     body('parentCommentId')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
@@ -121,7 +129,13 @@ commentRouter.put(
     body('commentId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('유효한 댓글 ID가 아닙니다.'),
-    body('commentContent').notEmpty().withMessage('댓글 내용은 필수입니다.')
+    body('commentContent').custom((commentContent) =>
+      validateFieldByteLength(
+        'commentContent',
+        commentContent,
+        COMMENT_CONTENT_MAX
+      )
+    )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {

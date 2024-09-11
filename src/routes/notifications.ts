@@ -82,7 +82,9 @@ notificationsRouter.get(
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
       ),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('is-before')
       .optional({ checkFalsy: true })
       .custom((value) => {
@@ -136,7 +138,7 @@ notificationsRouter.delete(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    body('notificationId').isString()
+    body('notificationId').matches(/^[0-9a-f]{32}$/i)
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {

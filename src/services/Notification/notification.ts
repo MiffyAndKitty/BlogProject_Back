@@ -9,13 +9,17 @@ import { NotificationName } from '../../constants/notificationName';
 import { isNotificationNameType } from '../../utils/typegaurd/isNotificationNameType';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { redis } from '../../loaders/redis';
+import {
+  BOARD_PAGESIZE_LIMIT,
+  NOTIFICATION_PAGESIZE_LIMIT
+} from '../../constants/pageSizeLimit';
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
     try {
       const sortQuery = this._buildSortQuery(listDto.sort);
 
       const totalCount = await this._getTotalCount(listDto.userId, sortQuery);
-      const pageSize = listDto.pageSize || 10;
+      const pageSize = listDto.pageSize || NOTIFICATION_PAGESIZE_LIMIT;
       const totalPageCount = Math.ceil(totalCount / pageSize);
 
       const { query, params } = await this._buildQuery(listDto, sortQuery);
@@ -108,7 +112,7 @@ export class NotificationService {
     listDto: NotificationListDto,
     sortQuery: string
   ) {
-    const pageSize = listDto.pageSize || 10;
+    const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
     const params: (string | number)[] = [listDto.userId];
     let order = 'DESC';
 
@@ -135,9 +139,9 @@ export class NotificationService {
           WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Comment.board_id
           ELSE NULL
         END AS notification_board,
-        Board.board_title AS board_title,
+        SUBSTRING(Board.board_title, 1, 30) AS board_title,
         BoardUser.user_nickname AS board_writer,
-        Comment.comment_content AS comment_content 
+        SUBSTRING(Comment.comment_content, 1, 30) AS comment_content
       FROM Notifications
       JOIN User ON Notifications.notification_trigger = User.user_id
       LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id

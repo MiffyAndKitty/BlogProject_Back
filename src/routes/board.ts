@@ -22,6 +22,13 @@ import {
   UserListResponse
 } from '../interfaces/response';
 import { BoardCommentListService } from '../services/comment/boardCommentList';
+import { stripHtmlTags } from '../utils/string/stripHtmlTags';
+import {
+  BOARD_TITLE_MAX,
+  TAG_NAME_MAX,
+  USER_NICKNAME_MAX
+} from '../constants/validation';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 
 export const boardRouter = Router();
 
@@ -36,8 +43,13 @@ boardRouter.get(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
     query('query').optional({ checkFalsy: true }).isString(),
-    query('tag').optional({ checkFalsy: true }).isString(),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('tag')
+      .optional({ checkFalsy: true })
+      .isString()
+      .custom((value) => validateFieldByteLength('태그', value, TAG_NAME_MAX)),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -86,7 +98,9 @@ boardRouter.get(
 boardRouter.get(
   '/list/:nickname',
   validate([
-    param('nickname').isString(),
+    param('nickname').custom((nickname) =>
+      validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+    ),
     query('query').optional({ checkFalsy: true }).isString(),
     query('sort')
       .optional({ checkFalsy: true })
@@ -94,8 +108,13 @@ boardRouter.get(
       .withMessage(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
-    query('tag').optional({ checkFalsy: true }).isString(),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('tag')
+      .optional({ checkFalsy: true })
+      .isString()
+      .custom((value) => validateFieldByteLength('태그', value, TAG_NAME_MAX)),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -167,7 +186,9 @@ boardRouter.get(
       .optional({ checkFalsy: true })
       .isIn(['like', 'dislike'])
       .withMessage('sort의 값이 존재한다면 "like" 또는 "dislike"이어야합니다.'),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt()
@@ -251,20 +272,31 @@ boardRouter.post(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    body('title').notEmpty(),
-    body('content').notEmpty(),
+    body('title').custom((title) =>
+      validateFieldByteLength('title', title, BOARD_TITLE_MAX)
+    ),
+    body('content')
+      .notEmpty()
+      .withMessage('내용을 입력해 주세요.')
+      .custom((value) => {
+        const strippedContent = stripHtmlTags(value); // 유틸리티 함수 사용
+        if (strippedContent.length === 0) {
+          throw new Error(
+            '내용에 HTML 태그를 제외한 실제 텍스트가 있어야 합니다.'
+          );
+        }
+        return true;
+      }),
     body('public').isString(), // 폼 데이터의 필드는 텍스트로 전송
     body('tagNames')
       .optional({ checkFalsy: true })
       .custom((tags) => {
-        if (typeof tags === 'string') tags = [tags];
-
-        if (!Array.isArray(tags))
-          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
-
-        if (tags.length > 10) {
+        tags = typeof tags === 'string' ? [tags] : tags;
+        if (tags.length > 10)
           throw new Error('태그는 최대 10개까지 허용됩니다.');
-        }
+
+        tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
+
         return true;
       }),
     body('categoryId')
@@ -333,20 +365,31 @@ boardRouter.put(
     body('boardId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 형식의 게시글 id가 아닙니다.'),
-    body('title').notEmpty(),
-    body('content').notEmpty(),
+    body('title').custom((title) =>
+      validateFieldByteLength('title', title, BOARD_TITLE_MAX)
+    ),
+    body('content')
+      .notEmpty()
+      .withMessage('내용을 입력해 주세요.')
+      .custom((value) => {
+        const strippedContent = stripHtmlTags(value);
+        if (strippedContent.length === 0) {
+          throw new Error(
+            '내용에 HTML 태그를 제외한 실제 텍스트가 있어야 합니다.'
+          );
+        }
+        return true;
+      }),
     body('public').isString(),
     body('tagNames')
       .optional({ checkFalsy: true })
       .custom((tags) => {
-        if (typeof tags === 'string') tags = [tags];
-
-        if (!Array.isArray(tags))
-          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
-
-        if (tags.length > 10) {
+        tags = typeof tags === 'string' ? [tags] : tags;
+        if (tags.length > 10)
           throw new Error('태그는 최대 10개까지 허용됩니다.');
-        }
+
+        tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
+
         return true;
       }),
     body('categoryId')
