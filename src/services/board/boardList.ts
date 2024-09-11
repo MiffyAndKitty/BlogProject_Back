@@ -11,6 +11,7 @@ import { BoardInDBDto } from '../../interfaces/board/boardInDB';
 import { ListResponse, UserListResponse } from '../../interfaces/response';
 import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
 import { CacheKeys } from '../../constants/cacheKeys';
+import { BOARD_PAGESIZE_LIMIT } from '../../constants/pageSizeLimit';
 
 export class BoardListService {
   static getList = async (listDto: ListDto): Promise<ListResponse> => {
@@ -27,7 +28,7 @@ export class BoardListService {
         params
       );
 
-      const pageSize = listDto.pageSize || 10;
+      const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
 
       const sortOptions: SortOptions = {
         pageSize: pageSize,
@@ -45,7 +46,7 @@ export class BoardListService {
 
       const totalCount = Number(countResult.totalCount.toString());
       const totalPageCount = Math.ceil(totalCount / pageSize);
-
+      console.log(query, params);
       return sortedList.length >= 0
         ? {
             result: true,
@@ -130,7 +131,7 @@ export class BoardListService {
         params
       );
 
-      const pageSize = listDto.pageSize || 10;
+      const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
 
       const sortOptions: SortOptions = {
         pageSize: pageSize,
