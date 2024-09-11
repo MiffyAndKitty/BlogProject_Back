@@ -23,7 +23,11 @@ import {
 } from '../interfaces/response';
 import { BoardCommentListService } from '../services/comment/boardCommentList';
 import { stripHtmlTags } from '../utils/string/stripHtmlTags';
-import { BOARD_TITLE_MAX, USER_NICKNAME_MAX } from '../constants/validation';
+import {
+  BOARD_TITLE_MAX,
+  TAG_NAME_MAX,
+  USER_NICKNAME_MAX
+} from '../constants/validation';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 
 export const boardRouter = Router();
@@ -39,7 +43,10 @@ boardRouter.get(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
     query('query').optional({ checkFalsy: true }).isString(),
-    query('tag').optional({ checkFalsy: true }).isString(),
+    query('tag')
+      .optional({ checkFalsy: true })
+      .isString()
+      .custom((value) => validateFieldByteLength('태그', value, TAG_NAME_MAX)),
     query('cursor')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i),
@@ -101,7 +108,10 @@ boardRouter.get(
       .withMessage(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
-    query('tag').optional({ checkFalsy: true }).isString(),
+    query('tag')
+      .optional({ checkFalsy: true })
+      .isString()
+      .custom((value) => validateFieldByteLength('태그', value, TAG_NAME_MAX)),
     query('cursor')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i),
@@ -281,14 +291,12 @@ boardRouter.post(
     body('tagNames')
       .optional({ checkFalsy: true })
       .custom((tags) => {
-        if (typeof tags === 'string') tags = [tags];
-
-        if (!Array.isArray(tags))
-          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
-
-        if (tags.length > 10) {
+        tags = typeof tags === 'string' ? [tags] : tags;
+        if (tags.length > 10)
           throw new Error('태그는 최대 10개까지 허용됩니다.');
-        }
+
+        tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
+
         return true;
       }),
     body('categoryId')
@@ -376,14 +384,12 @@ boardRouter.put(
     body('tagNames')
       .optional({ checkFalsy: true })
       .custom((tags) => {
-        if (typeof tags === 'string') tags = [tags];
-
-        if (!Array.isArray(tags))
-          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
-
-        if (tags.length > 10) {
+        tags = typeof tags === 'string' ? [tags] : tags;
+        if (tags.length > 10)
           throw new Error('태그는 최대 10개까지 허용됩니다.');
-        }
+
+        tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
+
         return true;
       }),
     body('categoryId')
