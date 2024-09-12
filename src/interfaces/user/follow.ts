@@ -20,3 +20,10 @@ export interface FollowListDto {
   pageSize: number;
   page: number;
 }
+
+export interface topFollowerInfo {
+  user_id: string;
+  user_nickname: string;
+  user_image: string;
+  deleted_at: string;
+}

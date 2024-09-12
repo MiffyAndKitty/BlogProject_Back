@@ -1,7 +1,7 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
-import { FollowListDto } from '../../interfaces/user/follow';
+import { FollowListDto, topFollowerInfo } from '../../interfaces/user/follow';
 import { SingleNotificationResponse } from '../../interfaces/response';
 import { redis } from '../../loaders/redis';
 import { LimitRequestDto } from '../../interfaces/limitRequestDto';
@@ -121,9 +121,9 @@ export class FollowService {
   };
 
   // 최다 팔로워 보유 블로거 리스트 조회
-  static getTopFollowersList = async (topFollowersDto: LimitRequestDto) => {
+  static getTopFollowersList = async (limitRequestDto: LimitRequestDto) => {
     try {
-      const followerLimit = topFollowersDto.limit || TOP_FOLLOW_LIMIT;
+      const followerLimit = limitRequestDto.limit || TOP_FOLLOW_LIMIT;
       const cachedTopFollowers = await redis.zrevrange(
         CacheKeys.TOP_FOLLOWERS,
         0,
@@ -138,14 +138,27 @@ export class FollowService {
           message: '최다 팔로워 보유 블로거 조회 실패'
         };
       }
+      const topFollowersWithScores: any = [];
+      const userIds = cachedTopFollowers.filter((_, index) => index % 2 === 0);
+      const userInfos = await db.query(
+        `
+          SELECT user_id,user_nickname, user_image, deleted_at
+          FROM User
+          WHERE user_id IN (?)
+        `,
+        [userIds]
+      );
 
-      const topFollowersWithScores = [];
-      for (let i = 0; i < cachedTopFollowers.length; i += 2) {
-        topFollowersWithScores.push({
-          userName: cachedTopFollowers[i],
-          score: Number(cachedTopFollowers[i + 1])
-        });
-      }
+      userInfos.forEach((userInfo: topFollowerInfo) => {
+        const index = cachedTopFollowers.indexOf(userInfo.user_id);
+        if (userInfo.deleted_at === null) {
+          topFollowersWithScores.push({
+            userName: userInfo.user_nickname,
+            userImage: userInfo.user_image,
+            score: Number(cachedTopFollowers[index + 1])
+          });
+        }
+      });
 
       return {
         result: true,
