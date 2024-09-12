@@ -291,9 +291,10 @@ boardRouter.post(
     body('tagNames')
       .optional({ checkFalsy: true })
       .custom((tags) => {
-        tags = typeof tags === 'string' ? [tags] : tags;
-        if (tags.length > 10)
-          throw new Error('태그는 최대 10개까지 허용됩니다.');
+        if (typeof tags === 'string') return true;
+
+        if (!Array.isArray(tags) || tags.length > 10)
+          throw new Error('태그 배열의 요소 최대 10개까지 허용됩니다.');
 
         tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
 
@@ -327,7 +328,10 @@ boardRouter.post(
         title: req.body.title,
         content: req.body.content,
         public: req.body.public === 'false' ? false : true,
-        tagNames: req.body.tagNames || [],
+        tagNames:
+          typeof req.body.tagNames === 'string'
+            ? [req.body.tagNames]
+            : req.body.tagNames,
         categoryId: req.body.categoryId,
         fileUrls: fileUrls
       };
@@ -384,9 +388,10 @@ boardRouter.put(
     body('tagNames')
       .optional({ checkFalsy: true })
       .custom((tags) => {
-        tags = typeof tags === 'string' ? [tags] : tags;
-        if (tags.length > 10)
-          throw new Error('태그는 최대 10개까지 허용됩니다.');
+        if (typeof tags === 'string') return true;
+
+        if (!Array.isArray(tags) || tags.length > 10)
+          throw new Error('태그 배열의 요소는 최대 10개까지 허용됩니다.');
 
         tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
 
@@ -422,7 +427,10 @@ boardRouter.put(
         title: req.body.title,
         content: req.body.content,
         public: req.body.public === 'false' ? false : true,
-        tagNames: req.body.tagNames || [],
+        tagNames:
+          typeof req.body.tagNames === 'string'
+            ? [req.body.tagNames]
+            : req.body.tagNames,
         categoryId: req.body.categoryId,
         fileUrls: fileUrls
       };
