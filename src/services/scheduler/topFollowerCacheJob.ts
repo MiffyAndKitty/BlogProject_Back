@@ -23,7 +23,7 @@ export class TopFollowersCacheJobService {
 
       const flatFollowers = transformToZaddEntries(
         topFollowers,
-        'user_nickname',
+        'followed_id',
         'follower_count'
       );
 
@@ -51,7 +51,7 @@ export class TopFollowersCacheJobService {
   private static async _getTopFollowers(startDate: string, endDate: string) {
     return db.query(
       `
-      SELECT u.user_nickname, COUNT(f.followed_id) AS follower_count
+      SELECT f.followed_id, COUNT(f.followed_id) AS follower_count
       FROM User u
       JOIN Follow f ON u.user_id = f.followed_id
       WHERE u.deleted_at IS NULL
@@ -66,23 +66,23 @@ export class TopFollowersCacheJobService {
   }
 
   private static async _addRandomFollowers(
-    topFollowers: { user_nickname: string; follower_count: string }[]
+    topFollowers: { followed_id: string; follower_count: string }[]
   ) {
     const numberOfAdditionalFollowers =
       FOLLOWER_CASH_LIMIT - topFollowers.length;
 
     const existingFollowerNames = topFollowers.map(
-      (follower) => follower.user_nickname
+      (follower) => follower.followed_id
     );
 
     const query = `
-      SELECT u.user_nickname, COUNT(f.followed_id) AS follower_count
+      SELECT f.followed_id, COUNT(f.followed_id) AS follower_count
       FROM User u
       JOIN Follow f ON u.user_id = f.followed_id
       WHERE u.deleted_at IS NULL
         AND f.deleted_at IS NULL
-       ${existingFollowerNames.length > 0 ? `AND user_nickname NOT IN (${existingFollowerNames.map(() => '?').join(',')})` : ''} 
-      GROUP BY u.user_nickname
+       ${existingFollowerNames.length > 0 ? `AND f.followed_id NOT IN (${existingFollowerNames.map(() => '?').join(',')})` : ''} 
+      GROUP BY f.followed_id
       ORDER BY RAND()
       LIMIT ?;
       `;
@@ -96,7 +96,7 @@ export class TopFollowersCacheJobService {
 
     for (const follower of additionalFollowers) {
       topFollowers.push({
-        user_nickname: follower.user_nickname,
+        followed_id: follower.followed_id,
         follower_count: '0'
       });
     }
