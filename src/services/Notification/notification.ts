@@ -5,86 +5,27 @@ import {
   NotificationListDto,
   UserNotificationDto
 } from '../../interfaces/notification';
-
+import { NotificationName } from '../../constants/notificationName';
+import { isNotificationNameType } from '../../utils/typegaurd/isNotificationNameType';
+import { CacheKeys } from '../../constants/cacheKeys';
+import { redis } from '../../loaders/redis';
+import {
+  BOARD_PAGESIZE_LIMIT,
+  NOTIFICATION_PAGESIZE_LIMIT
+} from '../../constants/pageSizeLimit';
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
     try {
-      const sortQuery = listDto.sort
-        ? `AND notification_type = '${listDto.sort}'`
-        : ``;
-      const [countResult] = await db.query(
-        `SELECT COUNT(*) AS totalCount 
-       FROM Notifications 
-       WHERE notification_recipient = ? 
-         ${sortQuery}
-         AND deleted_at IS NULL;`,
-        [listDto.userId]
-      );
+      const sortQuery = this._buildSortQuery(listDto.sort);
 
-      const pageSize = listDto.pageSize || 10;
-
-      const totalCount = Number(countResult.totalCount.toString());
+      const totalCount = await this._getTotalCount(listDto.userId, sortQuery);
+      const pageSize = listDto.pageSize || NOTIFICATION_PAGESIZE_LIMIT;
       const totalPageCount = Math.ceil(totalCount / pageSize);
 
-      let query = `
-      SELECT 
-        Notifications.notification_id, 
-        Notifications.notification_recipient, 
-        Notifications.notification_type, 
-        Notifications.notification_read, 
-        Notifications.notification_trigger, 
-        Notifications.created_at, 
-        Notifications.updated_at, 
-        Notifications.notification_order,     
-        User.user_nickname AS trigger_nickname, 
-        User.user_email AS trigger_email, 
-        User.user_image AS trigger_image,
-        CASE
-          WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Notifications.notification_location
-          ELSE NULL
-        END AS notification_comment,
-        CASE
-          WHEN Notifications.notification_type IN ('following-new-board', 'board-new-like') THEN Notifications.notification_location
-          WHEN Notifications.notification_type IN ('reply-to-comment', 'comment-on-board') THEN Comment.board_id
-          ELSE NULL
-        END AS notification_board,
-        Board.board_title AS board_title,
-        Comment.comment_content AS comment_content 
-      FROM Notifications
-      JOIN User ON Notifications.notification_trigger = User.user_id
-      LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id
-      LEFT JOIN Board ON Comment.board_id = Board.board_id
-      WHERE Notifications.notification_recipient = ? 
-        ${sortQuery}
-        AND Notifications.deleted_at IS NULL
-    `;
-
-      const params: (string | number)[] = [listDto.userId];
-
-      let order = 'DESC';
-      // 커서가 있을 경우 커서 이후의 데이터를 가져오기 위해 조건 추가
-      if (listDto.cursor) {
-        const [{ notification_order: cursorOrder }] = await db.query(
-          `SELECT notification_order 
-         FROM Notifications 
-         WHERE notification_id = ? ${sortQuery};`,
-          [listDto.cursor]
-        );
-
-        if (!cursorOrder) throw new Error('유효하지 않은 커서입니다.');
-
-        query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ?`;
-        params.push(cursorOrder);
-
-        if (listDto.isBefore) order = 'ASC';
-      }
-
-      query += ` ORDER BY notification_order ${order} LIMIT ?`;
-      params.push(pageSize);
-
+      const { query, params } = await this._buildQuery(listDto, sortQuery);
       const result = await db.query(query, params);
-      if (listDto.cursor && listDto.isBefore) result.reverse();
 
+      if (listDto.cursor && listDto.isBefore) result.reverse();
       return {
         result: true,
         data: result,
@@ -98,6 +39,28 @@ export class NotificationService {
       const error = ensureError(err);
       console.log(error.message);
       return { result: false, data: [], total: null, message: error.message };
+    }
+  }
+
+  static async getCached(userId: string): Promise<string[]> {
+    const key = CacheKeys.NOTIFICATION + userId;
+    const isExistCached = await redis.exists(key);
+
+    if (isExistCached) {
+      const cachedNotifications = await redis.lrange(key, 0, -1);
+      return cachedNotifications;
+    }
+
+    return [];
+  }
+
+  static deleteCashed(userId: string) {
+    try {
+      const key = CacheKeys.NOTIFICATION + userId;
+      redis.unlink(key);
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
     }
   }
 
@@ -120,5 +83,107 @@ export class NotificationService {
       console.log(error.message);
       return { result: false, message: error.message };
     }
+  }
+
+  // 정렬 쿼리 빌드
+  private static _buildSortQuery(sort: string): string {
+    return isNotificationNameType(sort)
+      ? `AND notification_type = '${sort}'`
+      : '';
+  }
+
+  // 총 알림 수 조회
+  private static async _getTotalCount(
+    userId: string,
+    sortQuery: string
+  ): Promise<number> {
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) AS totalCount 
+       FROM Notifications 
+       WHERE notification_recipient = ? 
+         ${sortQuery}
+         AND deleted_at IS NULL;`,
+      [userId]
+    );
+    return Number(countResult.totalCount.toString());
+  }
+  // 쿼리 및 파라미터 빌드
+  private static async _buildQuery(
+    listDto: NotificationListDto,
+    sortQuery: string
+  ) {
+    const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
+    const params: (string | number)[] = [listDto.userId];
+    let order = 'DESC';
+
+    let query = `
+      SELECT 
+        Notifications.notification_id, 
+        Notifications.notification_recipient, 
+        Notifications.notification_type, 
+        Notifications.notification_read, 
+        Notifications.notification_trigger, 
+        Notifications.created_at, 
+        Notifications.updated_at, 
+        Notifications.notification_order,     
+        User.user_nickname AS trigger_nickname, 
+        User.user_email AS trigger_email, 
+        User.user_image AS trigger_image,
+        CASE
+          WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Notifications.notification_location
+          ELSE NULL
+        END AS notification_comment,
+        Comment.parent_comment_id AS parent_comment_id,
+        CASE
+          WHEN Notifications.notification_type IN ('${NotificationName.FOLLOWING_NEW_BOARD}', '${NotificationName.BOARD_NEW_LIKE}') THEN Notifications.notification_location
+          WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Comment.board_id
+          ELSE NULL
+        END AS notification_board,
+        SUBSTRING(Board.board_title, 1, 30) AS board_title,
+        BoardUser.user_nickname AS board_writer,
+        SUBSTRING(Comment.comment_content, 1, 30) AS comment_content
+      FROM Notifications
+      JOIN User ON Notifications.notification_trigger = User.user_id
+      LEFT JOIN Comment ON Notifications.notification_location = Comment.comment_id
+      LEFT JOIN Board ON 
+          (CASE 
+              WHEN Notifications.notification_type IN ('${NotificationName.FOLLOWING_NEW_BOARD}', '${NotificationName.BOARD_NEW_LIKE}') THEN Notifications.notification_location
+              WHEN Notifications.notification_type IN ('${NotificationName.REPLY_TO_COMMENT}', '${NotificationName.COMMENT_ON_BOARD}') THEN Comment.board_id
+              ELSE NULL
+          END) = Board.board_id
+      LEFT JOIN User AS BoardUser ON Board.user_id = BoardUser.user_id 
+      WHERE Notifications.notification_recipient = ? 
+        ${sortQuery}
+        AND Notifications.deleted_at IS NULL
+    `;
+
+    if (listDto.cursor) {
+      const cursorOrder = await this._getCursorOrder(listDto.cursor, sortQuery);
+      query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ?`;
+      params.push(cursorOrder);
+
+      if (listDto.isBefore) order = 'ASC';
+    }
+
+    query += ` ORDER BY notification_order ${order} LIMIT ?`;
+    params.push(pageSize);
+
+    return { query, params };
+  }
+
+  // 커서 정보 조회
+  private static async _getCursorOrder(
+    cursor: string,
+    sortQuery: string
+  ): Promise<number> {
+    const [{ notification_order: cursorOrder }] = await db.query(
+      `SELECT notification_order 
+       FROM Notifications 
+       WHERE notification_id = ? ${sortQuery};`,
+      [cursor]
+    );
+
+    if (!cursorOrder) throw new Error('유효하지 않은 커서입니다.');
+    return cursorOrder;
   }
 }

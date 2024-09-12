@@ -15,18 +15,24 @@ import {
 } from '../interfaces/board/listDto';
 import { upload } from '../middleware/multer';
 import { checkWriter } from '../middleware/checkWriter';
-import { saveNotificationService } from '../services/Notification/saveNotifications';
+import { SaveNotificationService } from '../services/Notification/saveNotifications';
 import {
   ListResponse,
   SingleNotificationResponse,
   UserListResponse
 } from '../interfaces/response';
 import { BoardCommentListService } from '../services/comment/boardCommentList';
+import { stripHtmlTags } from '../utils/string/stripHtmlTags';
+import {
+  BOARD_TITLE_MAX,
+  TAG_NAME_MAX,
+  USER_NICKNAME_MAX
+} from '../constants/validation';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 
 export const boardRouter = Router();
 
-// 게시글 리스트 조회
-// GET : /board/list?sort=&tag=&cursor=&page-size=&is-before=
+// 게시글 리스트 조회 (GET : /board/list?sort=&tag=&cursor=&page-size=&is-before=)
 boardRouter.get(
   '/list',
   validate([
@@ -37,8 +43,13 @@ boardRouter.get(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
     query('query').optional({ checkFalsy: true }).isString(),
-    query('tag').optional({ checkFalsy: true }).isString(),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('tag')
+      .optional({ checkFalsy: true })
+      .isString()
+      .custom((value) => validateFieldByteLength('태그', value, TAG_NAME_MAX)),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -82,13 +93,14 @@ boardRouter.get(
   }
 );
 
-// 유저의 유니크한 값인 닉네임을 이용하여 특정 유저의 게시글 리스트 반환
-// 자기 자신의 게시글을 조회할 경우에만 비공개된 글까지 조회 가능
-// GET : /board/list/:{nickname}?sort=&tag=&cursor=&pageSize=&categoryId=&isBefore=
+// 특정 유저의 게시글 리스트 반환 (GET : /board/list/:{nickname}?sort=&tag=&cursor=&pageSize=&categoryId=&isBefore=)
+// 유저의 유니크한 값인 닉네임을 이용, 자기 자신의 게시글을 조회할 경우에만 비공개된 글까지 조회 가능
 boardRouter.get(
   '/list/:nickname',
   validate([
-    param('nickname').isString(),
+    param('nickname').custom((nickname) =>
+      validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+    ),
     query('query').optional({ checkFalsy: true }).isString(),
     query('sort')
       .optional({ checkFalsy: true })
@@ -96,8 +108,13 @@ boardRouter.get(
       .withMessage(
         'sort의 값이 존재한다면 like, view 중 하나의 값이어야합니다.'
       ),
-    query('tag').optional({ checkFalsy: true }).isString(),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('tag')
+      .optional({ checkFalsy: true })
+      .isString()
+      .custom((value) => validateFieldByteLength('태그', value, TAG_NAME_MAX)),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -169,10 +186,12 @@ boardRouter.get(
       .optional({ checkFalsy: true })
       .isIn(['like', 'dislike'])
       .withMessage('sort의 값이 존재한다면 "like" 또는 "dislike"이어야합니다.'),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .matches(/^[0-9a-f]{32}$/i),
     query('page-size')
       .optional({ checkFalsy: true })
-      .toInt() // 숫자로 전환
+      .toInt()
       .isInt({ min: 1 })
       .withMessage(
         'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
@@ -212,7 +231,7 @@ boardRouter.get(
   }
 );
 
-// 게시글 데이터 조회 ( GET : /board)
+// 게시글 데이터 조회 (GET : /board)
 boardRouter.get(
   '/:boardId',
   validate([
@@ -232,7 +251,6 @@ boardRouter.get(
         boardId: req.params.boardId.split(':')[1]
       };
 
-      // 게시글 데이터 조회 서비스 호출
       const result = await BoardService.getBoard(boardIdInfo);
 
       return res
@@ -254,20 +272,35 @@ boardRouter.post(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    body('title').notEmpty(),
-    body('content').notEmpty(),
-    body('public').isString(), // 폼 데이터의 필드는 텍스트로 전송
-    body('tagNames')
-      .optional({ checkFalsy: true })
-      .isArray()
-      .custom((tags) => {
-        if (tags.length > 10) {
-          throw new Error('태그는 최대 10개까지 허용됩니다.');
+    body('title').custom((title) =>
+      validateFieldByteLength('title', title, BOARD_TITLE_MAX)
+    ),
+    body('content')
+      .notEmpty()
+      .withMessage('내용을 입력해 주세요.')
+      .custom((value) => {
+        const strippedContent = stripHtmlTags(value); // 유틸리티 함수 사용
+        if (strippedContent.length === 0) {
+          throw new Error(
+            '내용에 HTML 태그를 제외한 실제 텍스트가 있어야 합니다.'
+          );
         }
         return true;
       }),
+    body('public').isString(), // 폼 데이터의 필드는 텍스트로 전송
+    body('tagNames')
+      .optional({ checkFalsy: true })
+      .custom((tags) => {
+        tags = typeof tags === 'string' ? [tags] : tags;
+        if (tags.length > 10)
+          throw new Error('태그는 최대 10개까지 허용됩니다.');
+
+        tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
+
+        return true;
+      }),
     body('categoryId')
-      .optional({ checkFalsy: true }) //빈 문자열, null, undefined 등)이면 검사를 건너뛴다
+      .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('카테고리 id는 32자리의 문자열이어야합니다.')
   ]),
@@ -304,7 +337,7 @@ boardRouter.post(
 
       if (result.result === true && result.notifications) {
         const notified =
-          await saveNotificationService.createMultiUserNotification(
+          await SaveNotificationService.createMultiUserNotification(
             result.notifications
           );
         return res.status(notified.result ? 200 : 500).send(notified);
@@ -332,16 +365,31 @@ boardRouter.put(
     body('boardId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 형식의 게시글 id가 아닙니다.'),
-    body('title').notEmpty(),
-    body('content').notEmpty(),
+    body('title').custom((title) =>
+      validateFieldByteLength('title', title, BOARD_TITLE_MAX)
+    ),
+    body('content')
+      .notEmpty()
+      .withMessage('내용을 입력해 주세요.')
+      .custom((value) => {
+        const strippedContent = stripHtmlTags(value);
+        if (strippedContent.length === 0) {
+          throw new Error(
+            '내용에 HTML 태그를 제외한 실제 텍스트가 있어야 합니다.'
+          );
+        }
+        return true;
+      }),
     body('public').isString(),
     body('tagNames')
       .optional({ checkFalsy: true })
-      .isArray()
       .custom((tags) => {
-        if (tags.length > 10) {
+        tags = typeof tags === 'string' ? [tags] : tags;
+        if (tags.length > 10)
           throw new Error('태그는 최대 10개까지 허용됩니다.');
-        }
+
+        tags.forEach((tag: string) => validateFieldByteLength('태그', tag, 50));
+
         return true;
       }),
     body('categoryId')
@@ -353,7 +401,6 @@ boardRouter.put(
   checkWriter(),
   async (req: Request, res: Response) => {
     try {
-      // 작성자와 동일하지 않은 경우
       if (!req.isWriter) {
         return res.status(403).send({
           message: '해당 유저가 작성한 게시글이 아닙니다.'
@@ -408,7 +455,6 @@ boardRouter.delete(
   checkWriter(),
   async (req: Request, res: Response) => {
     try {
-      // 작성자와 동일하지 않은 경우
       if (!req.isWriter) {
         return res.status(403).send({
           message: '해당 유저가 작성한 게시글이 아닙니다.'
@@ -420,10 +466,8 @@ boardRouter.delete(
         boardId: req.body.boardId
       };
 
-      // 게시글 삭제 서비스 호출
       const result = await BoardService.deleteBoard(boardIdInfo);
 
-      // 삭제 결과 전송
       return res
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
@@ -465,7 +509,7 @@ boardRouter.post(
 
       if (result.result === true && result.notifications) {
         const notified =
-          await saveNotificationService.createSingleUserNotification(
+          await SaveNotificationService.createSingleUserNotification(
             result.notifications
           );
         return res.status(notified.result ? 200 : 500).send(notified);

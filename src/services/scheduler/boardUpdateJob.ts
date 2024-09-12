@@ -1,9 +1,10 @@
 import { redis } from '../../loaders/redis';
 import { db } from '../../loaders/mariadb';
+import { CacheKeys } from '../../constants/cacheKeys';
 
 export class BoardUpdateJobService {
   static async updateBoard(
-    keyname: 'board_view' | 'board_like'
+    keyname: typeof CacheKeys.BOARD_VIEW | typeof CacheKeys.BOARD_LIKE
   ): Promise<boolean> {
     try {
       let isSuccess: boolean = true;
@@ -13,7 +14,7 @@ export class BoardUpdateJobService {
         const [nextCursor, keys] = await redis.scan(
           cursor,
           'MATCH',
-          `${keyname}:*`,
+          `${keyname}*`,
           'COUNT',
           100
         );
@@ -27,8 +28,9 @@ export class BoardUpdateJobService {
           if (count <= 0) continue;
 
           try {
+            const keynameField = keyname.replace(':', '');
             const updated = await db.query(
-              `UPDATE Board SET ${keyname} = ${keyname} + ? WHERE board_id = ?`,
+              `UPDATE Board SET ${keynameField} = ${keynameField} + ? WHERE board_id = ?`,
               [count, boardId]
             );
 
@@ -36,13 +38,13 @@ export class BoardUpdateJobService {
               await redis.unlink(key);
             } else {
               console.log(
-                `${keyname} : Board 테이블 업데이트 실패: board_id=${boardId}`
+                `${keyname} Board 테이블 업데이트 실패: board_id=${boardId}`
               );
               isSuccess = false;
             }
           } catch (err) {
             console.error(
-              `${keyname} : Board 테이블 업데이트 중 오류 발생: board_id=${boardId}`,
+              `${keyname} Board 테이블 업데이트 중 오류 발생: board_id=${boardId}`,
               err
             );
             isSuccess = false;

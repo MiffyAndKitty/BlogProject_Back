@@ -10,6 +10,8 @@ import {
 import { redis } from '../../loaders/redis';
 import { MultipleNotificationResponse } from '../../interfaces/response';
 import { NotificationDto } from '../../interfaces/notification';
+import { CacheKeys } from '../../constants/cacheKeys';
+import { NotificationName } from '../../constants/notificationName';
 export class commentService {
   // 댓글 생성
   static create = async (
@@ -17,13 +19,19 @@ export class commentService {
   ): Promise<MultipleNotificationResponse> => {
     try {
       const boardId = commentDto.boardId;
-      const boardWriterQuery = `SELECT user_id FROM Board WHERE board_id = ? AND deleted_at IS NULL LIMIT 1;`;
+      const boardWriterQuery = `
+          SELECT u.user_id, u.user_nickname, b.board_title 
+          FROM Board b
+          JOIN User u ON b.user_id = u.user_id
+          WHERE b.board_id = ? 
+            AND b.deleted_at IS NULL
+          LIMIT 1;
+        `;
 
-      const [{ user_id: boardWriter }] = await db.query(boardWriterQuery, [
-        boardId
-      ]);
+      const [{ user_id: boardWriterId, user_nickname: boardWriterNickname }] =
+        await db.query(boardWriterQuery, [boardId]);
 
-      if (!boardWriter)
+      if (!boardWriterId)
         return { result: false, message: '존재하지 않거나 삭제된 게시글' };
 
       const commentId = uuidv4().replace(/-/g, '');
@@ -57,14 +65,24 @@ export class commentService {
             [commentDto.userId]
           );
 
-          const [{ comment_content: commentContent }] = await db.query(
-            `SELECT comment_content FROM Comment WHERE comment_id = ?`,
+          const [
+            {
+              comment_content: commentContent,
+              board_title: commentedBoardTitle
+            }
+          ] = await db.query(
+            `SELECT 
+              SUBSTRING(C.comment_content, 1, 30) as comment_content, 
+              SUBSTRING(B.board_title, 1, 30) as board_title
+            FROM Comment C
+            JOIN Board B ON C.board_id = B.board_id
+            WHERE C.comment_id = ?`,
             [commentId]
           );
 
           replyToComment = {
             recipient: parentCommenter,
-            type: 'reply-to-comment',
+            type: NotificationName.REPLY_TO_COMMENT,
             trigger: {
               id: commentDto.userId,
               nickname: replier.user_nickname,
@@ -73,9 +91,11 @@ export class commentService {
             },
             location: {
               boardId: boardId,
+              parentCommentId: commentDto.parentCommentId,
               commentId: commentId,
-              boardTitle: undefined,
-              commentContent: commentContent
+              boardTitle: commentedBoardTitle,
+              commentContent: commentContent,
+              boardWriterNickname: boardWriterNickname
             }
           };
         }
@@ -83,7 +103,7 @@ export class commentService {
       // 2. 게시글 작성자에게 부모 댓글 알림
       else if (
         !commentDto.parentCommentId &&
-        boardWriter !== commentDto.userId
+        boardWriterId !== commentDto.userId
       ) {
         const [commenter] = await db.query(
           `SELECT user_nickname, user_email, user_image FROM User WHERE user_id = ?`,
@@ -94,8 +114,8 @@ export class commentService {
           { comment_content: commentContent, board_title: commentedBoardTitle }
         ] = await db.query(
           `SELECT 
-            C.comment_content, 
-            B.board_title 
+            SUBSTRING(C.comment_content, 1, 30) as comment_content, 
+            SUBSTRING(B.board_title, 1, 30) as board_title
           FROM Comment C
           JOIN Board B ON C.board_id = B.board_id
           WHERE C.comment_id = ?`,
@@ -103,8 +123,8 @@ export class commentService {
         );
 
         commentOnBoard = {
-          recipient: boardWriter,
-          type: 'comment-on-board',
+          recipient: boardWriterId,
+          type: NotificationName.COMMENT_ON_BOARD,
           trigger: {
             id: commentDto.userId,
             nickname: commenter.user_nickname,
@@ -186,7 +206,7 @@ export class commentService {
       if (likedInDB.length === 0) {
         // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
         const likedInRedis = await redis.hset(
-          `comment_like:${commentLikeDto.commentId}`,
+          `${CacheKeys.COMMENT_LIKE}${commentLikeDto.commentId}`,
           commentLikeDto.userId,
           Number(commentLikeDto.isLike)
         );
@@ -196,7 +216,7 @@ export class commentService {
           likedInRedis === 1 ||
           (likedInRedis === 0 &&
             (await redis.hexists(
-              `comment_like:${commentLikeDto.commentId}`,
+              `${CacheKeys.COMMENT_LIKE}${commentLikeDto.commentId}`,
               commentLikeDto.userId
             )))
         ) {
@@ -218,7 +238,7 @@ export class commentService {
             : '이미 싫어요한 댓글입니다'
         };
       }
-      // likedInDB.comment_like !== commentLikeDto.isLike
+      // 사용자가 좋아요/싫어요를 눌렀을 때, 데이터베이스에는 반대되는 상태가 저장된 경우 처리
       const query = `INSERT INTO Comment_Like (comment_id, user_id, comment_like) VALUES (?,?,?) 
                      ON DUPLICATE KEY UPDATE comment_like = ?, deleted_at = NULL`;
       const params = [
@@ -271,7 +291,7 @@ export class commentService {
     try {
       // Redis에서 캐시 확인 후 삭제 시도
       const isCashed = await redis.hdel(
-        `comment_like:${commentIdDto.commentId}`,
+        `${CacheKeys.COMMENT_LIKE}${commentIdDto.commentId}`,
         commentIdDto.userId
       );
 

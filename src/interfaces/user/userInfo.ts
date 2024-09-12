@@ -2,16 +2,9 @@ export interface UserEmailDto {
   email: string;
 }
 
-export interface UserIdDto {
+export interface UserInfoDto {
   userId: string;
-}
-
-export interface UserInfoDto extends UserIdDto {
   email: string;
-}
-
-export interface UserPwDto extends UserIdDto {
-  password: string;
 }
 
 export interface UserLoginDto {
@@ -20,34 +13,23 @@ export interface UserLoginDto {
 }
 
 // 사용자 정보 상세 조회 UserEmailDto, UserNicknameDto
-export interface UserEmailDto {
+export interface UserEmailLookupDto {
   userId?: string;
   email: string;
 }
 
-export interface UserNicknameDto {
+export interface UserNicknameLookupDto {
   userId?: string;
   nickname: string;
+}
+
+export interface UserPwDto {
+  userId: string;
+  password: string;
 }
 
 export interface UserProfileDto extends UserPwDto {
   nickname: string;
   profilePicture: string;
   statusMessage: string;
-}
-
-export interface FollowListDto {
-  userId?: string;
-  email: string;
-  pageSize: number;
-  page: number;
-}
-
-export interface CommentListDto {
-  userId?: string;
-  email?: string;
-  sort: string;
-  pageSize: number;
-  cursor: string;
-  isBefore: boolean;
 }

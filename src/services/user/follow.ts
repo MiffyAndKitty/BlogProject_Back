@@ -1,8 +1,18 @@
 import { db } from '../../loaders/mariadb';
 import { ensureError } from '../../errors/ensureError';
 import { UserInfoDto } from '../../interfaces/user/userInfo';
-import { FollowListDto } from '../../interfaces/user/userInfo';
+import { FollowListDto } from '../../interfaces/user/follow';
 import { SingleNotificationResponse } from '../../interfaces/response';
+import { redis } from '../../loaders/redis';
+import { LimitRequestDto } from '../../interfaces/limitRequestDto';
+import { CacheKeys } from '../../constants/cacheKeys';
+import {
+  FollowedListUser,
+  FollowingListUser
+} from '../../interfaces/user/follow';
+import { NotificationName } from '../../constants/notificationName';
+import { FOLLOW_PAGESIZE_LIMIT } from '../../constants/pageSizeLimit';
+import { TOP_FOLLOW_LIMIT } from '../../constants/cashedListSizeLimit';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -29,7 +39,7 @@ export class FollowService {
 
       const thisUser = user.user_id;
       const currentUser = followListDto.userId;
-      const pageSize = followListDto.pageSize || 10;
+      const pageSize = followListDto.pageSize || FOLLOW_PAGESIZE_LIMIT;
       const offset = (followListDto.page - 1) * pageSize;
 
       const followingsList: FollowingListUser[] = await db.query(
@@ -110,6 +120,49 @@ export class FollowService {
     }
   };
 
+  // 최다 팔로워 보유 블로거 리스트 조회
+  static getTopFollowersList = async (topFollowersDto: LimitRequestDto) => {
+    try {
+      const followerLimit = topFollowersDto.limit || TOP_FOLLOW_LIMIT;
+      const cachedTopFollowers = await redis.zrevrange(
+        CacheKeys.TOP_FOLLOWERS,
+        0,
+        followerLimit - 1,
+        'WITHSCORES'
+      );
+
+      if (!cachedTopFollowers || cachedTopFollowers.length === 0) {
+        return {
+          result: false,
+          data: [],
+          message: '최다 팔로워 보유 블로거 조회 실패'
+        };
+      }
+
+      const topFollowersWithScores = [];
+      for (let i = 0; i < cachedTopFollowers.length; i += 2) {
+        topFollowersWithScores.push({
+          userName: cachedTopFollowers[i],
+          score: Number(cachedTopFollowers[i + 1])
+        });
+      }
+
+      return {
+        result: true,
+        data: topFollowersWithScores,
+        message: '최다 팔로워 보유 블로거 조회 성공'
+      };
+    } catch (err) {
+      const error = ensureError(err);
+      console.log(error.message);
+      return {
+        result: false,
+        data: null,
+        message: error.message
+      };
+    }
+  };
+
   static addfollow = async (
     userInfoDto: UserInfoDto
   ): Promise<SingleNotificationResponse> => {
@@ -175,7 +228,7 @@ export class FollowService {
               : '팔로우 추가 성공',
             notifications: {
               recipient: followedUser.user_id,
-              type: 'new-follower',
+              type: NotificationName.NEW_FOLLOWER,
               trigger: {
                 id: currentUser.user_id,
                 nickname: currentUser.user_nickname,
@@ -200,7 +253,6 @@ export class FollowService {
     try {
       // following하던 사람이 followed되던 사람을 팔로우 취소
       const [followedUser] = await db.query(
-        // 팔로우 하던 사람
         `
         SELECT *
         FROM User
@@ -214,7 +266,7 @@ export class FollowService {
       }
 
       const followed = followedUser.user_id!;
-      const currentUser = userInfoDto.userId; // following하던 사람
+      const currentUser = userInfoDto.userId; // 팔로워 (현재 유저)
 
       const query = `UPDATE Follow SET deleted_at = CURRENT_TIMESTAMP
                      WHERE followed_id = ? AND following_id = ? AND deleted_at IS NULL;

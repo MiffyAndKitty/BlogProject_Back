@@ -11,10 +11,12 @@ import {
   UpdateCategoryNameDto
 } from '../interfaces/category';
 import { categoryService } from '../services/category';
+import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import { CATEGORY_NAME_MAX, USER_NICKNAME_MAX } from '../constants/validation';
 
 export const categoryRouter = Router();
 
-// 특정 유저의 카테고리 리스트 조회 ( GET : /category/list/:nickname)
+// 특정 유저의 카테고리 리스트 조회 (GET : /category/list/:nickname)
 categoryRouter.get(
   '/list/:nickname',
   validate([
@@ -22,7 +24,9 @@ categoryRouter.get(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
-    param('nickname').notEmpty(),
+    param('nickname').custom((nickname) =>
+      validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
+    ),
     query('topcategory-id')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
@@ -52,14 +56,16 @@ categoryRouter.get(
   }
 );
 
-// 카테고리 생성
+// 카테고리 생성 (POST : /category)
 categoryRouter.post(
   '/',
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
-    body('categoryName').notEmpty(),
+    body('categoryName').custom((categoryName) =>
+      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+    ),
     body('topcategoryId')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
@@ -92,7 +98,7 @@ categoryRouter.post(
   }
 );
 
-// 카테고리명 수정
+// 카테고리명 수정 (PUT : /category/name)
 categoryRouter.put(
   '/name',
   validate([
@@ -102,7 +108,9 @@ categoryRouter.put(
     body('categoryId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 카테고리 id 형식이 아닙니다.'),
-    body('categoryName').notEmpty().withMessage('categoryName은 필수입니다.')
+    body('categoryName').custom((categoryName) =>
+      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+    )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -132,7 +140,7 @@ categoryRouter.put(
   }
 );
 
-// 카테고리 레벨 수정
+// 카테고리 레벨 수정 (PUT : /category/level)
 categoryRouter.put(
   '/level',
   validate([
@@ -175,7 +183,7 @@ categoryRouter.put(
   }
 );
 
-// 카테고리 삭제
+// 카테고리 삭제 (DELETE : /category)
 categoryRouter.delete(
   '/',
   validate([

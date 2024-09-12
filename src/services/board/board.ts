@@ -4,6 +4,8 @@ import { BoardIdInfoDto } from '../../interfaces/board/IdInfo';
 import { redis } from '../../loaders/redis';
 import { SingleNotificationResponse } from '../../interfaces/response';
 import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
+import { CacheKeys } from '../../constants/cacheKeys';
+import { NotificationName } from '../../constants/notificationName';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
@@ -74,7 +76,7 @@ export class BoardService {
   // 사용자의 좋아요 여부 확인
   private static _isLiked = async (boardIdInfoDto: BoardIdInfoDto) => {
     let isLike = false;
-    const redisKey = `board_like:${boardIdInfoDto.boardId}`;
+    const redisKey = `${CacheKeys.BOARD_LIKE}${boardIdInfoDto.boardId}`;
     // redis에서 사용자가 좋아요를 눌렀는지 확인
     const isLikedInRedis = await redis.sismember(
       redisKey,
@@ -99,7 +101,7 @@ export class BoardService {
   // 캐시된 데이터들은 매일 자정이 지날 때마다 board의 view칼럼에 value들의 숫자를 더하여 저장되도록 업데이트 될 것임
   private static _addView = async (boardIdInfoDto: BoardIdInfoDto) => {
     const { boardId, userId } = boardIdInfoDto;
-    const redisKey = `board_view:${boardId}`;
+    const redisKey = `${CacheKeys.BOARD_VIEW}${boardId}`;
 
     // Redis에 조회수 +1 캐시
     if (userId) {
@@ -140,16 +142,20 @@ export class BoardService {
 
       // Redis에 좋아요 캐시 추가 ( DB에 없을 때만 추가 )
       const likedInRedis = await redis.sadd(
-        `board_like:${boardId}`, // 왜 여기 0이야?
+        `${CacheKeys.BOARD_LIKE}${boardId}`,
         currentUser.user_id
       ); // 추가될 시 1, 추가되지 않으면 0
+
+      if (board.user_id === userId && likedInRedis === 1) {
+        return { result: true, message: '자신의 게시물에 좋아요 추가 성공' };
+      }
 
       return likedInRedis === 1
         ? {
             result: true,
             notifications: {
               recipient: board.user_id,
-              type: 'board-new-like',
+              type: NotificationName.BOARD_NEW_LIKE,
               trigger: {
                 id: currentUser.user_id,
                 nickname: currentUser.user_nickname,
@@ -158,7 +164,7 @@ export class BoardService {
               },
               location: {
                 boardId: boardId,
-                boardTitle: board.board_title
+                boardTitle: board.board_title.substring(0, 30)
               }
             },
             message: '좋아요 추가 성공'
