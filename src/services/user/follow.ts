@@ -121,9 +121,9 @@ export class FollowService {
   };
 
   // 최다 팔로워 보유 블로거 리스트 조회
-  static getTopFollowersList = async (topFollowersDto: LimitRequestDto) => {
+  static getTopFollowersList = async (limitRequestDto: LimitRequestDto) => {
     try {
-      const followerLimit = topFollowersDto.limit || TOP_FOLLOW_LIMIT;
+      const followerLimit = limitRequestDto.limit || TOP_FOLLOW_LIMIT;
       const cachedTopFollowers = await redis.zrevrange(
         CacheKeys.TOP_FOLLOWERS,
         0,

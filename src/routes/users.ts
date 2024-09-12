@@ -154,11 +154,11 @@ usersRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      const topFollowersDto: LimitRequestDto = {
+      const limitRequestDto: LimitRequestDto = {
         limit: req.query.limit as unknown as number
       };
       const result: BasicResponse =
-        await FollowService.getTopFollowersList(topFollowersDto);
+        await FollowService.getTopFollowersList(limitRequestDto);
 
       if (result.result === true) {
         return res.status(200).send(result);
