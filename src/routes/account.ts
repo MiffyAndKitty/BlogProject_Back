@@ -5,7 +5,11 @@ import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AccountService } from '../services/account';
 import { ensureError } from '../errors/ensureError';
 import { BasicResponse, SingleDataResponse } from '../interfaces/response';
-import { UserEmailDto, UserLoginDto } from '../interfaces/user/userInfo';
+import {
+  PasswordResetLinkDto,
+  UserEmailInfoDto,
+  UserIdDto
+} from '../interfaces/account';
 
 export const accountRouter = Router();
 
@@ -23,26 +27,26 @@ accountRouter.post(
           .status(401)
           .send({ message: req.tokenMessage || '비로그인 유저' });
 
-      const userInfoDto: UserEmailDto = {
+      const userEmailInfoDto: UserEmailInfoDto = {
         email: req.body.email
       };
       const result: SingleDataResponse =
-        await AccountService.setTemporaryPassword(userInfoDto);
+        await AccountService.setTemporaryPassword(userEmailInfoDto);
 
       res.status(result.result ? 200 : 500).send({
         result: result.result,
         message: result.message
       });
 
-      const userLoginDto: UserLoginDto = {
+      const passwordResetLinkDto: PasswordResetLinkDto = {
         email: req.body.email,
         password: result.data
       };
 
       const sentResult =
-        await AccountService.sendPasswordResetLink(userLoginDto);
+        await AccountService.sendPasswordResetLink(passwordResetLinkDto);
 
-      console.log(`${sentResult.message} : ${userLoginDto.email}`);
+      console.log(`${sentResult.message} : ${passwordResetLinkDto.email}`);
     } catch (err) {
       const error = ensureError(err);
       return res.status(500).send({ result: false, message: error.message });

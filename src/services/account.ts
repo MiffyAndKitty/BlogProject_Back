@@ -1,13 +1,17 @@
 import { db } from '../loaders/mariadb';
 import { BasicResponse, SingleDataResponse } from '../interfaces/response';
 import { ensureError } from '../errors/ensureError';
-import { UserEmailDto, UserLoginDto } from '../interfaces/user/userInfo';
 import { getHashed } from '../utils/getHashed';
 import { generatePassword } from '../utils/passwordGenerator';
 import { sendEMail } from '../utils/sendEmail';
+import {
+  PasswordResetLinkDto,
+  UserEmailInfoDto,
+  UserIdDto
+} from '../interfaces/account';
 export class AccountService {
   static async setTemporaryPassword(
-    userInfoDto: UserEmailDto
+    userEmailInfoDto: UserEmailInfoDto
   ): Promise<SingleDataResponse> {
     try {
       const temporaryPassword = generatePassword();
@@ -16,7 +20,7 @@ export class AccountService {
 
       const [user] = await db.query(
         `SELECT deleted_at FROM User WHERE user_email = ?;`,
-        [userInfoDto.email]
+        [userEmailInfoDto.email]
       );
 
       if (user.deleted_at !== null) {
@@ -26,7 +30,7 @@ export class AccountService {
       const query = `UPDATE User SET user_password = ? WHERE user_email = ? AND deleted_at IS NULL`;
       const { affectedRows: updatedCount } = await db.query(query, [
         hashedPassword,
-        userInfoDto.email
+        userEmailInfoDto.email
       ]);
 
       if (updatedCount !== 1) {
@@ -50,15 +54,15 @@ export class AccountService {
 
   // 비밀번호 재설정 링크 전송
   static async sendPasswordResetLink(
-    userLoginDto: UserLoginDto
+    passwordResetLinkDto: PasswordResetLinkDto
   ): Promise<BasicResponse> {
     try {
       const sent: boolean = await sendEMail(
-        userLoginDto.email,
+        passwordResetLinkDto.email,
         '임시 비밀번호 발급',
         'passwordResetTemplate',
         {
-          password: userLoginDto.password,
+          password: passwordResetLinkDto.password,
           loginUrl: `${process.env.ORIGIN_URL}/login`
         }
       );
