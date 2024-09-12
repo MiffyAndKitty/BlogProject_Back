@@ -22,18 +22,20 @@ accountRouter.post(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '비로그인 유저' });
-
       const userEmailInfoDto: UserEmailInfoDto = {
         email: req.body.email
       };
       const result: SingleDataResponse =
         await AccountService.setTemporaryPassword(userEmailInfoDto);
 
-      res.status(result.result ? 200 : 500).send({
+      if (!result.result) {
+        return res.status(500).send({
+          result: result.result,
+          message: result.message
+        });
+      }
+
+      res.status(200).send({
         result: result.result,
         message: result.message
       });
