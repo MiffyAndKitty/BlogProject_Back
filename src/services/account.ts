@@ -87,13 +87,21 @@ export class AccountService {
     try {
       const query = `UPDATE User SET deleted_at = NOW() WHERE user_id = ? AND deleted_at IS NULL`;
       const result = await db.query(query, [userIdDto.userId]);
-      console.log(result);
-      return result.affectedRows === 1
-        ? {
+
+      switch (result.affectedRows) {
+        case 1:
+          return {
             result: true,
             message: '회원 탈퇴가 성공적으로 처리되었습니다.'
-          }
-        : { result: false, message: '회원 탈퇴에 실패했습니다.' };
+          };
+        case 0:
+          return {
+            result: false,
+            message: '이미 탈퇴된 회원입니다.'
+          };
+        default:
+          return { result: false, message: '회원 탈퇴에 실패했습니다.' };
+      }
     } catch (err) {
       const error = ensureError(err);
       return { result: false, message: error.message };
@@ -108,12 +116,20 @@ export class AccountService {
       const query = `UPDATE User SET deleted_at = NULL WHERE user_email = ? AND deleted_at IS NOT NULL`;
       const result = await db.query(query, [userInfoDto.email]);
 
-      return result.affectedRows === 1
-        ? {
+      switch (result.affectedRows) {
+        case 1:
+          return {
             result: true,
             message: '계정이 성공적으로 복구되었습니다.'
-          }
-        : { result: false, message: '복구할 계정을 찾을 수 없습니다.' };
+          };
+        case 0:
+          return {
+            result: false,
+            message: '복구할 계정을 찾을 수 없습니다.'
+          };
+        default:
+          return { result: false, message: '회원 탈퇴에 실패했습니다.' };
+      }
     } catch (err) {
       const error = ensureError(err);
       return { result: false, message: error.message };
