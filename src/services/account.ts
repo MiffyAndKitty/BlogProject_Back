@@ -19,12 +19,17 @@ export class AccountService {
       const hashedPassword = await getHashed(temporaryPassword);
 
       const [user] = await db.query(
-        `SELECT deleted_at FROM User WHERE user_email = ?;`,
+        `SELECT deleted_at FROM User WHERE user_email = ? AND user_provider IS NULL;`,
         [userEmailInfoDto.email]
       );
 
-      if (user.deleted_at !== null) {
-        return { result: false, data: '', message: '이미 탈퇴한 유저입니다.' };
+      if (!user || user.deleted_at !== null) {
+        return {
+          result: false,
+          data: '',
+          message:
+            '이미 탈퇴한 유저 혹은 존재하지 않는 로컬 회원가입 유저입니다.'
+        };
       }
 
       const query = `UPDATE User SET user_password = ? WHERE user_email = ? AND deleted_at IS NULL`;
