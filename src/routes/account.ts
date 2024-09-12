@@ -5,11 +5,7 @@ import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AccountService } from '../services/account';
 import { ensureError } from '../errors/ensureError';
 import { BasicResponse, SingleDataResponse } from '../interfaces/response';
-import {
-  UserEmailDto,
-  UserIdDto,
-  UserLoginDto
-} from '../interfaces/user/userInfo';
+import { UserEmailDto, UserLoginDto } from '../interfaces/user/userInfo';
 
 export const accountRouter = Router();
 
@@ -75,31 +71,6 @@ accountRouter.delete(
       };
       const result: BasicResponse =
         await AccountService.deleteUserAccount(userIdDto);
-
-      return res.status(result.result ? 200 : 500).send({
-        message: result.message
-      });
-    } catch (err) {
-      const error = ensureError(err);
-      return res.status(500).send({ result: false, message: error.message });
-    }
-  }
-);
-
-// 탈퇴한 회원 후 복구
-accountRouter.post(
-  '/recover',
-  validate([
-    body('email').isEmail().withMessage('유효한 이메일을 입력하세요.')
-  ]),
-  async (req: Request, res: Response) => {
-    try {
-      const userInfoDto: UserEmailDto = {
-        email: req.body.email
-      };
-
-      const result: BasicResponse =
-        await AccountService.recoverDeletedAccount(userInfoDto);
 
       return res.status(result.result ? 200 : 500).send({
         message: result.message
