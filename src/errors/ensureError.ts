@@ -1,11 +1,20 @@
-export function ensureError(err: unknown): Error {
-  if (err instanceof Error) return err;
+import { BaseError } from './baseError';
 
-  let stringified = '에러값 문자열화 실패';
+export function ensureError(err: unknown): BaseError<string> {
+  if (err instanceof BaseError) return err;
+
+  let stringified: string;
   try {
     stringified = JSON.stringify(err);
-  } catch {}
+  } catch {
+    stringified = '알 수 없는 에러';
+  }
 
   const error = new Error(`error : ${stringified}`);
-  return error;
+
+  return new BaseError({
+    name: '알 수 없는 에러',
+    message: error.message,
+    code: 500
+  });
 }
