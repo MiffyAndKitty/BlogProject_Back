@@ -26,6 +26,7 @@ import {
   USER_NICKNAME_MAX,
   USER_STATUS_MESSAGE_MAX
 } from '../constants/validation';
+import { handleError } from '../utils/errHandler';
 export const usersRouter = Router();
 
 // 특정 이메일/닉네임의 중복 여부 확인 (POST : /users/duplication)
@@ -46,9 +47,7 @@ usersRouter.post(
         return res.status(400).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -82,9 +81,7 @@ usersRouter.post(
         return res.status(400).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -134,9 +131,7 @@ usersRouter.get(
         return res.status(500).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -166,9 +161,7 @@ usersRouter.get(
         return res.status(500).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -213,9 +206,7 @@ usersRouter.post(
         return res.status(500).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -254,9 +245,7 @@ usersRouter.delete(
         return res.status(500).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -400,9 +389,7 @@ usersRouter.put(
         return res.status(500).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );

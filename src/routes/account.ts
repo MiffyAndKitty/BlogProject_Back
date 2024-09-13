@@ -10,6 +10,7 @@ import {
   UserEmailInfoDto,
   UserIdDto
 } from '../interfaces/account';
+import { handleError } from '../utils/errHandler';
 
 export const accountRouter = Router();
 
@@ -50,8 +51,7 @@ accountRouter.post(
 
       console.log(`${sentResult.message} : ${passwordResetLinkDto.email}`);
     } catch (err) {
-      const error = ensureError(err);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -82,8 +82,7 @@ accountRouter.delete(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );

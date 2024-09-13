@@ -16,6 +16,7 @@ import { SaveNotificationService } from '../services/Notification/saveNotificati
 import { CommentListService } from '../services/comment/commentList';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { COMMENT_CONTENT_MAX } from '../constants/validation';
+import { handleError } from '../utils/errHandler';
 
 export const commentRouter = Router();
 
@@ -112,9 +113,7 @@ commentRouter.post(
 
       return res.status(result.result ? 201 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -156,9 +155,7 @@ commentRouter.put(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -192,9 +189,7 @@ commentRouter.delete(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -229,9 +224,7 @@ commentRouter.post(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -264,9 +257,7 @@ commentRouter.delete(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -315,9 +306,7 @@ commentRouter.get(
         await CommentListService.getChildCommentsByParentId(commentIdDto);
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );

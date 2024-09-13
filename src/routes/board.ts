@@ -29,6 +29,7 @@ import {
   USER_NICKNAME_MAX
 } from '../constants/validation';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import { handleError } from '../utils/errHandler';
 
 export const boardRouter = Router();
 
@@ -86,9 +87,7 @@ boardRouter.get(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -164,9 +163,7 @@ boardRouter.get(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -257,9 +254,7 @@ boardRouter.get(
         .status(result.result ? 200 : 500)
         .send({ data: result.data, message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -351,9 +346,7 @@ boardRouter.post(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -441,9 +434,7 @@ boardRouter.put(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -480,9 +471,7 @@ boardRouter.delete(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -527,9 +516,7 @@ boardRouter.post(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -566,9 +553,7 @@ boardRouter.post(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );

@@ -4,6 +4,7 @@ import { query } from 'express-validator';
 import { ensureError } from '../errors/ensureError';
 import { LimitRequestDto } from '../interfaces/limitRequestDto';
 import { tagService } from '../services/tag';
+import { handleError } from '../utils/errHandler';
 
 export const tagRouter = Router();
 
@@ -29,9 +30,7 @@ tagRouter.get(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ data: [], message: error.message });
+      handleError(err, res);
     }
   }
 );

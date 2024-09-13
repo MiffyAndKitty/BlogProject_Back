@@ -14,6 +14,7 @@ import { CacheKeys } from '../constants/cacheKeys';
 import { NotificationName } from '../constants/notificationName';
 import { setSSEHeaders } from '../utils/sse/setSSEHeaders';
 import { handleClientClose } from '../utils/sse/handleClientClose';
+import { handleError } from '../utils/errHandler';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
@@ -59,10 +60,8 @@ notificationsRouter.get(
 
       NotificationService.deleteCashed(req.id);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
       if (!res.headersSent) {
-        return res.status(500).send({ result: false, message: error.message });
+        handleError(err, res); // 중복 응답을 방지하기 위해 이미 응답 헤더를 전송하지 않은 경우에만 응답
       }
     }
   }
@@ -124,9 +123,7 @@ notificationsRouter.get(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -159,9 +156,7 @@ notificationsRouter.delete(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );

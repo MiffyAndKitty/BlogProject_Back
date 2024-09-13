@@ -13,6 +13,7 @@ import {
 import { categoryService } from '../services/category';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { CATEGORY_NAME_MAX, USER_NICKNAME_MAX } from '../constants/validation';
+import { handleError } from '../utils/errHandler';
 
 export const categoryRouter = Router();
 
@@ -49,9 +50,7 @@ categoryRouter.get(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -91,9 +90,7 @@ categoryRouter.post(
         .status(result.result ? 201 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -133,9 +130,7 @@ categoryRouter.put(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -176,9 +171,7 @@ categoryRouter.put(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -213,9 +206,7 @@ categoryRouter.delete(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );

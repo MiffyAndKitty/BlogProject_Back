@@ -15,6 +15,7 @@ import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 import { USER_NICKNAME_MAX } from '../constants/validation';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import { handleError } from '../utils/errHandler';
 
 export const authRouter = Router();
 
@@ -65,11 +66,7 @@ authRouter.post(
           }
         });
       } catch (err) {
-        const error = ensureError(err);
-        console.log(error.message);
-        return res
-          .status(500)
-          .send({ result: false, data: {}, message: error.message });
+        handleError(err, res);
       }
     })(req, res, next);
   }
@@ -149,9 +146,7 @@ authRouter.get(
         return res.status(401).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -183,9 +178,7 @@ authRouter.post(
         return res.status(400).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
