@@ -14,6 +14,7 @@ import { categoryService } from '../services/category';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { CATEGORY_NAME_MAX, USER_NICKNAME_MAX } from '../constants/validation';
 import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 
 export const categoryRouter = Router();
 
@@ -74,9 +75,9 @@ categoryRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          message: req.tokenMessage || '카테고리 생성 권한 없음'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 카테고리를 추가할 수 있습니다.'
+        );
       }
 
       const categoryDto: NewCategoryDto = {
@@ -113,9 +114,10 @@ categoryRouter.put(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          message: req.tokenMessage || '카테고리 업데이트 권한 없음'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 카테고리 이름을 수정할 수 있습니다.'
+        );
       }
 
       const categoryDto: UpdateCategoryNameDto = {
@@ -154,9 +156,10 @@ categoryRouter.put(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          message: req.tokenMessage || '카테고리 업데이트 권한 없음'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 카테고리 레벨을 추가할 수 있습니다.'
+        );
       }
 
       const categoryDto: UpdateCategoryLevelDto = {
@@ -191,9 +194,9 @@ categoryRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          message: req.tokenMessage || '카테고리 삭제 권한 없음'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 카테고리를 삭제할 수 있습니다.'
+        );
       }
 
       const categoryDto: CategoryDto = {

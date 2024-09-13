@@ -16,6 +16,7 @@ import { body, header } from 'express-validator';
 import { USER_NICKNAME_MAX } from '../constants/validation';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 
 export const authRouter = Router();
 
@@ -133,10 +134,9 @@ authRouter.get(
   async (req: Request, res: Response) => {
     try {
       if (!req.id)
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '로그인 상태가 아닙니다.'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '이미 로그아웃한 유저입니다.'
+        );
 
       const result: BasicResponse = await AuthService.deleteToken(req.id);
 

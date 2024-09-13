@@ -17,6 +17,7 @@ import { CommentListService } from '../services/comment/commentList';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { COMMENT_CONTENT_MAX } from '../constants/validation';
 import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 
 export const commentRouter = Router();
 
@@ -46,10 +47,9 @@ commentRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 댓글을 작성할 수 있습니다.'
+        );
       }
 
       const commentDto: CommentDto = {
@@ -140,10 +140,9 @@ commentRouter.put(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 댓글을 수정할 수 있습니다.'
+        );
       }
 
       const commentDto: CommentUpdateDto = {
@@ -175,10 +174,9 @@ commentRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 댓글을 삭제할 수 있습니다.'
+        );
       }
 
       const commentIdDto: CommentIdDto = {
@@ -210,11 +208,12 @@ commentRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 좋아요/싫어요 추가를 할 수 있습니다.'
+        );
       }
+
       const commentLikeDto: CommentLikeDto = {
         userId: req.id,
         commentId: req.body.commentId,
@@ -244,11 +243,12 @@ commentRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 좋아요/싫어요 취소를 할 수 있습니다.'
+        );
       }
+
       const commentIdDto: CommentIdDto = {
         userId: req.id,
         commentId: req.body.commentId

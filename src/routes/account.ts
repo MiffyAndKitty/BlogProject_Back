@@ -11,6 +11,7 @@ import {
   UserIdDto
 } from '../interfaces/account';
 import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 
 export const accountRouter = Router();
 
@@ -20,7 +21,6 @@ accountRouter.post(
   validate([
     body('email').isEmail().withMessage('유효한 이메일을 입력하세요.')
   ]),
-  jwtAuth,
   async (req: Request, res: Response) => {
     try {
       const userEmailInfoDto: UserEmailInfoDto = {
@@ -68,9 +68,9 @@ accountRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '비로그인 유저' });
+        throw new UnauthorizedError(
+          req.tokenMessage || '현재 로그인 상태가 아닙니다'
+        );
 
       const userIdDto: UserIdDto = {
         userId: req.id

@@ -30,6 +30,8 @@ import {
 } from '../constants/validation';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
+import { ForbiddenError } from '../errors/forbiddenError';
 
 export const boardRouter = Router();
 
@@ -304,9 +306,9 @@ boardRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '게시글 저장 권한 없음' });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 게시글 작성이 가능합니다.'
+        );
 
       const fileUrls: Array<string> = [];
 
@@ -491,10 +493,10 @@ boardRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(403).send({
-          message:
-            '로그인 하지 않은 유저는 게시글에 좋아요를 추가할 수 없습니다. '
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 게시글에 당근을 추가할 수 있습니다.'
+        );
       }
 
       const boardIdInfoDto: BoardIdInfoDto = {
@@ -536,10 +538,10 @@ boardRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(403).send({
-          message:
-            '로그인 하지 않은 유저는 게시글에 좋아요를 취소할 수 없습니다. '
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 게시글에 당근을 취소할 수 있습니다.'
+        );
       }
 
       const boardIdInfoDto: BoardIdInfoDto = {

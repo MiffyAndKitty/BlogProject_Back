@@ -27,6 +27,7 @@ import {
   USER_STATUS_MESSAGE_MAX
 } from '../constants/validation';
 import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 export const usersRouter = Router();
 
 // 특정 이메일/닉네임의 중복 여부 확인 (POST : /users/duplication)
@@ -63,10 +64,11 @@ usersRouter.post(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '사용자 존재하지 않음' });
+      if (!req.id) {
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 사용자가 존재하지 않습니다.'
+        );
+      }
 
       const userPwDto: UserPwDto = {
         userId: req.id,
@@ -181,10 +183,11 @@ usersRouter.post(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '현재 사용자 존재하지 않음' });
+      if (!req.id) {
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 사용자만 팔로우 추가를 할 수 있습니다.'
+        );
+      }
 
       const userInfoDto: UserInfoDto = {
         userId: req.id,
@@ -226,10 +229,11 @@ usersRouter.delete(
   jwtAuth,
   async (req: Request, res: Response) => {
     try {
-      if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '현재 사용자 존재하지 않음' });
+      if (!req.id) {
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 사용자만 팔로우 취소를 할 수 있습니다.'
+        );
+      }
 
       const userInfoDto: UserInfoDto = {
         userId: req.id,
@@ -359,9 +363,9 @@ usersRouter.put(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          message: req.tokenMessage || '정보를 수정할 사용자가 존재하지 않음'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 사용자만 정보를 수정할 수 있습니다.'
+        );
       }
 
       let fileUrl = '';
