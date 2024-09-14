@@ -171,10 +171,19 @@ export class BoardListService {
   ): { query: string; params: (string | string[] | number)[] } {
     const queryParts: string[] = [];
     const params: (string | string[] | number)[] = [];
+    if (tag) {
+      const tagCondition = this._AddTagCondition(tag);
+      queryParts.push(tagCondition.query);
+      params.push(...tagCondition.params);
 
-    queryParts.push(
-      'WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'
-    );
+      queryParts.push(
+        'AND Board.deleted_at IS NULL AND Board.board_public = TRUE'
+      );
+    } else {
+      queryParts.push(
+        'WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'
+      );
+    }
 
     if (queryValue) {
       const decodedQuery = decodeURIComponent(queryValue);
@@ -182,12 +191,6 @@ export class BoardListService {
         `AND (board_title LIKE ? OR REGEXP_REPLACE(board_content, '<[^>]+>', '') LIKE ?)`
       );
       params.push(`%${decodedQuery}%`, `%${decodedQuery}%`);
-    }
-
-    if (tag) {
-      const tagCondition = this._AddTagCondition(tag);
-      queryParts.push(tagCondition.query);
-      params.push(...tagCondition.params);
     }
 
     return { query: ' ' + queryParts.join(' '), params };
