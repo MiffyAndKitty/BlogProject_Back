@@ -46,10 +46,13 @@ accountRouter.post(
         password: result.data
       };
 
-      const sentResult =
-        await AccountService.sendPasswordResetLink(passwordResetLinkDto);
-
-      console.log(`${sentResult.message} : ${passwordResetLinkDto.email}`);
+      AccountService.sendPasswordResetLink(passwordResetLinkDto)
+        .then((sentResult) => {
+          console.log(`${sentResult.message} : ${passwordResetLinkDto.email}`);
+        })
+        .catch((err) => {
+          console.error(`이메일 전송 오류: ${err.message}`);
+        });
     } catch (err) {
       handleError(err, res);
     }
@@ -72,13 +75,13 @@ accountRouter.delete(
           req.tokenMessage || '현재 로그인 상태가 아닙니다'
         );
 
-      const userIdDto: UserIdDto = {
-        userId: req.id
-      };
+      const userIdDto: UserIdDto = { userId: req.id };
+
       const result: BasicResponse =
         await AccountService.deleteUserAccount(userIdDto);
 
       return res.status(result.result ? 200 : 500).send({
+        result: result.result,
         message: result.message
       });
     } catch (err) {
