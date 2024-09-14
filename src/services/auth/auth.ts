@@ -4,14 +4,13 @@ import { SignUpDto } from '../../interfaces/auth';
 import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
+import { InternalServerError } from '../../errors/internalServerError';
 export class AuthService {
   static deleteToken = async (userId: string) => {
     const deleted = await redis.unlink(`${CacheKeys.REFRESHTOKEN}${userId}`);
-    if (deleted === 1) {
-      return { result: true, message: '로그아웃 성공' };
-    } else {
-      return { result: false, message: 'refresh 토큰 삭제 실패' };
-    }
+    if (deleted == 0) throw new InternalServerError('refresh 토큰 삭제 실패');
+
+    return { result: true, message: '로그아웃 성공' };
   };
 
   static saveUser = async (userDto: SignUpDto) => {
@@ -32,9 +31,8 @@ export class AuthService {
       params
     );
 
-    if (saved.affectedRows !== 1) {
-      return { result: false, message: '회원 정보 저장 실패' };
-    }
+    if (saved.affectedRows === 0)
+      throw new InternalServerError('회원 정보 저장 실패');
 
     return userDto.provider
       ? { result: true, message: `${userDto.provider} 회원 정보 저장 성공` }
