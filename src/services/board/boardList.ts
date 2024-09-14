@@ -1,6 +1,5 @@
 import { db } from '../../loaders/mariadb';
 import { redis } from '../../loaders/redis';
-import { ensureError } from '../../errors/ensureError';
 import {
   ListDto,
   UserListDto,
@@ -15,175 +14,153 @@ import { BOARD_PAGESIZE_LIMIT } from '../../constants/pageSizeLimit';
 
 export class BoardListService {
   static getList = async (listDto: ListDto): Promise<ListResponse> => {
-    try {
-      const { query, params } = this._buildQueryConditions(
-        listDto.query,
-        listDto.tag
-      );
+    const { query, params } = this._buildQueryConditions(
+      listDto.query,
+      listDto.tag
+    );
 
-      const [countResult] = await db.query(
-        `SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
-          query +
-          ` ) AS distinctBoards`,
-        params
-      );
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
+        query +
+        ` ) AS distinctBoards`,
+      params
+    );
 
-      const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
+    const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
 
-      const sortOptions: SortOptions = {
-        pageSize: pageSize,
-        cursor: listDto.cursor,
-        isBefore: listDto.isBefore
-      };
+    const sortOptions: SortOptions = {
+      pageSize: pageSize,
+      cursor: listDto.cursor,
+      isBefore: listDto.isBefore
+    };
 
-      const sortedList =
-        listDto.sort === 'view' || listDto.sort === 'like'
-          ? await this._sortByViewOrLike(query, params, {
-              ...sortOptions,
-              sort: listDto.sort
-            } as ViewOrLikeSortOptions)
-          : await this._sortByASC(query, params, sortOptions);
+    const sortedList =
+      listDto.sort === 'view' || listDto.sort === 'like'
+        ? await this._sortByViewOrLike(query, params, {
+            ...sortOptions,
+            sort: listDto.sort
+          } as ViewOrLikeSortOptions)
+        : await this._sortByASC(query, params, sortOptions);
 
-      const totalCount = Number(countResult.totalCount.toString());
-      const totalPageCount = Math.ceil(totalCount / pageSize);
-      console.log(query, params);
-      return sortedList.length >= 0
-        ? {
-            result: true,
-            data: sortedList,
-            total: {
-              totalCount: totalCount, // 총 글의 개수
-              totalPageCount: totalPageCount // 총 페이지 수
-            },
-            message: '게시글 리스트 데이터 조회 성공'
-          }
-        : {
-            result: false,
-            data: null,
-            total: null,
-            message: '게시글 리스트 데이터 조회 실패'
-          };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return {
-        result: false,
-        data: null,
-        total: null,
-        message: error.message
-      };
-    }
+    const totalCount = Number(countResult.totalCount.toString());
+    const totalPageCount = Math.ceil(totalCount / pageSize);
+    console.log(query, params);
+    return sortedList.length >= 0
+      ? {
+          result: true,
+          data: sortedList,
+          total: {
+            totalCount: totalCount, // 총 글의 개수
+            totalPageCount: totalPageCount // 총 페이지 수
+          },
+          message: '게시글 리스트 데이터 조회 성공'
+        }
+      : {
+          result: false,
+          data: null,
+          total: null,
+          message: '게시글 리스트 데이터 조회 실패'
+        };
   };
 
   static getUserList = async (
     listDto: UserListDto
   ): Promise<UserListResponse> => {
-    try {
-      const [writer] = await db.query(
-        // 검색 대상인 유저를 찾음
-        'SELECT user_id FROM User WHERE user_nickname = ? LIMIT 1;',
-        decodeURIComponent(listDto.nickname)
-      );
+    const [writer] = await db.query(
+      // 검색 대상인 유저를 찾음
+      'SELECT user_id FROM User WHERE user_nickname = ? LIMIT 1;',
+      decodeURIComponent(listDto.nickname)
+    );
 
-      if (!writer) {
-        return {
-          result: false,
-          data: null,
-          total: null,
-          message: '검색 대상인 유저가 존재하지 않습니다'
-        };
-      }
-
-      let { query, params } = this._buildQueryConditions(
-        listDto.query,
-        listDto.tag
-      );
-
-      query += ` AND Board.user_id = ?`;
-      params.push(writer.user_id);
-
-      const isWriter = writer.user_id === listDto.userId;
-
-      // 작성자와 동일하지 않은 경우 공개 게시글만 보여주도록 제한
-      if (!isWriter) query += ' AND Board.board_public = TRUE';
-
-      if (listDto.categoryId) {
-        const [category] = await db.query(
-          `SELECT category_id FROM Board_Category WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
-          [listDto.categoryId, writer.user_id]
-        );
-
-        if (!category) {
-          throw new Error(
-            '해당 닉네임을 소유한 유저가 생성한 카테고리가 아니거나 삭제된 카테고리입니다.'
-          );
-        }
-
-        // 검색 대상 유저가 생성한 카테고리인 경우에만
-        query += ` AND Board.category_id = ?`;
-        params.push(category.category_id);
-      }
-
-      const [countResult] = await db.query(
-        `SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
-          query +
-          ` ) AS distinctBoards`,
-        params
-      );
-
-      const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
-
-      const sortOptions: SortOptions = {
-        pageSize: pageSize,
-        cursor: listDto.cursor,
-        isBefore: listDto.isBefore
-      };
-
-      const sortedList =
-        listDto.sort === 'view' || listDto.sort === 'like'
-          ? await this._sortByViewOrLike(query, params, {
-              ...sortOptions,
-              sort: listDto.sort
-            } as ViewOrLikeSortOptions)
-          : await this._sortByASC(query, params, sortOptions);
-
-      const modifiedList = sortedList.map((boardData: BoardInDBDto) => {
-        boardData.isWriter = isWriter; // data 배열의 각 객체에 isWriter 속성을 추가
-        if (!boardData.category_name) boardData.category_name = '기본 카테고리'; // 카테고리 이름이 없을 경우 "기본 카테고리"로 설정
-        return boardData;
-      });
-
-      const totalCount = Number(countResult.totalCount.toString());
-      const totalPageCount = Math.ceil(totalCount / pageSize);
-
-      return modifiedList.length >= 0
-        ? {
-            result: true,
-            data: modifiedList,
-            isWriter: isWriter,
-            total: {
-              totalCount: totalCount,
-              totalPageCount: totalPageCount
-            },
-            message: '특정 사용자의 게시글 리스트 데이터 조회 성공'
-          }
-        : {
-            result: false,
-            data: null,
-            isWriter: isWriter,
-            total: null,
-            message: '특정 사용자의 게시글 리스트 데이터 조회 실패'
-          };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
+    if (!writer) {
       return {
         result: false,
         data: null,
         total: null,
-        message: error.message
+        message: '검색 대상인 유저가 존재하지 않습니다'
       };
     }
+
+    let { query, params } = this._buildQueryConditions(
+      listDto.query,
+      listDto.tag
+    );
+
+    query += ` AND Board.user_id = ?`;
+    params.push(writer.user_id);
+
+    const isWriter = writer.user_id === listDto.userId;
+
+    // 작성자와 동일하지 않은 경우 공개 게시글만 보여주도록 제한
+    if (!isWriter) query += ' AND Board.board_public = TRUE';
+
+    if (listDto.categoryId) {
+      const [category] = await db.query(
+        `SELECT category_id FROM Board_Category WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
+        [listDto.categoryId, writer.user_id]
+      );
+
+      if (!category) {
+        throw new Error(
+          '해당 닉네임을 소유한 유저가 생성한 카테고리가 아니거나 삭제된 카테고리입니다.'
+        );
+      }
+
+      // 검색 대상 유저가 생성한 카테고리인 경우에만
+      query += ` AND Board.category_id = ?`;
+      params.push(category.category_id);
+    }
+
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
+        query +
+        ` ) AS distinctBoards`,
+      params
+    );
+
+    const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
+
+    const sortOptions: SortOptions = {
+      pageSize: pageSize,
+      cursor: listDto.cursor,
+      isBefore: listDto.isBefore
+    };
+
+    const sortedList =
+      listDto.sort === 'view' || listDto.sort === 'like'
+        ? await this._sortByViewOrLike(query, params, {
+            ...sortOptions,
+            sort: listDto.sort
+          } as ViewOrLikeSortOptions)
+        : await this._sortByASC(query, params, sortOptions);
+
+    const modifiedList = sortedList.map((boardData: BoardInDBDto) => {
+      boardData.isWriter = isWriter; // data 배열의 각 객체에 isWriter 속성을 추가
+      if (!boardData.category_name) boardData.category_name = '기본 카테고리'; // 카테고리 이름이 없을 경우 "기본 카테고리"로 설정
+      return boardData;
+    });
+
+    const totalCount = Number(countResult.totalCount.toString());
+    const totalPageCount = Math.ceil(totalCount / pageSize);
+
+    return modifiedList.length >= 0
+      ? {
+          result: true,
+          data: modifiedList,
+          isWriter: isWriter,
+          total: {
+            totalCount: totalCount,
+            totalPageCount: totalPageCount
+          },
+          message: '특정 사용자의 게시글 리스트 데이터 조회 성공'
+        }
+      : {
+          result: false,
+          data: null,
+          isWriter: isWriter,
+          total: null,
+          message: '특정 사용자의 게시글 리스트 데이터 조회 실패'
+        };
   };
 
   private static _buildQueryConditions(
