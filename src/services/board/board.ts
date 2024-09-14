@@ -5,6 +5,8 @@ import { SingleNotificationResponse } from '../../interfaces/response';
 import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { NotificationName } from '../../constants/notificationName';
+import { InternalServerError } from '../../errors/internalServerError';
+import { NotFoundError } from '../../errors/notFoundError';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
@@ -17,7 +19,7 @@ export class BoardService {
        LIMIT 1`,
       [boardIdInfoDto.boardId]
     );
-    if (!data) throw new Error('존재하지 않는 게시글입니다.');
+    if (!data) throw new NotFoundError('존재하지 않는 게시글입니다.');
 
     data = parseFieldToNumber(data, 'board_comment');
 
@@ -49,11 +51,10 @@ export class BoardService {
       [boardIdInfoDto.userId, boardIdInfoDto.boardId]
     );
 
-    if (deleted.affectedRows === 1) {
-      return { result: true, message: '게시글 삭제 성공' };
-    } else {
-      return { result: false, message: '게시글 삭제 실패' };
+    if (deleted.affectedRows === 0) {
+      throw new InternalServerError('게시글 삭제 에러');
     }
+    return { result: true, message: '게시글 삭제 성공' };
   };
 
   // 사용자의 좋아요 여부 확인
@@ -93,8 +94,7 @@ export class BoardService {
         ? console.log('이미 조회한 유저')
         : console.log('처음 조회한 유저');
     }
-    const viewCount = await redis.scard(redisKey);
-    return viewCount;
+    return await redis.scard(redisKey);
   };
 
   // 사용자의 좋아요 추가 -> cash -> DB
@@ -132,26 +132,28 @@ export class BoardService {
       return { result: true, message: '자신의 게시물에 좋아요 추가 성공' };
     }
 
-    return likedInRedis === 1
-      ? {
-          result: true,
-          notifications: {
-            recipient: board.user_id,
-            type: NotificationName.BOARD_NEW_LIKE,
-            trigger: {
-              id: currentUser.user_id,
-              nickname: currentUser.user_nickname,
-              email: currentUser.user_email,
-              image: currentUser.user_image
-            },
-            location: {
-              boardId: boardId,
-              boardTitle: board.board_title.substring(0, 30)
-            }
-          },
-          message: '좋아요 추가 성공'
+    if (likedInRedis === 0) {
+      throw new InternalServerError('좋아요 추가 실패 ( 캐시 실패 )');
+    }
+
+    return {
+      result: true,
+      notifications: {
+        recipient: board.user_id,
+        type: NotificationName.BOARD_NEW_LIKE,
+        trigger: {
+          id: currentUser.user_id,
+          nickname: currentUser.user_nickname,
+          email: currentUser.user_email,
+          image: currentUser.user_image
+        },
+        location: {
+          boardId: boardId,
+          boardTitle: board.board_title.substring(0, 30)
         }
-      : { result: false, message: '좋아요 추가 실패 ( ex. 캐시 실패 )' };
+      },
+      message: '좋아요 추가 성공'
+    };
   };
 
   // 사용자의 좋아요 취소 -> cash 확인 -> DB 확인
@@ -172,8 +174,9 @@ export class BoardService {
       [boardId, userId]
     );
 
-    return deleted.affectedRows > 0
-      ? { result: true, message: '좋아요 취소 성공' }
-      : { result: false, message: '좋아요 취소 실패' };
+    if (deleted.affectedRows === 0) {
+      throw new InternalServerError('좋아요 취소 실패');
+    }
+    return { result: true, message: '좋아요 취소 성공' };
   };
 }

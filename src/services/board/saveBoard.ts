@@ -4,6 +4,7 @@ import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
 import { v4 as uuidv4 } from 'uuid';
 import { SingleNotificationResponse } from '../../interfaces/response';
 import { NotificationName } from '../../constants/notificationName';
+import { InternalServerError } from '../../errors/internalServerError';
 
 export class saveBoardService {
   static modifyBoard = async (
@@ -30,8 +31,7 @@ export class saveBoardService {
           boardDto.content,
           boardDto.fileUrls
         );
-        if (urlReplaced !== undefined && urlReplaced !== false)
-          content = urlReplaced;
+        content = urlReplaced;
       }
       query += params.length > 0 ? ', board_content = ?' : ' board_content = ?';
       params.push(content);
@@ -50,14 +50,10 @@ export class saveBoardService {
     query += ' WHERE board_id = ? AND user_id = ? AND deleted_at IS NULL;';
     params.push(boardDto.boardId, boardDto.userId);
 
-    console.log('query : ', query);
-    console.log('params : ', params);
-
     const modified = await db.query(query, params);
-    console.log(modified);
 
-    if (modified.affectedRows < 0)
-      return { result: false, message: '게시글 수정 실패' };
+    if (modified.affectedRows !== 1)
+      throw new InternalServerError('게시글 수정 실패 (쿼리 오류)');
 
     if (boardDto.tagNames && boardDto.tagNames.length > 0) {
       // 기존 태그 삭제 후 새로 저장
@@ -65,13 +61,7 @@ export class saveBoardService {
         'DELETE FROM Board_Tag WHERE board_id = ?',
         boardDto.boardId!
       );
-      const savedTag = await saveBoardService._savedTags(
-        boardDto.boardId,
-        boardDto.tagNames
-      );
-      savedTag.result
-        ? { result: true, message: '태그와 게시글 수정 성공' }
-        : { result: false, message: '태그와 게시글 수정 실패' };
+      await saveBoardService._savedTags(boardDto.boardId, boardDto.tagNames);
     }
     return { result: true, message: '게시글 수정 성공' };
   };
@@ -80,16 +70,15 @@ export class saveBoardService {
     boardDto: boardDto
   ): Promise<SingleNotificationResponse> => {
     const boardId = uuidv4().replace(/-/g, '');
+
     // content의 사진 url를 s3에 저장된 url로 변경
-    console.log('boardId', boardId);
     let content: string = boardDto.content;
     if (boardDto.fileUrls) {
-      const urlReplaced: false | string = await saveBoardService._savedImage(
+      const urlReplaced = await saveBoardService._savedImage(
         boardDto.content,
         boardDto.fileUrls
       );
-      if (urlReplaced !== undefined && urlReplaced !== false)
-        content = urlReplaced;
+      content = urlReplaced;
     }
 
     const saved = await db.query(
@@ -105,16 +94,10 @@ export class saveBoardService {
     );
 
     if (saved.affectedRows !== 1)
-      return { result: false, message: '게시글 저장 실패' };
+      throw new InternalServerError('게시글 저장 실패');
 
     if (boardDto.tagNames && boardDto.tagNames.length > 0) {
-      const savedTag = await saveBoardService._savedTags(
-        boardId,
-        boardDto.tagNames
-      );
-      savedTag.result
-        ? { result: true, message: '태그와 게시글 저장 성공' }
-        : { result: false, message: '태그와 게시글 저장 실패' };
+      await saveBoardService._savedTags(boardId, boardDto.tagNames);
     }
 
     const [writer] = await db.query(
@@ -158,11 +141,11 @@ export class saveBoardService {
         }
       }
 
-      return { result: true, message: '게시글 태그 저장 성공' };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
+      return true;
+    } catch (err: any) {
+      throw new InternalServerError(
+        `게시글 태그를 데이터 베이스에 저장 중 에러 발생 : ${err.message}`
+      );
     }
   };
 
@@ -190,10 +173,10 @@ export class saveBoardService {
       );
 
       return replacedContent;
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return false;
+    } catch (err: any) {
+      throw new InternalServerError(
+        `게시글 이미지 저장 중 에러 발생 : ${err.message}`
+      );
     }
   };
 }
