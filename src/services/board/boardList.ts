@@ -94,7 +94,7 @@ export class BoardListService {
     // 작성자와 동일하지 않은 경우 공개 게시글만 보여주도록 제한
     if (!isWriter) query += ' AND Board.board_public = TRUE';
 
-    if (listDto.categoryId) {
+    if (listDto.categoryId && listDto.categoryId !== 'default') {
       const [category] = await db.query(
         `SELECT category_id FROM Board_Category WHERE category_id = ? AND user_id =? AND deleted_at IS NULL;`,
         [listDto.categoryId, writer.user_id]
@@ -109,6 +109,8 @@ export class BoardListService {
       // 검색 대상 유저가 생성한 카테고리인 경우에만
       query += ` AND Board.category_id = ?`;
       params.push(category.category_id);
+    } else if (listDto.categoryId === 'default') {
+      query += ` AND (Board.category_id IS NULL OR Board.category_id = '')`;
     }
 
     const [countResult] = await db.query(
