@@ -1,7 +1,6 @@
 import { CacheKeys } from '../../constants/cacheKeys';
 import { TAG_CASH_LIMIT } from '../../constants/cashLimit';
 import { ensureError } from '../../errors/ensureError';
-import { InternalServerError } from '../../errors/internalServerError';
 import { db } from '../../loaders/mariadb';
 import { cacheToRedisWithScores } from '../../utils/redis/cacheToRedisWithScores';
 import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
