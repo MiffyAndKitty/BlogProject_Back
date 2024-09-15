@@ -9,6 +9,9 @@ import {
   UpdateCategoryNameDto
 } from '../interfaces/category';
 import { v4 as uuidv4 } from 'uuid';
+import { NotFoundError } from '../errors/notFoundError';
+import { InternalServerError } from '../errors/internalServerError';
+import { BadRequestError } from '../errors/badRequestError';
 
 export class categoryService {
   static getAllList = async (categoryDto: CategoryListDto) => {
@@ -18,7 +21,7 @@ export class categoryService {
     );
 
     if (!user) {
-      throw new Error('해당 닉네임을 가진 유저가 존재하지 않습니다.');
+      throw new NotFoundError('해당 닉네임을 가진 유저가 존재하지 않습니다.');
     }
 
     // 카테고리 ID가 없는 게시글의 개수 조회
@@ -94,48 +97,54 @@ export class categoryService {
     topCategoryId?: string
   ) => {
     // 카테고리를 계층적으로 구성하기 위해 부모 카테고리를 기준으로 그룹화
-    const categoryMap = categories.reduce(
-      (
-        map: { [key: string]: HierarchicalCategoryDto[] },
-        category: HierarchicalCategoryDto
-      ) => {
-        const parentId = category.topcategory_id || 'root';
-        if (!map[parentId]) {
-          map[parentId] = [];
-        }
-        map[parentId].push(category);
-        return map;
-      },
-      { root: [] }
-    );
+    try {
+      const categoryMap = categories.reduce(
+        (
+          map: { [key: string]: HierarchicalCategoryDto[] },
+          category: HierarchicalCategoryDto
+        ) => {
+          const parentId = category.topcategory_id || 'root';
+          if (!map[parentId]) {
+            map[parentId] = [];
+          }
+          map[parentId].push(category);
+          return map;
+        },
+        { root: [] }
+      );
 
-    // 재귀적으로 계층 구조를 생성하면서, 하위 카테고리의 게시글 수를 상위 카테고리에 더하는 함수
-    const buildCategoryTree = (parentId: string): HierarchicalCategoryDto[] => {
-      const categories = categoryMap[parentId] || []; // 부모 ID에 대한 카테고리 배열
-      return categories.map((category: HierarchicalCategoryDto) => {
-        const subcategories = buildCategoryTree(category.category_id);
+      // 재귀적으로 계층 구조를 생성하면서, 하위 카테고리의 게시글 수를 상위 카테고리에 더하는 함수
+      const buildCategoryTree = (
+        parentId: string
+      ): HierarchicalCategoryDto[] => {
+        const categories = categoryMap[parentId] || []; // 부모 ID에 대한 카테고리 배열
+        return categories.map((category: HierarchicalCategoryDto) => {
+          const subcategories = buildCategoryTree(category.category_id);
 
-        // 하위 카테고리들의 게시글 수를 모두 더함
-        const totalBoardCount = subcategories.reduce(
-          (sum, subcategory) => sum + subcategory.board_count,
-          category.board_count //현재 카테고리의 게시글 수 포함
-        );
+          // 하위 카테고리들의 게시글 수를 모두 더함
+          const totalBoardCount = subcategories.reduce(
+            (sum, subcategory) => sum + subcategory.board_count,
+            category.board_count //현재 카테고리의 게시글 수 포함
+          );
 
-        return {
-          category_id: category.category_id,
-          category_name: category.category_name,
-          board_count: totalBoardCount, // 상위 카테고리로 누적된 게시글 수
-          ...(subcategories.length > 0 && { subcategories }) // 하위 카테고리가 있으면 포함
-        };
-      });
-    };
+          return {
+            category_id: category.category_id,
+            category_name: category.category_name,
+            board_count: totalBoardCount, // 상위 카테고리로 누적된 게시글 수
+            ...(subcategories.length > 0 && { subcategories }) // 하위 카테고리가 있으면 포함
+          };
+        });
+      };
 
-    // 상위 카테고리가 지정되었을 때, 그 카테고리와 그 하위 카테고리들을 포함하여 반환
-    if (topCategoryId) {
-      return buildCategoryTree(topCategoryId);
+      // 상위 카테고리가 지정되었을 때, 그 카테고리와 그 하위 카테고리들을 포함하여 반환
+      if (topCategoryId) {
+        return buildCategoryTree(topCategoryId);
+      }
+
+      return buildCategoryTree('root');
+    } catch (err) {
+      throw ensureError(err, '카테고리를 계층적으로 구성하는 중 에러 발생');
     }
-
-    return buildCategoryTree('root');
   };
 
   static create = async (categoryDto: NewCategoryDto) => {
@@ -146,7 +155,7 @@ export class categoryService {
           [categoryDto.topcategoryId]
         );
         if (!topcategory)
-          throw new Error(
+          throw new BadRequestError(
             '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
           );
       }
@@ -163,11 +172,11 @@ export class categoryService {
 
       const created = await db.query(query, params);
 
-      if (created.affectedRows === 1) {
-        return { result: true, message: '카테고리 저장 성공' };
-      } else {
-        return { result: false, message: '카테고리 저장 실패' };
+      if (created.affectedRow === 0) {
+        throw new InternalServerError('카테고리 저장 실패');
       }
+
+      return { result: true, message: '카테고리 저장 성공' };
     } catch (err) {
       const error = ensureError(err);
       const isDuplicated = Boolean(
@@ -176,7 +185,7 @@ export class categoryService {
       if (isDuplicated) {
         return await categoryService._restore(categoryDto);
       }
-      return { result: false, message: error.message };
+      throw ensureError(err, '카테고리 생성 중 에러 발생');
     }
   };
 
@@ -194,7 +203,7 @@ export class categoryService {
       const [origin] = await db.query(query, params);
 
       if (!origin) {
-        throw new Error(
+        throw new BadRequestError(
           '카테고리 복원 에러 발생 ( 예시 : 삭제된 카테고리가 존재하지 않는 경우, 동일 레벨&이름의 카테고리가 이미 존재 )'
         );
       }
@@ -203,18 +212,12 @@ export class categoryService {
         [origin.category_id]
       );
 
-      if (restored.affectedRows === 1) {
-        return { result: true, message: '카테고리 복원 성공' };
-      } else {
-        return { result: false, message: '카테고리 복원 실패' };
+      if (restored.affectedRows === 0) {
+        throw new InternalServerError('카테고리 복원 실패');
       }
+      return { result: true, message: '카테고리 복원 성공' };
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error);
-      return {
-        result: false,
-        message: '카테고리 복원 에러 발생 : ' + error.message
-      };
+      throw ensureError(err, '카테고리 복원 에러 발생');
     }
   };
 
@@ -223,12 +226,12 @@ export class categoryService {
       `UPDATE Board_Category SET category_name = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
       [categoryDto.categoryName, categoryDto.categoryId, categoryDto.userId]
     );
-    return updated.affectedRows === 1
-      ? { result: true, message: '카테고리명 업데이트 성공' }
-      : {
-          result: false,
-          message: '카테고리명 업데이트 실패 ( 예시 : 카테고리가 삭제된 경우 )'
-        };
+    if (updated.affectedRows === 0) {
+      throw new InternalServerError(
+        '카테고리명 업데이트 실패 ( 예시 : 카테고리가 삭제된 경우 )'
+      );
+    }
+    return { result: true, message: '카테고리명 업데이트 성공' };
   };
 
   static modifyLevel = async (categoryDto: UpdateCategoryLevelDto) => {
@@ -240,13 +243,10 @@ export class categoryService {
         categoryDto.userId
       ]
     );
-
-    return updated.affectedRows === 1
-      ? { result: true, message: '카테고리 레벨 업데이트 성공' }
-      : {
-          result: false,
-          message: '카테고리 레벨 업데이트 실패'
-        };
+    if (updated.affectedRows === 0) {
+      throw new InternalServerError('카테고리 레벨 업데이트 실패');
+    }
+    return { result: true, message: '카테고리 레벨 업데이트 성공' };
   };
 
   static delete = async (categoryDto: CategoryDto) => {
@@ -257,10 +257,9 @@ export class categoryService {
     );
 
     if (subcategories.subcategoryCount > 0) {
-      return {
-        result: false,
-        message: '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
-      };
+      throw new BadRequestError(
+        '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
+      );
     }
 
     const { affectedRows: deletedCount } = await db.query(
@@ -268,8 +267,9 @@ export class categoryService {
       [categoryDto.categoryId, categoryDto.userId]
     );
 
-    return deletedCount === 1
-      ? { result: true, message: '카테고리 삭제 성공' }
-      : { result: false, message: '카테고리 삭제 실패' };
+    if (deletedCount === 0) {
+      throw new InternalServerError('카테고리 삭제 실패');
+    }
+    return { result: true, message: '카테고리 삭제 성공' };
   };
 }
