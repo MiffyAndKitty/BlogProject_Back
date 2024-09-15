@@ -6,12 +6,12 @@ export function verifyTokenError(err: unknown): Error {
   const error = ensureError(err);
   switch (error.name) {
     case 'TokenExpiredError':
-      return new UnauthorizedError('만료된 토큰입니다.');
+      throw new UnauthorizedError('만료된 토큰입니다.');
     case 'JsonWebTokenError':
-      return new BadRequestError('유효하지 않은 토큰입니다.');
+      throw new BadRequestError('유효하지 않은 토큰입니다.');
     case 'TypeError':
-      return new BadRequestError('잘못된 타입의 토큰입니다.');
+      throw new BadRequestError('잘못된 타입의 토큰입니다.');
     default:
-      return error;
+      throw ensureError(err, '토큰 유효성 검증 에러');
   }
 }
