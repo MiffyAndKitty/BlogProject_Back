@@ -221,9 +221,7 @@ boardRouter.get(
         );
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );

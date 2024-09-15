@@ -104,10 +104,9 @@ commentRouter.post(
                 `${notificationResult.type}: ${notificationResult.message}`
             );
 
-          return res.status(500).send({
-            result: false,
-            message: `일부 알림 전송 실패: ${failedMessages.join(', ')}`
-          });
+          throw new InternalServerError(
+            `일부 알림 전송 실패: ${failedMessages.join(', ')}`
+          );
         }
       }
 
