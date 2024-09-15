@@ -2,6 +2,7 @@ import '../config/env';
 import { s3 } from '../config/s3';
 import multer from 'multer';
 import multerS3 from 'multer-s3';
+import { BadRequestError } from '../errors/badRequestError';
 
 export const upload = (folder: string) =>
   multer({
@@ -13,7 +14,7 @@ export const upload = (folder: string) =>
         const extention = file.mimetype.split('/')[1];
         if (!['png', 'jpg', 'jpeg', 'gif'].includes(extention)) {
           return cb(
-            new Error(
+            new BadRequestError(
               "'png', 'jpg', 'jpeg', 'gif' 확장자에 맞는 이미지 파일을 등록해주세요."
             )
           );
