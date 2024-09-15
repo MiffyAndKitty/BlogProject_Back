@@ -1,5 +1,6 @@
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import { ensureError } from '../../errors/ensureError';
+import { InternalServerError } from '../../errors/internalServerError';
 
 export function setSSEHeaders(res: Response): void {
   try {
@@ -10,10 +11,12 @@ export function setSSEHeaders(res: Response): void {
     if (res.flushHeaders) {
       res.flushHeaders();
     } else {
-      throw new Error('[flushHeader() 에러] SSE 헤더 설정 후 플러시 실패');
+      throw new InternalServerError('SSE 헤더 설정 후 flushHeader() 실패');
     }
   } catch (err) {
-    const error = ensureError(err);
-    throw new Error('[SSE 헤더 설정 에러] ', error);
+    throw ensureError(
+      err,
+      'SSE 헤더 설정 중 에러 발생하였습니다. : ${(err as Error).message}'
+    );
   }
 }
