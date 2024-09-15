@@ -1,7 +1,6 @@
 import { Strategy as LocalStrategy } from 'passport-local';
 import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
-import { ensureError } from '../errors/ensureError';
 import { comparePw } from '../utils/comparePassword';
 export const local = (passport: PassportStatic) => {
   passport.use('local', new LocalStrategy(passportConfig, passportVerify));
@@ -38,8 +37,6 @@ const passportVerify = async (
       reason: '올바르지 않은 아이디/비밀번호가 입력되었습니다.'
     });
   } catch (err) {
-    const error = ensureError(err);
-    console.log('로컬 전략 오류 : ', error.message);
-    done(error);
+    done(err);
   }
 };
