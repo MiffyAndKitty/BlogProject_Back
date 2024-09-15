@@ -1,6 +1,7 @@
 import { BaseError } from './baseError';
+import { InternalServerError } from './internalServerError';
 
-export function ensureError(err: unknown): BaseError<string> {
+export function ensureError(err: unknown, errName?: string): BaseError<string> {
   if (err instanceof BaseError) return err;
 
   let stringified: string;
@@ -10,11 +11,7 @@ export function ensureError(err: unknown): BaseError<string> {
     stringified = '알 수 없는 에러';
   }
 
-  const error = new Error(`error : ${stringified}`);
-
-  return new BaseError({
-    name: '알 수 없는 에러',
-    message: error.message,
-    code: 500
-  });
+  return new InternalServerError(
+    `${errName ?? '알 수 없는 에러'} : ${stringified}`
+  );
 }
