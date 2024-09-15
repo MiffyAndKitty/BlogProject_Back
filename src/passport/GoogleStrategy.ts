@@ -55,8 +55,6 @@ const passportVerify = async (
     } as LoginUserDto);
     return;
   } catch (err) {
-    const error = ensureError(err);
-    console.log('구글 전략 오류 : ', error.message);
-    done(error);
+    done(err);
   }
 };
