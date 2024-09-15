@@ -4,6 +4,7 @@ import { getHashed } from '../utils/getHashed';
 import { generatePassword } from '../utils/passwordGenerator';
 import { sendEMail } from '../utils/sendEmail';
 import {
+  EmailVerificationDto,
   PasswordResetLinkDto,
   UserEmailInfoDto,
   UserIdDto
@@ -70,6 +71,29 @@ export class AccountService {
     return {
       result: true,
       message: '비밀번호 재설정 메일 전송 성공'
+    };
+  }
+
+  // 이메일 유효성 확인을 위한 이메일 전송
+  static async sendEmailVerification(
+    emailVerificationDto: EmailVerificationDto
+  ): Promise<BasicResponse> {
+    const sent: boolean = await sendEMail(
+      emailVerificationDto.email,
+      '이메일 유효성 확인을 위한 링크 전송',
+      'emailVerificationTemplate',
+      {
+        validationUrl: `${process.env.ORIGIN_URL}localsignup?email=${emailVerificationDto.email}`
+      }
+    );
+
+    if (!sent) {
+      throw new InternalServerError('이메일 유효성 확인을 위한 메일 전송 실패');
+    }
+
+    return {
+      result: true,
+      message: '이메일 유효성 확인을 위한 메일 전송 성공'
     };
   }
 

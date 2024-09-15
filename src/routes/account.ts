@@ -58,6 +58,36 @@ accountRouter.post(
   }
 );
 
+// 이메일 유효성 확인을 위한 메일 전송
+accountRouter.post(
+  '/email-validation',
+  validate([
+    body('email').isEmail().withMessage('유효한 이메일을 입력하세요.')
+  ]),
+  async (req: Request, res: Response) => {
+    try {
+      const userEmailInfoDto: UserEmailInfoDto = {
+        email: req.body.email
+      };
+
+      res.status(200).send({
+        result: true,
+        message: '이메일 유효성 확인을 위한 이메일이 전송되었습니다.'
+      });
+
+      AccountService.sendEmailVerification(userEmailInfoDto)
+        .then((sentResult) => {
+          console.log(`${sentResult.message} : ${userEmailInfoDto.email}`);
+        })
+        .catch((err) => {
+          console.error(`이메일 전송 오류: ${err.message}`);
+        });
+    } catch (err) {
+      handleError(err, res);
+    }
+  }
+);
+
 // 회원 탈퇴
 accountRouter.delete(
   '/',

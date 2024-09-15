@@ -7,6 +7,10 @@ export interface PasswordResetLinkDto {
   password: string;
 }
 
+export interface EmailVerificationDto {
+  email: string;
+}
+
 export interface UserIdDto {
   userId: string;
 }
