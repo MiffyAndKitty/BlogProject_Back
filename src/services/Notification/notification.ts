@@ -13,33 +13,28 @@ import {
   BOARD_PAGESIZE_LIMIT,
   NOTIFICATION_PAGESIZE_LIMIT
 } from '../../constants/pageSizeLimit';
+
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
-    try {
-      const sortQuery = this._buildSortQuery(listDto.sort);
+    const sortQuery = this._buildSortQuery(listDto.sort);
 
-      const totalCount = await this._getTotalCount(listDto.userId, sortQuery);
-      const pageSize = listDto.pageSize || NOTIFICATION_PAGESIZE_LIMIT;
-      const totalPageCount = Math.ceil(totalCount / pageSize);
+    const totalCount = await this._getTotalCount(listDto.userId, sortQuery);
+    const pageSize = listDto.pageSize || NOTIFICATION_PAGESIZE_LIMIT;
+    const totalPageCount = Math.ceil(totalCount / pageSize);
 
-      const { query, params } = await this._buildQuery(listDto, sortQuery);
-      const result = await db.query(query, params);
+    const { query, params } = await this._buildQuery(listDto, sortQuery);
+    const result = await db.query(query, params);
 
-      if (listDto.cursor && listDto.isBefore) result.reverse();
-      return {
-        result: true,
-        data: result,
-        total: {
-          totalCount: totalCount,
-          totalPageCount: totalPageCount
-        },
-        message: '알림 리스트 조회 성공'
-      };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, data: [], total: null, message: error.message };
-    }
+    if (listDto.cursor && listDto.isBefore) result.reverse();
+    return {
+      result: true,
+      data: result,
+      total: {
+        totalCount: totalCount,
+        totalPageCount: totalPageCount
+      },
+      message: '알림 리스트 조회 성공'
+    };
   }
 
   static async getCached(userId: string): Promise<string[]> {
@@ -54,35 +49,23 @@ export class NotificationService {
     return [];
   }
 
-  static deleteCashed(userId: string) {
-    try {
-      const key = CacheKeys.NOTIFICATION + userId;
-      redis.unlink(key);
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-    }
+  static async deleteCashed(userId: string) {
+    const key = CacheKeys.NOTIFICATION + userId;
+    await redis.unlink(key);
   }
 
   static async delete(
     userNotificationDto: UserNotificationDto
   ): Promise<BasicResponse> {
-    try {
-      const result = await db.query(
-        `UPDATE Notifications 
+    const { affectedRows: deletedCount } = await db.query(
+      `UPDATE Notifications 
         SET deleted_at = NOW() 
         WHERE notification_recipient = ? AND notification_id = ? AND deleted_at IS NULL;`,
-        [userNotificationDto.userId, userNotificationDto.notificationId]
-      );
+      [userNotificationDto.userId, userNotificationDto.notificationId]
+    );
+    if (deletedCount === 0) return { result: false, message: '알림 삭제 실패' };
 
-      return result.affectedRows > 0
-        ? { result: true, message: '알림 삭제 성공' }
-        : { result: false, message: '알림 삭제 실패 또는 이미 삭제됨' };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
-    }
+    return { result: true, message: '알림 삭제 성공' };
   }
 
   // 정렬 쿼리 빌드
