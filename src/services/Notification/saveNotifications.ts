@@ -32,7 +32,7 @@ export class SaveNotificationService {
     if (savedCount > 0) {
       return await this._sendNotification(notificationDto);
     }
-    return { result: false, message: '단일 사용자에게 알림 저장 실패' };
+    throw new InternalServerError('단일 사용자에게 알림 저장 실패');
   }
 
   static async createMultiUserNotification(
@@ -40,7 +40,10 @@ export class SaveNotificationService {
   ): Promise<BasicResponse> {
     const userList = await this._getUserList(notificationDto);
     if (userList.length === 0) {
-      return { result: true, message: '알림을 전달할 유저가 없음' };
+      return {
+        result: true,
+        message: '알림을 전달 대상 유저가 존재하지 않습니다.'
+      };
     }
 
     const location = this._selectLocation(
@@ -57,21 +60,16 @@ export class SaveNotificationService {
       return { result: true, message: '다수의 유저들에게 알림 전달 성공' };
     }
 
-    const retryResult: boolean = await this._retryFailedUsers(
+    await this._retryFailedUsers(
       notificationDto,
       dbSaveFailedUserIds,
       notificationFailedUserIds
     );
 
-    return retryResult
-      ? {
-          result: true,
-          message: '오류 발생 후 다수의 유저들에게 알림 재전달 성공'
-        }
-      : {
-          result: false,
-          message: `일부 유저 혹은 전체 유저에게 알림 전달 실패`
-        };
+    return {
+      result: true,
+      message: '오류 발생 후 다수의 유저들에게 알림 재전달 성공'
+    };
   }
 
   private static async _sendNotification(
@@ -96,17 +94,12 @@ export class SaveNotificationService {
         };
       }
       // 클라이언트가 연결되지 않은 경우 Redis에 알림 캐싱
-      const cashed = await this._cacheNotification(notificationDto);
+      await this._cacheNotification(notificationDto);
 
-      return cashed
-        ? {
-            result: true,
-            message: 'Redis에 알림을 저장 완료'
-          }
-        : {
-            result: false,
-            message: 'Redis에 알림을 저장 실패'
-          };
+      return {
+        result: true,
+        message: 'Redis에 알림 저장 완료'
+      };
     } catch (err) {
       const error = ensureError(err);
       console.log(error.message);
