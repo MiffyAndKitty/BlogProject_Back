@@ -10,10 +10,11 @@ import {
   NotificationListDto,
   UserNotificationDto
 } from '../interfaces/notification';
-import { CacheKeys } from '../constants/cacheKeys';
 import { NotificationName } from '../constants/notificationName';
 import { setSSEHeaders } from '../utils/sse/setSSEHeaders';
 import { handleClientClose } from '../utils/sse/handleClientClose';
+import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 export const notificationsRouter = Router();
 
 notificationsRouter.get(
@@ -27,10 +28,9 @@ notificationsRouter.get(
   jwtAuth,
   async (req: Request, res: Response) => {
     if (!req.id) {
-      return res.status(401).send({
-        result: false,
-        message: req.tokenMessage || '유효하지 않은 토큰'
-      });
+      throw new UnauthorizedError(
+        req.tokenMessage || 'SSE 연결은 로그인된 유저만 조회 가능합니다.'
+      );
     }
 
     setSSEHeaders(res);
@@ -59,10 +59,8 @@ notificationsRouter.get(
 
       NotificationService.deleteCashed(req.id);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
       if (!res.headersSent) {
-        return res.status(500).send({ result: false, message: error.message });
+        handleError(err, res); // 중복 응답을 방지하기 위해 이미 응답 헤더를 전송하지 않은 경우에만 응답
       }
     }
   }
@@ -106,10 +104,10 @@ notificationsRouter.get(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '게시글 알림 리스트는 로그인된 유저만 조회 가능합니다.'
+        );
       }
 
       const listDto: NotificationListDto = {
@@ -124,9 +122,7 @@ notificationsRouter.get(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -144,10 +140,10 @@ notificationsRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 자신의 알림을 삭제할 수 있습니다.'
+        );
       }
 
       const userNotificationDto: UserNotificationDto = {
@@ -159,9 +155,7 @@ notificationsRouter.delete(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );

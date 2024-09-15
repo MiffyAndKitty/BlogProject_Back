@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
 import { header, body, param, query } from 'express-validator';
-import { ensureError } from '../errors/ensureError';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { BoardService } from '../services/board/board';
 import { saveBoardService } from '../services/board/saveBoard';
@@ -29,6 +28,8 @@ import {
   USER_NICKNAME_MAX
 } from '../constants/validation';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 
 export const boardRouter = Router();
 
@@ -86,9 +87,7 @@ boardRouter.get(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -164,9 +163,7 @@ boardRouter.get(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -224,9 +221,7 @@ boardRouter.get(
         );
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -257,9 +252,7 @@ boardRouter.get(
         .status(result.result ? 200 : 500)
         .send({ data: result.data, message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -309,9 +302,9 @@ boardRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '게시글 저장 권한 없음' });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 게시글 작성이 가능합니다.'
+        );
 
       const fileUrls: Array<string> = [];
 
@@ -351,9 +344,7 @@ boardRouter.post(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -441,9 +432,7 @@ boardRouter.put(
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -480,9 +469,7 @@ boardRouter.delete(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -502,10 +489,10 @@ boardRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(403).send({
-          message:
-            '로그인 하지 않은 유저는 게시글에 좋아요를 추가할 수 없습니다. '
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 게시글에 당근을 추가할 수 있습니다.'
+        );
       }
 
       const boardIdInfoDto: BoardIdInfoDto = {
@@ -527,9 +514,7 @@ boardRouter.post(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -549,10 +534,10 @@ boardRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(403).send({
-          message:
-            '로그인 하지 않은 유저는 게시글에 좋아요를 취소할 수 없습니다. '
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 게시글에 당근을 취소할 수 있습니다.'
+        );
       }
 
       const boardIdInfoDto: BoardIdInfoDto = {
@@ -566,9 +551,7 @@ boardRouter.post(
         .status(result.result ? 200 : 500)
         .send({ message: result.message });
     } catch (err) {
-      const error = ensureError(err);
-      console.error(error);
-      return res.status(500).send({ message: error.message });
+      handleError(err, res);
     }
   }
 );

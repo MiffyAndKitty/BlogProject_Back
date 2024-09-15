@@ -3,13 +3,14 @@ import { validate } from '../middleware/express-validation';
 import { header, body } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AccountService } from '../services/account';
-import { ensureError } from '../errors/ensureError';
 import { BasicResponse, SingleDataResponse } from '../interfaces/response';
 import {
   PasswordResetLinkDto,
   UserEmailInfoDto,
   UserIdDto
 } from '../interfaces/account';
+import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 
 export const accountRouter = Router();
 
@@ -19,7 +20,6 @@ accountRouter.post(
   validate([
     body('email').isEmail().withMessage('유효한 이메일을 입력하세요.')
   ]),
-  jwtAuth,
   async (req: Request, res: Response) => {
     try {
       const userEmailInfoDto: UserEmailInfoDto = {
@@ -45,13 +45,15 @@ accountRouter.post(
         password: result.data
       };
 
-      const sentResult =
-        await AccountService.sendPasswordResetLink(passwordResetLinkDto);
-
-      console.log(`${sentResult.message} : ${passwordResetLinkDto.email}`);
+      AccountService.sendPasswordResetLink(passwordResetLinkDto)
+        .then((sentResult) => {
+          console.log(`${sentResult.message} : ${passwordResetLinkDto.email}`);
+        })
+        .catch((err) => {
+          console.error(`이메일 전송 오류: ${err.message}`);
+        });
     } catch (err) {
-      const error = ensureError(err);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -68,22 +70,21 @@ accountRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id)
-        return res
-          .status(401)
-          .send({ message: req.tokenMessage || '비로그인 유저' });
+        throw new UnauthorizedError(
+          req.tokenMessage || '현재 로그인 상태가 아닙니다'
+        );
 
-      const userIdDto: UserIdDto = {
-        userId: req.id
-      };
+      const userIdDto: UserIdDto = { userId: req.id };
+
       const result: BasicResponse =
         await AccountService.deleteUserAccount(userIdDto);
 
       return res.status(result.result ? 200 : 500).send({
+        result: result.result,
         message: result.message
       });
     } catch (err) {
-      const error = ensureError(err);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );

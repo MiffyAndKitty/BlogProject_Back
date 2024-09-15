@@ -13,33 +13,30 @@ import {
   BOARD_PAGESIZE_LIMIT,
   NOTIFICATION_PAGESIZE_LIMIT
 } from '../../constants/pageSizeLimit';
+/*import { NotFoundError } from '../../errors/notFoundError';*/
+import { InternalServerError } from '../../errors/internalServerError';
+
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
-    try {
-      const sortQuery = this._buildSortQuery(listDto.sort);
+    const sortQuery = this._buildSortQuery(listDto.sort);
 
-      const totalCount = await this._getTotalCount(listDto.userId, sortQuery);
-      const pageSize = listDto.pageSize || NOTIFICATION_PAGESIZE_LIMIT;
-      const totalPageCount = Math.ceil(totalCount / pageSize);
+    const totalCount = await this._getTotalCount(listDto.userId, sortQuery);
+    const pageSize = listDto.pageSize || NOTIFICATION_PAGESIZE_LIMIT;
+    const totalPageCount = Math.ceil(totalCount / pageSize);
 
-      const { query, params } = await this._buildQuery(listDto, sortQuery);
-      const result = await db.query(query, params);
+    const { query, params } = await this._buildQuery(listDto, sortQuery);
+    const result = await db.query(query, params);
 
-      if (listDto.cursor && listDto.isBefore) result.reverse();
-      return {
-        result: true,
-        data: result,
-        total: {
-          totalCount: totalCount,
-          totalPageCount: totalPageCount
-        },
-        message: '알림 리스트 조회 성공'
-      };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, data: [], total: null, message: error.message };
-    }
+    if (listDto.cursor && listDto.isBefore) result.reverse();
+    return {
+      result: true,
+      data: result,
+      total: {
+        totalCount: totalCount,
+        totalPageCount: totalPageCount
+      },
+      message: '알림 리스트 조회 성공'
+    };
   }
 
   static async getCached(userId: string): Promise<string[]> {
@@ -54,35 +51,23 @@ export class NotificationService {
     return [];
   }
 
-  static deleteCashed(userId: string) {
-    try {
-      const key = CacheKeys.NOTIFICATION + userId;
-      redis.unlink(key);
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-    }
+  static async deleteCashed(userId: string) {
+    const key = CacheKeys.NOTIFICATION + userId;
+    await redis.unlink(key);
   }
 
   static async delete(
     userNotificationDto: UserNotificationDto
   ): Promise<BasicResponse> {
-    try {
-      const result = await db.query(
-        `UPDATE Notifications 
+    const { affectedRows: deletedCount } = await db.query(
+      `UPDATE Notifications 
         SET deleted_at = NOW() 
         WHERE notification_recipient = ? AND notification_id = ? AND deleted_at IS NULL;`,
-        [userNotificationDto.userId, userNotificationDto.notificationId]
-      );
+      [userNotificationDto.userId, userNotificationDto.notificationId]
+    );
+    if (deletedCount === 0) return { result: false, message: '알림 삭제 실패' };
 
-      return result.affectedRows > 0
-        ? { result: true, message: '알림 삭제 성공' }
-        : { result: false, message: '알림 삭제 실패 또는 이미 삭제됨' };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
-    }
+    return { result: true, message: '알림 삭제 성공' };
   }
 
   // 정렬 쿼리 빌드
@@ -97,26 +82,31 @@ export class NotificationService {
     userId: string,
     sortQuery: string
   ): Promise<number> {
-    const [countResult] = await db.query(
-      `SELECT COUNT(*) AS totalCount 
+    try {
+      const [countResult] = await db.query(
+        `SELECT COUNT(*) AS totalCount 
        FROM Notifications 
        WHERE notification_recipient = ? 
          ${sortQuery}
          AND deleted_at IS NULL;`,
-      [userId]
-    );
-    return Number(countResult.totalCount.toString());
+        [userId]
+      );
+      return Number(countResult.totalCount.toString());
+    } catch (err) {
+      throw ensureError(err, '총 알림 수 조회 중 에러 발생');
+    }
   }
   // 쿼리 및 파라미터 빌드
   private static async _buildQuery(
     listDto: NotificationListDto,
     sortQuery: string
   ) {
-    const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
-    const params: (string | number)[] = [listDto.userId];
-    let order = 'DESC';
+    try {
+      const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
+      const params: (string | number)[] = [listDto.userId];
+      let order = 'DESC';
 
-    let query = `
+      let query = `
       SELECT 
         Notifications.notification_id, 
         Notifications.notification_recipient, 
@@ -157,18 +147,24 @@ export class NotificationService {
         AND Notifications.deleted_at IS NULL
     `;
 
-    if (listDto.cursor) {
-      const cursorOrder = await this._getCursorOrder(listDto.cursor, sortQuery);
-      query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ?`;
-      params.push(cursorOrder);
+      if (listDto.cursor) {
+        const cursorOrder = await this._getCursorOrder(
+          listDto.cursor,
+          sortQuery
+        );
+        query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ?`;
+        params.push(cursorOrder);
 
-      if (listDto.isBefore) order = 'ASC';
+        if (listDto.isBefore) order = 'ASC';
+      }
+
+      query += ` ORDER BY notification_order ${order} LIMIT ?`;
+      params.push(pageSize);
+
+      return { query, params };
+    } catch (err) {
+      throw ensureError(err, '알림 쿼리 및 파라미터 빌드 중 에러 발생');
     }
-
-    query += ` ORDER BY notification_order ${order} LIMIT ?`;
-    params.push(pageSize);
-
-    return { query, params };
   }
 
   // 커서 정보 조회
@@ -176,14 +172,20 @@ export class NotificationService {
     cursor: string,
     sortQuery: string
   ): Promise<number> {
-    const [{ notification_order: cursorOrder }] = await db.query(
-      `SELECT notification_order 
+    try {
+      const [{ notification_order: cursorOrder }] = await db.query(
+        `SELECT notification_order 
        FROM Notifications 
        WHERE notification_id = ? ${sortQuery};`,
-      [cursor]
-    );
+        [cursor]
+      );
 
-    if (!cursorOrder) throw new Error('유효하지 않은 커서입니다.');
-    return cursorOrder;
+      if (!cursorOrder)
+        throw new InternalServerError('유효하지 않은 커서입니다.');
+      /*throw new NotFoundError('유효하지 않은 커서입니다.');*/
+      return cursorOrder;
+    } catch (err) {
+      throw ensureError(err, '커서 정보 조회 중 에러 발생');
+    }
   }
 }

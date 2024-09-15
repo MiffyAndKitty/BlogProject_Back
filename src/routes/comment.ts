@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
-import { header, body, param, query } from 'express-validator';
-import { ensureError } from '../errors/ensureError';
+import { header, body, param } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { commentService } from '../services/comment/comment';
 import {
@@ -16,6 +15,9 @@ import { SaveNotificationService } from '../services/Notification/saveNotificati
 import { CommentListService } from '../services/comment/commentList';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { COMMENT_CONTENT_MAX } from '../constants/validation';
+import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
+import { InternalServerError } from '../errors/internalServerError';
 
 export const commentRouter = Router();
 
@@ -45,10 +47,9 @@ commentRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 댓글을 작성할 수 있습니다.'
+        );
       }
 
       const commentDto: CommentDto = {
@@ -103,18 +104,15 @@ commentRouter.post(
                 `${notificationResult.type}: ${notificationResult.message}`
             );
 
-          return res.status(500).send({
-            result: false,
-            message: `일부 알림 전송 실패: ${failedMessages.join(', ')}`
-          });
+          throw new InternalServerError(
+            `일부 알림 전송 실패: ${failedMessages.join(', ')}`
+          );
         }
       }
 
       return res.status(result.result ? 201 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -141,10 +139,9 @@ commentRouter.put(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 댓글을 수정할 수 있습니다.'
+        );
       }
 
       const commentDto: CommentUpdateDto = {
@@ -156,9 +153,7 @@ commentRouter.put(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -178,10 +173,9 @@ commentRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '로그인된 유저만 댓글을 삭제할 수 있습니다.'
+        );
       }
 
       const commentIdDto: CommentIdDto = {
@@ -192,9 +186,7 @@ commentRouter.delete(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -215,11 +207,12 @@ commentRouter.post(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 좋아요/싫어요 추가를 할 수 있습니다.'
+        );
       }
+
       const commentLikeDto: CommentLikeDto = {
         userId: req.id,
         commentId: req.body.commentId,
@@ -229,9 +222,7 @@ commentRouter.post(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -251,11 +242,12 @@ commentRouter.delete(
   async (req: Request, res: Response) => {
     try {
       if (!req.id) {
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '유효하지 않은 토큰'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage ||
+            '로그인된 유저만 좋아요/싫어요 취소를 할 수 있습니다.'
+        );
       }
+
       const commentIdDto: CommentIdDto = {
         userId: req.id,
         commentId: req.body.commentId
@@ -264,9 +256,7 @@ commentRouter.delete(
 
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -315,9 +305,7 @@ commentRouter.get(
         await CommentListService.getChildCommentsByParentId(commentIdDto);
       return res.status(result.result ? 200 : 500).send(result);
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );

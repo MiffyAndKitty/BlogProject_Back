@@ -49,8 +49,6 @@ export const sendEMail = async (
     // 이메일이 성공적으로 전송되었는지 확인
     return sentResult.accepted.length > 0;
   } catch (err) {
-    const error = ensureError(err);
-    console.log(error.message);
-    return false;
+    throw ensureError(err, '이메일 전송 중 에러 발생');
   }
 };

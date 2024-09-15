@@ -5,7 +5,6 @@ import { googleAuthService } from '../services/auth/passport-google-login-auth';
 import { localAuthService } from '../services/auth/passport-local-login';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AuthService } from '../services/auth/auth';
-import { ensureError } from '../errors/ensureError';
 import {
   BasicResponse,
   MultipleUserDataResponse
@@ -15,6 +14,10 @@ import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 import { USER_NICKNAME_MAX } from '../constants/validation';
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
+import { handleError } from '../utils/errHandler';
+import { UnauthorizedError } from '../errors/unauthorizedError';
+import { InternalServerError } from '../errors/internalServerError';
+/*import { BadRequestError } from '../errors/badRequestError';*/
 
 export const authRouter = Router();
 
@@ -30,46 +33,31 @@ authRouter.post(
   async (req: Request, res: Response, next: NextFunction) => {
     passport.authenticate('local', (err?: any, user?: any, info?: any) => {
       try {
-        if (err) {
-          return res.status(500).send({ result: false, message: err.message });
-        }
+        if (err) throw new InternalServerError(err.message);
 
-        if (!user) {
-          return res.status(400).send({
-            result: false,
-            message: info.reason
-          });
-        }
+        if (!user)
+          throw new InternalServerError(
+            info.reason
+          ); /*throw new BadRequestError(info.reason);*/
 
         req.login(user, { session: false }, async (err) => {
-          if (err) return err;
+          if (err) throw new InternalServerError(err.message);
 
           const result: MultipleUserDataResponse = await localAuthService(
             user as LoginServiceDto
           );
-          if (result.result === true) {
-            return res
-              .set('Authorization', `Bearer ${result.data.accessToken}`)
-              .status(200)
-              .send({
-                result: result.result,
-                data: result.data.userEmail,
-                message: result.message
-              });
-          } else {
-            return res.status(500).set('Authorization', '').send({
+
+          return res
+            .set('Authorization', `Bearer ${result.data.accessToken}`)
+            .status(result.result ? 200 : 500)
+            .send({
               result: result.result,
-              data: {},
+              data: result.data.userEmail,
               message: result.message
             });
-          }
         });
       } catch (err) {
-        const error = ensureError(err);
-        console.log(error.message);
-        return res
-          .status(500)
-          .send({ result: false, data: {}, message: error.message });
+        handleError(err, res);
       }
     })(req, res, next);
   }
@@ -113,16 +101,13 @@ authRouter.get(
         return res.redirect(
           `https://mk-blogservice.site/auth/callback?data=${result.data?.userEmail}&token=${result.data.accessToken}&message=${encodeURIComponent(result.message)}`
         );
-      } else {
-        return res.redirect(
-          `https://mk-blogservice.site/auth/login?error=${encodeURIComponent(result.message)}`
-        );
       }
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
       return res.redirect(
-        `https://mk-blogservice.site/auth/login?error=${encodeURIComponent(error.message)}`
+        `https://mk-blogservice.site/auth/login?error=${encodeURIComponent(result.message)}`
+      );
+    } catch (err: any) {
+      return res.redirect(
+        `https://mk-blogservice.site/auth/login?error=${encodeURIComponent(err.message)}`
       );
     }
   }
@@ -136,22 +121,18 @@ authRouter.get(
   async (req: Request, res: Response) => {
     try {
       if (!req.id)
-        return res.status(401).send({
-          result: false,
-          message: req.tokenMessage || '로그인 상태가 아닙니다.'
-        });
+        throw new UnauthorizedError(
+          req.tokenMessage || '이미 로그아웃한 유저입니다.'
+        );
 
       const result: BasicResponse = await AuthService.deleteToken(req.id);
 
       if (result.result === true) {
         return res.set('Authorization', '').status(200).send(result);
-      } else {
-        return res.status(401).send(result);
       }
+      throw new InternalServerError('로그아웃 에러');
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );
@@ -183,9 +164,7 @@ authRouter.post(
         return res.status(400).send(result);
       }
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return res.status(500).send({ result: false, message: error.message });
+      handleError(err, res);
     }
   }
 );

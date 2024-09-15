@@ -1,40 +1,33 @@
 import { CacheKeys } from '../../constants/cacheKeys';
 import { FOLLOWER_CASH_LIMIT } from '../../constants/cashLimit';
+import { ensureError } from '../../errors/ensureError';
 import { db } from '../../loaders/mariadb';
 import { cacheToRedisWithScores } from '../../utils/redis/cacheToRedisWithScores';
 import { transformToZaddEntries } from '../../utils/redis/formatForZadd';
 import moment from 'moment';
 
 export class TopFollowersCacheJobService {
-  static async cacheTopFollowers(): Promise<boolean> {
-    try {
-      const { startDate, endDate } = this._getLastWeekPeriod();
+  static async cacheTopFollowers() {
+    const { startDate, endDate } = this._getLastWeekPeriod();
 
-      let topFollowers = await this._getTopFollowers(startDate, endDate);
+    let topFollowers = await this._getTopFollowers(startDate, endDate);
 
-      if (topFollowers.length < FOLLOWER_CASH_LIMIT) {
-        topFollowers = await this._addRandomFollowers(topFollowers);
-      }
+    if (topFollowers.length < FOLLOWER_CASH_LIMIT) {
+      topFollowers = await this._addRandomFollowers(topFollowers);
+    }
 
-      if (topFollowers.length === 0) {
-        console.log('유저가 존재하지 않습니다. 캐싱을 중단합니다.');
-        return false;
-      }
-
-      const flatFollowers = transformToZaddEntries(
-        topFollowers,
-        'followed_id',
-        'follower_count'
-      );
-
-      return await cacheToRedisWithScores(
-        CacheKeys.TOP_FOLLOWERS,
-        flatFollowers
-      );
-    } catch (err) {
-      console.error('최다 팔로워 보유 블로거 캐싱 중 오류 발생:', err);
+    if (topFollowers.length === 0) {
+      console.log('팔로우 리스트가 존재하지 않습니다. 캐싱을 중단합니다.');
       return false;
     }
+
+    const flatFollowers = transformToZaddEntries(
+      topFollowers,
+      'followed_id',
+      'follower_count'
+    );
+
+    return await cacheToRedisWithScores(CacheKeys.TOP_FOLLOWERS, flatFollowers);
   }
 
   private static _getLastWeekPeriod() {
@@ -49,8 +42,9 @@ export class TopFollowersCacheJobService {
   }
 
   private static async _getTopFollowers(startDate: string, endDate: string) {
-    return db.query(
-      `
+    try {
+      return db.query(
+        `
       SELECT f.followed_id, COUNT(f.followed_id) AS follower_count
       FROM User u
       JOIN Follow f ON u.user_id = f.followed_id
@@ -61,21 +55,25 @@ export class TopFollowersCacheJobService {
       ORDER BY follower_count DESC
       LIMIT ?;
       `,
-      [startDate, endDate, FOLLOWER_CASH_LIMIT]
-    );
+        [startDate, endDate, FOLLOWER_CASH_LIMIT]
+      );
+    } catch (err) {
+      throw ensureError(err, '지난 주의 최대 팔로워 유저 반환 에러');
+    }
   }
 
   private static async _addRandomFollowers(
     topFollowers: { followed_id: string; follower_count: string }[]
   ) {
-    const numberOfAdditionalFollowers =
-      FOLLOWER_CASH_LIMIT - topFollowers.length;
+    try {
+      const numberOfAdditionalFollowers =
+        FOLLOWER_CASH_LIMIT - topFollowers.length;
 
-    const existingFollowerNames = topFollowers.map(
-      (follower) => follower.followed_id
-    );
+      const existingFollowerNames = topFollowers.map(
+        (follower) => follower.followed_id
+      );
 
-    const query = `
+      const query = `
       SELECT f.followed_id, COUNT(f.followed_id) AS follower_count
       FROM User u
       JOIN Follow f ON u.user_id = f.followed_id
@@ -87,20 +85,26 @@ export class TopFollowersCacheJobService {
       LIMIT ?;
       `;
 
-    const params =
-      existingFollowerNames.length > 0
-        ? [...existingFollowerNames, numberOfAdditionalFollowers]
-        : [numberOfAdditionalFollowers];
+      const params =
+        existingFollowerNames.length > 0
+          ? [...existingFollowerNames, numberOfAdditionalFollowers]
+          : [numberOfAdditionalFollowers];
 
-    const additionalFollowers = await db.query(query, params);
+      const additionalFollowers = await db.query(query, params);
 
-    for (const follower of additionalFollowers) {
-      topFollowers.push({
-        followed_id: follower.followed_id,
-        follower_count: '0'
-      });
+      for (const follower of additionalFollowers) {
+        topFollowers.push({
+          followed_id: follower.followed_id,
+          follower_count: '0'
+        });
+      }
+
+      return topFollowers;
+    } catch (err) {
+      throw ensureError(
+        err,
+        '주간 최대 팔로워 리스트의 랜덤 유저 생성 중 에러 발생'
+      );
     }
-
-    return topFollowers;
   }
 }
