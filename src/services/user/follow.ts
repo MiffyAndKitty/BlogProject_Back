@@ -12,6 +12,10 @@ import {
 import { NotificationName } from '../../constants/notificationName';
 import { FOLLOW_PAGESIZE_LIMIT } from '../../constants/pageSizeLimit';
 import { TOP_FOLLOW_LIMIT } from '../../constants/cashedListSizeLimit';
+import { NotFoundError } from '../../errors/notFoundError';
+import { ConflictError } from '../../errors/conflictError';
+import { BadRequestError } from '../../errors/badRequestError';
+import { InternalServerError } from '../../errors/internalServerError';
 
 export class FollowService {
   static getFollowList = async (followListDto: FollowListDto) => {
@@ -27,13 +31,8 @@ export class FollowService {
       [followListDto.email]
     );
 
-    if (!user) {
-      return {
-        result: false,
-        data: [],
-        message: '해당 이메일을 가진 유저가 존재하지 않습니다.'
-      };
-    }
+    if (!user)
+      throw new NotFoundError('해당 이메일을 가진 유저가 존재하지 않습니다.');
 
     const thisUser = user.user_id;
     const currentUser = followListDto.userId;
@@ -123,13 +122,9 @@ export class FollowService {
       'WITHSCORES'
     );
 
-    if (!cachedTopFollowers || cachedTopFollowers.length === 0) {
-      return {
-        result: false,
-        data: [],
-        message: '최다 팔로워 보유 블로거 조회 실패'
-      };
-    }
+    if (!cachedTopFollowers || cachedTopFollowers.length === 0)
+      throw new NotFoundError('최다 팔로워 보유 블로거 조회 실패');
+
     const topFollowersWithScores: any = [];
     const userIds = cachedTopFollowers.filter((_, index) => index % 2 === 0);
     const userInfos = await db.query(
@@ -168,12 +163,8 @@ export class FollowService {
       [userInfoDto.email]
     );
 
-    if (!followedUser) {
-      return {
-        result: false,
-        message: '팔로우할 유저를 찾을 수 없습니다.'
-      };
-    }
+    if (!followedUser)
+      throw new NotFoundError('팔로우할 유저를 찾을 수 없습니다.');
 
     const [currentUser] = await db.query(
       `SELECT user_id, user_email, user_nickname, user_image FROM User WHERE user_id = ? AND deleted_at IS NULL;`,
@@ -181,7 +172,7 @@ export class FollowService {
     );
 
     if (followedUser.user_id === currentUser.user_id) {
-      return { result: false, message: '자기 자신을 팔로우할 수 없습니다.' };
+      throw new BadRequestError('자기 자신을 팔로우할 수 없습니다.');
     }
 
     const values = [
@@ -197,10 +188,7 @@ export class FollowService {
 
     if (existingFollow && !existingFollow.deleted_at) {
       // 이미 팔로우된 경우
-      return {
-        result: false,
-        message: '이미 팔로우된 유저입니다.'
-      };
+      throw new ConflictError('이미 팔로우한 유저입니다.');
     }
 
     let query: string;
@@ -215,27 +203,24 @@ export class FollowService {
 
     const { affectedRows: addedCount } = await db.query(query, values);
 
-    return addedCount > 0
-      ? {
-          result: true,
-          message: existingFollow
-            ? 'soft delete한 팔로우 복구 성공'
-            : '팔로우 추가 성공',
-          notifications: {
-            recipient: followedUser.user_id,
-            type: NotificationName.NEW_FOLLOWER,
-            trigger: {
-              id: currentUser.user_id,
-              nickname: currentUser.user_nickname,
-              email: currentUser.user_email,
-              image: currentUser.user_image
-            }
-          }
+    if (addedCount === 0) throw new InternalServerError('팔로우 추가 실패');
+
+    return {
+      result: true,
+      message: existingFollow
+        ? 'soft delete한 팔로우 복구 성공'
+        : '팔로우 추가 성공',
+      notifications: {
+        recipient: followedUser.user_id,
+        type: NotificationName.NEW_FOLLOWER,
+        trigger: {
+          id: currentUser.user_id,
+          nickname: currentUser.user_nickname,
+          email: currentUser.user_email,
+          image: currentUser.user_image
         }
-      : {
-          result: false,
-          message: '팔로우 추가 실패'
-        };
+      }
+    };
   };
 
   // 팔로우 취소
@@ -250,9 +235,8 @@ export class FollowService {
       [userInfoDto.email]
     );
 
-    if (!followedUser) {
-      return { result: false, message: '팔로우할 유저를 찾을 수 없습니다.' };
-    }
+    if (!followedUser)
+      throw new NotFoundError('팔로우할 유저를 찾을 수 없습니다.');
 
     const followed = followedUser.user_id!;
     const currentUser = userInfoDto.userId; // 팔로워 (현재 유저)
@@ -264,8 +248,8 @@ export class FollowService {
 
     const { affectedRows: deletedCount } = await db.query(query, values);
 
-    return deletedCount === 1
-      ? { result: true, message: '팔로우 취소 성공' }
-      : { result: false, message: '팔로우 취소 실패' };
+    if (deletedCount === 0) throw new InternalServerError('팔로우 취소 실패');
+
+    return { result: true, message: '팔로우 취소 성공' };
   };
 }

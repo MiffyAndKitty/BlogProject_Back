@@ -9,18 +9,22 @@ import {
 import { getHashed } from '../../utils/getHashed';
 import { comparePw } from '../../utils/comparePassword';
 import { NotFoundError } from '../../errors/notFoundError';
+import { ConflictError } from '../../errors/conflictError';
+import { InternalServerError } from '../../errors/internalServerError';
+import { BadRequestError } from '../../errors/badRequestError';
 
 export class UsersService {
   static isDuplicated = async (existDto: DbColumnDto) => {
-    const query = `SELECT * FROM User WHERE ${existDto.column} = ? ;`;
+    const query = `SELECT * FROM User WHERE ${existDto.column} = ?;`;
     const values = [existDto.data];
     const rows = await db.query(query, values);
 
-    if (rows.length === 0) {
-      return { result: true, message: '사용 가능한 데이터' };
-    } else {
-      return { result: false, message: '이미 사용 중인 데이터' };
+    if (rows.length !== 0) {
+      throw new BadRequestError('이미 사용 중인 데이터입니다.');
+      //throw new ConflictError('이미 사용 중인 데이터입니다.');
     }
+
+    return { result: true, message: '사용 가능한 데이터' };
   };
 
   static checkDuplicatePassword = async (userPwDto: UserPwDto) => {
@@ -32,9 +36,8 @@ export class UsersService {
 
     if (isMatch === true) {
       return { result: true, message: '비밀번호 일치' };
-    } else {
-      return { result: false, message: '비밀번호 불일치' };
     }
+    throw new BadRequestError('비밀번호가 일치하지 않습니다.');
   };
 
   static getUserInfoByEmail = async (
@@ -44,8 +47,7 @@ export class UsersService {
     const values = [userEmailLookupDto.email];
     const [userInfo] = await db.query(query, values);
 
-    if (!userInfo)
-      return { result: false, data: [], message: '존재하지 않는 사용자' };
+    if (!userInfo) throw new NotFoundError('존재하지 않는 사용자');
 
     userInfo.isSelf = false;
     if (userInfo.user_id === userEmailLookupDto.userId) {
@@ -92,13 +94,9 @@ export class UsersService {
 
     const [userInfo] = await db.query(query, params);
 
-    if (!userInfo) {
-      throw new NotFoundError('존재하지 않는 회원입니다.');
-    }
+    if (!userInfo) throw new NotFoundError('존재하지 않는 회원입니다.');
 
-    if (userInfo.deleted_at) {
-      throw new NotFoundError('탈퇴한 회원입니다');
-    }
+    if (userInfo.deleted_at) throw new NotFoundError('탈퇴한 회원입니다');
 
     return {
       result: true,
@@ -138,14 +136,12 @@ export class UsersService {
 
     const { affectedRows: updatedCount } = await db.query(query, values);
 
-    return updatedCount === 1
-      ? {
-          result: true,
-          message: '사용자 데이터 업데이트 성공'
-        }
-      : {
-          result: false,
-          message: '사용자 데이터 업데이트 실패'
-        };
+    if (updatedCount === 0) {
+      throw new InternalServerError('사용자 데이터 업데이트 실패');
+    }
+    return {
+      result: true,
+      message: '사용자 데이터 업데이트 성공'
+    };
   };
 }
