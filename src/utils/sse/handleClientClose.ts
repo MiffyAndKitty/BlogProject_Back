@@ -20,7 +20,6 @@ export function handleClientClose(
       console.log('[연결 timeout] 클라이언트 제거');
     });
   } catch (err) {
-    const error = ensureError(err);
-    throw new Error('[연결 종료 error] SSE 연결 종료 중 발생 : ', error);
+    throw ensureError(err, 'SSE 연결 종료 중 에러가 발생하였습니다.');
   }
 }

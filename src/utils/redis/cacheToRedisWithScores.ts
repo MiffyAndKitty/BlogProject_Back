@@ -1,5 +1,6 @@
 import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
+import { ensureError } from '../../errors/ensureError';
 
 export const cacheToRedisWithScores = async (
   key: typeof CacheKeys.POPULAR_TAGS | typeof CacheKeys.TOP_FOLLOWERS,
@@ -16,7 +17,6 @@ export const cacheToRedisWithScores = async (
 
     return true;
   } catch (err) {
-    console.error(`Redis 캐싱 중 오류 발생: ${err}`);
-    return false;
+    throw ensureError(err, 'Redis 캐싱 중 오류 발생');
   }
 };

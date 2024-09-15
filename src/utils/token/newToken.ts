@@ -1,6 +1,7 @@
 import '../../config/env';
 import jwt from 'jsonwebtoken';
-import { InternalServerError } from '../../errors/internalServerError';
+import { ensureError } from '../../errors/ensureError';
+
 export class newToken {
   static access(userId: string) {
     try {
@@ -9,7 +10,7 @@ export class newToken {
         expiresIn: '1h'
       });
     } catch (err) {
-      throw new InternalServerError('access토큰 발급 오류');
+      throw ensureError(err, 'access토큰 발급 오류');
     }
   }
 
@@ -20,7 +21,7 @@ export class newToken {
         expiresIn: '7d'
       });
     } catch (err) {
-      throw new InternalServerError('refresh토큰 발급 오류');
+      throw ensureError(err, 'refresh토큰 발급 오류');
     }
   }
 }

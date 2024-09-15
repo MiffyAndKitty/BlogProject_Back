@@ -1,6 +1,6 @@
 import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
-import { InternalServerError } from '../../errors/internalServerError';
+import { ensureError } from '../../errors/ensureError';
 
 export async function setRefreshToken(userId: string, refreshToken: string) {
   try {
@@ -11,7 +11,7 @@ export async function setRefreshToken(userId: string, refreshToken: string) {
       7 * 24 * 60 * 60 // 7주일 뒤 만료
     );
   } catch (err) {
-    throw new InternalServerError('refresh 토큰 저장 오류');
+    throw ensureError(err, 'refresh 토큰 저장 오류');
   }
 }
 
@@ -20,6 +20,6 @@ export async function getRefreshToken(userId: string) {
     const key = `${CacheKeys.REFRESHTOKEN}${userId}`;
     return await redis.get(key);
   } catch (err) {
-    throw new InternalServerError('refresh 토큰 반환 오류');
+    throw ensureError(err, 'refresh 토큰 반환 오류');
   }
 }
