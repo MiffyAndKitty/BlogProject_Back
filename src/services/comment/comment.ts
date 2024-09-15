@@ -18,19 +18,26 @@ export class commentService {
   ): Promise<MultipleNotificationResponse> => {
     const boardId = commentDto.boardId;
     const boardWriterQuery = `
-          SELECT u.user_id, u.user_nickname, b.board_title 
+          SELECT u.user_id, u.user_nickname, u.deleted_at AS userDeleteTime
           FROM Board b
           JOIN User u ON b.user_id = u.user_id
           WHERE b.board_id = ? 
-            AND b.deleted_at IS NULL
           LIMIT 1;
         `;
 
-    const [{ user_id: boardWriterId, user_nickname: boardWriterNickname }] =
-      await db.query(boardWriterQuery, [boardId]);
+    const [
+      {
+        user_id: boardWriterId,
+        user_nickname: boardWriterNickname,
+        userDeleteTime: userDeleteTime
+      }
+    ] = await db.query(boardWriterQuery, [boardId]);
 
-    if (!boardWriterId)
-      return { result: false, message: '존재하지 않거나 삭제된 게시글' };
+    if (!boardWriterId) throw new BadRequestError('존재하지 않는 게시글');
+
+    if (userDeleteTime) {
+      throw new NotFoundError('탈퇴한 회원의 게시글입니다.');
+    }
 
     const commentId = uuidv4().replace(/-/g, '');
     const query = `INSERT INTO Comment (comment_id, board_id, user_id, comment_content, parent_comment_id) VALUES (?,?,?,?,?);`;
