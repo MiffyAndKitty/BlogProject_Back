@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
 import { header, body, param, query } from 'express-validator';
-import { ensureError } from '../errors/ensureError';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { BoardService } from '../services/board/board';
 import { saveBoardService } from '../services/board/saveBoard';
@@ -31,7 +30,6 @@ import {
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
-import { ForbiddenError } from '../errors/forbiddenError';
 
 export const boardRouter = Router();
 

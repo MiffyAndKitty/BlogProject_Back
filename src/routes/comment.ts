@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
-import { header, body, param, query } from 'express-validator';
-import { ensureError } from '../errors/ensureError';
+import { header, body, param } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { commentService } from '../services/comment/comment';
 import {
@@ -18,6 +17,7 @@ import { validateFieldByteLength } from '../utils/validation/validateFieldByteLe
 import { COMMENT_CONTENT_MAX } from '../constants/validation';
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
+import { InternalServerError } from '../errors/internalServerError';
 
 export const commentRouter = Router();
 

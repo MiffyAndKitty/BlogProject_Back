@@ -1,7 +1,6 @@
 import { db } from '../../loaders/mariadb';
 import { getHashed } from '../../utils/getHashed';
 import { SignUpDto } from '../../interfaces/auth';
-import { ensureError } from '../../errors/ensureError';
 import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { InternalServerError } from '../../errors/internalServerError';

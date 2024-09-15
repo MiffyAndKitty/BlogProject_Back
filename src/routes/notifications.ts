@@ -10,7 +10,6 @@ import {
   NotificationListDto,
   UserNotificationDto
 } from '../interfaces/notification';
-import { CacheKeys } from '../constants/cacheKeys';
 import { NotificationName } from '../constants/notificationName';
 import { setSSEHeaders } from '../utils/sse/setSSEHeaders';
 import { handleClientClose } from '../utils/sse/handleClientClose';

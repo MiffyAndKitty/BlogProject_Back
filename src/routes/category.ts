@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { validate } from '../middleware/express-validation';
 import { header, body, query, param } from 'express-validator';
-import { ensureError } from '../errors/ensureError';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import {
   CategoryDto,

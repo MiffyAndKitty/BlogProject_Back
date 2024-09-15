@@ -3,7 +3,6 @@ import { validate } from '../middleware/express-validation';
 import { header, body } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AccountService } from '../services/account';
-import { ensureError } from '../errors/ensureError';
 import { BasicResponse, SingleDataResponse } from '../interfaces/response';
 import {
   PasswordResetLinkDto,
