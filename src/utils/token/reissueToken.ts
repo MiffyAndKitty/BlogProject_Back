@@ -5,7 +5,7 @@ import { ensureError } from '../../errors/ensureError';
 import { BasicResponse, MultipleDataResponse } from '../../interfaces/response';
 import { getRefreshToken } from '../redis/refreshToken';
 import { InternalServerError } from '../../errors/internalServerError';
-import { BadRequestError } from '../../errors/badRequestError';
+/*import { BadRequestError } from '../../errors/badRequestError';*/
 
 // 토큰 유효성 검증 후 재발급
 export async function reissueToken(
@@ -20,7 +20,9 @@ export async function reissueToken(
     const refreshToken = await getRefreshToken(decodedId);
 
     // access토큰은 유효x -> refresh토큰이 유효x
-    if (!refreshToken) throw new BadRequestError('유효하지 않은 refresh 토큰');
+    if (!refreshToken)
+      throw new InternalServerError('유효하지 않은 refresh 토큰');
+    /*throw new BadRequestError('유효하지 않은 refresh 토큰');*/
 
     // access토큰은 유효x-> refresh토큰이 유효-> 재발급
     const userId: string = decodedId;

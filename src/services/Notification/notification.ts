@@ -13,7 +13,8 @@ import {
   BOARD_PAGESIZE_LIMIT,
   NOTIFICATION_PAGESIZE_LIMIT
 } from '../../constants/pageSizeLimit';
-import { NotFoundError } from '../../errors/notFoundError';
+/*import { NotFoundError } from '../../errors/notFoundError';*/
+import { InternalServerError } from '../../errors/internalServerError';
 
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
@@ -179,7 +180,9 @@ export class NotificationService {
         [cursor]
       );
 
-      if (!cursorOrder) throw new NotFoundError('유효하지 않은 커서입니다.');
+      if (!cursorOrder)
+        throw new InternalServerError('유효하지 않은 커서입니다.');
+      /*throw new NotFoundError('유효하지 않은 커서입니다.');*/
       return cursorOrder;
     } catch (err) {
       throw ensureError(err, '커서 정보 조회 중 에러 발생');

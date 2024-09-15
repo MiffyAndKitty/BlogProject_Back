@@ -3,7 +3,9 @@ import { BoardCommentListDto } from '../../interfaces/board/listDto';
 import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { TOP_COMMENT_PAGESIZE_LIMIT } from '../../constants/pageSizeLimit';
-import { BadRequestError } from '../../errors/badRequestError';
+/*import { BadRequestError } from '../../errors/badRequestError';*/
+import { InternalServerError } from '../../errors/internalServerError';
+
 export class BoardCommentListService {
   // 특정 게시판의 최상위 댓글을 조회하고 사용자 정보와 함께 반환
   static getTopLevelCommentsByPostId = async (
@@ -153,7 +155,10 @@ export class BoardCommentListService {
       };
     } else {
       // cursor에 해당하는 댓글이 없을 경우, 빈 배열 반환
-      throw new BadRequestError('해당 커서에 해당하는 댓글을 찾을 수 없습니다');
+      /* throw new BadRequestError('해당 커서에 해당하는 댓글을 찾을 수 없습니다'); */
+      throw new InternalServerError(
+        '해당 커서에 해당하는 댓글을 찾을 수 없습니다'
+      );
     }
   };
 }

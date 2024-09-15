@@ -17,7 +17,7 @@ import { validateFieldByteLength } from '../utils/validation/validateFieldByteLe
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
 import { InternalServerError } from '../errors/internalServerError';
-import { BadRequestError } from '../errors/badRequestError';
+/*import { BadRequestError } from '../errors/badRequestError';*/
 
 export const authRouter = Router();
 
@@ -35,7 +35,10 @@ authRouter.post(
       try {
         if (err) throw new InternalServerError(err.message);
 
-        if (!user) throw new BadRequestError(info.reason);
+        if (!user)
+          throw new InternalServerError(
+            info.reason
+          ); /*throw new BadRequestError(info.reason);*/
 
         req.login(user, { session: false }, async (err) => {
           if (err) throw new InternalServerError(err.message);

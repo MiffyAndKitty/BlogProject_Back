@@ -12,7 +12,7 @@ import { parseFieldToNumber } from '../../utils/parseFieldToNumber';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { BOARD_PAGESIZE_LIMIT } from '../../constants/pageSizeLimit';
 import { InternalServerError } from '../../errors/internalServerError';
-import { NotFoundError } from '../../errors/notFoundError';
+/*import { NotFoundError } from '../../errors/notFoundError';*/
 
 export class BoardListService {
   static getList = async (listDto: ListDto): Promise<ListResponse> => {
@@ -68,7 +68,10 @@ export class BoardListService {
     );
 
     if (!writer) {
-      throw new NotFoundError('검색한 유저가 존재하지 않습니다.');
+      throw new InternalServerError(
+        '게시글을 작성한 유저가 존재하지 않습니다.'
+      );
+      /*throw new NotFoundError('게시글을 작성한 유저가 존재하지 않습니다.');*/
     }
 
     let { query, params } = this._buildQueryConditions(
@@ -91,9 +94,14 @@ export class BoardListService {
       );
 
       if (!category) {
+        throw new InternalServerError(
+          '해당 닉네임을 소유한 유저가 생성한 카테고리가 아니거나 삭제된 카테고리입니다.'
+        );
+        /*
         throw new NotFoundError(
           '해당 닉네임을 소유한 유저가 생성한 카테고리가 아니거나 삭제된 카테고리입니다.'
         );
+        */
       }
 
       // 검색 대상 유저가 생성한 카테고리인 경우에만

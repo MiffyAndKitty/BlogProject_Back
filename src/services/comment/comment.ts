@@ -12,8 +12,9 @@ import { NotificationDto } from '../../interfaces/notification';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { NotificationName } from '../../constants/notificationName';
 import { InternalServerError } from '../../errors/internalServerError';
-import { BadRequestError } from '../../errors/badRequestError';
-import { NotFoundError } from '../../errors/notFoundError';
+/*import { BadRequestError } from '../../errors/badRequestError';
+import { NotFoundError } from '../../errors/notFoundError';*/
+
 export class commentService {
   // 댓글 생성
   static create = async (
@@ -36,10 +37,12 @@ export class commentService {
       }
     ] = await db.query(boardWriterQuery, [boardId]);
 
-    if (!boardWriterId) throw new BadRequestError('존재하지 않는 게시글');
+    if (!boardWriterId) throw new InternalServerError('존재하지 않는 게시글');
+    /*throw new BadRequestError('존재하지 않는 게시글');*/
 
     if (userDeleteTime) {
-      throw new NotFoundError('탈퇴한 회원의 게시글입니다.');
+      throw new InternalServerError('탈퇴한 회원의 게시글입니다.');
+      /*throw new NotFoundError('탈퇴한 회원의 게시글입니다.');*/
     }
 
     const commentId = uuidv4().replace(/-/g, '');

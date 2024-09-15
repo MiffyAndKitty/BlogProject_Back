@@ -13,7 +13,7 @@ import { CacheKeys } from '../../constants/cacheKeys';
 import { NotificationName } from '../../constants/notificationName';
 import { NotificationNameType } from '../../types/notification';
 import { InternalServerError } from '../../errors/internalServerError';
-import { NotFoundError } from '../../errors/notFoundError';
+/*import { NotFoundError } from '../../errors/notFoundError';*/
 
 export class SaveNotificationService {
   static async createSingleUserNotification(
@@ -79,7 +79,8 @@ export class SaveNotificationService {
   ): Promise<BasicResponse> {
     try {
       if (!notificationDto.recipient) {
-        throw new NotFoundError('알림 수신인이 정의되어 있지 않습니다');
+        throw new InternalServerError('알림 수신인이 정의되어 있지 않습니다');
+        /*throw new NotFoundError('알림 수신인이 정의되어 있지 않습니다');*/
       }
 
       // 클라이언트가 SSE로 연결되어 있는지 확인

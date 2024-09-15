@@ -8,8 +8,8 @@ import {
 } from '../../interfaces/user/userInfo';
 import { getHashed } from '../../utils/getHashed';
 import { comparePw } from '../../utils/comparePassword';
-import { NotFoundError } from '../../errors/notFoundError';
-import { ConflictError } from '../../errors/conflictError';
+/*import { NotFoundError } from '../../errors/notFoundError';
+import { ConflictError } from '../../errors/conflictError';*/
 import { InternalServerError } from '../../errors/internalServerError';
 import { BadRequestError } from '../../errors/badRequestError';
 
@@ -20,8 +20,8 @@ export class UsersService {
     const rows = await db.query(query, values);
 
     if (rows.length !== 0) {
-      throw new BadRequestError('이미 사용 중인 데이터입니다.');
-      //throw new ConflictError('이미 사용 중인 데이터입니다.');
+      throw new InternalServerError('이미 사용 중인 데이터입니다.');
+      /*throw new ConflictError('이미 사용 중인 데이터입니다.');*/
     }
 
     return { result: true, message: '사용 가능한 데이터' };
@@ -47,7 +47,8 @@ export class UsersService {
     const values = [userEmailLookupDto.email];
     const [userInfo] = await db.query(query, values);
 
-    if (!userInfo) throw new NotFoundError('존재하지 않는 사용자');
+    if (!userInfo) throw new InternalServerError('존재하지 않는 사용자');
+    /*throw new NotFoundError('존재하지 않는 사용자');*/
 
     userInfo.isSelf = false;
     if (userInfo.user_id === userEmailLookupDto.userId) {
@@ -94,9 +95,15 @@ export class UsersService {
 
     const [userInfo] = await db.query(query, params);
 
-    if (!userInfo) throw new NotFoundError('존재하지 않는 회원입니다.');
+    if (!userInfo)
+      throw new InternalServerError(
+        '존재하지 않는 회원입니다.'
+      ); /*throw new NotFoundError('존재하지 않는 회원입니다.');*/
 
-    if (userInfo.deleted_at) throw new NotFoundError('탈퇴한 회원입니다');
+    if (userInfo.deleted_at)
+      throw new InternalServerError(
+        '탈퇴한 회원입니다'
+      ); /*throw new NotFoundError('탈퇴한 회원입니다');*/
 
     return {
       result: true,

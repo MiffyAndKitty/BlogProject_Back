@@ -9,9 +9,9 @@ import {
   UpdateCategoryNameDto
 } from '../interfaces/category';
 import { v4 as uuidv4 } from 'uuid';
-import { NotFoundError } from '../errors/notFoundError';
+/*import { NotFoundError } from '../errors/notFoundError';*/
 import { InternalServerError } from '../errors/internalServerError';
-import { BadRequestError } from '../errors/badRequestError';
+/*import { BadRequestError } from '../errors/badRequestError';*/
 
 export class categoryService {
   static getAllList = async (categoryDto: CategoryListDto) => {
@@ -20,9 +20,9 @@ export class categoryService {
       [categoryDto.nickname]
     );
 
-    if (!user) {
-      throw new NotFoundError('해당 닉네임을 가진 유저가 존재하지 않습니다.');
-    }
+    //if (!user) {
+    // throw new NotFoundError('해당 닉네임을 가진 유저가 존재하지 않습니다.');
+    //}
 
     // 카테고리 ID가 없는 게시글의 개수 조회
     const [uncategorizedCountResult] = await db.query(
@@ -155,9 +155,14 @@ export class categoryService {
           [categoryDto.topcategoryId]
         );
         if (!topcategory)
+          throw new InternalServerError(
+            '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
+          );
+        /*
           throw new BadRequestError(
             '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
           );
+          */
       }
 
       const categoryId = uuidv4().replace(/-/g, '');
@@ -203,9 +208,14 @@ export class categoryService {
       const [origin] = await db.query(query, params);
 
       if (!origin) {
+        throw new InternalServerError(
+          '카테고리 복원 에러 발생 ( 예시 : 삭제된 카테고리가 존재하지 않는 경우, 동일 레벨&이름의 카테고리가 이미 존재 )'
+        );
+        /*
         throw new BadRequestError(
           '카테고리 복원 에러 발생 ( 예시 : 삭제된 카테고리가 존재하지 않는 경우, 동일 레벨&이름의 카테고리가 이미 존재 )'
         );
+        */
       }
       const restored = await db.query(
         `UPDATE Board_Category SET deleted_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE category_id = ? `,
@@ -257,9 +267,14 @@ export class categoryService {
     );
 
     if (subcategories.subcategoryCount > 0) {
+      throw new InternalServerError(
+        '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
+      );
+      /*
       throw new BadRequestError(
         '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
       );
+      */
     }
 
     const { affectedRows: deletedCount } = await db.query(
