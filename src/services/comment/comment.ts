@@ -11,6 +11,9 @@ import { MultipleNotificationResponse } from '../../interfaces/response';
 import { NotificationDto } from '../../interfaces/notification';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { NotificationName } from '../../constants/notificationName';
+import { InternalServerError } from '../../errors/internalServerError';
+import { BadRequestError } from '../../errors/badRequestError';
+import { NotFoundError } from '../../errors/notFoundError';
 export class commentService {
   // 댓글 생성
   static create = async (
@@ -51,7 +54,7 @@ export class commentService {
 
     const { affectedRows: createdCount } = await db.query(query, params);
 
-    if (createdCount !== 1) return { result: false, message: '댓글 생성 실패' };
+    if (createdCount !== 1) throw new InternalServerError('댓글 생성 실패');
 
     let replyToComment: NotificationDto | undefined,
       commentOnBoard: NotificationDto | undefined;
@@ -161,9 +164,9 @@ export class commentService {
 
     const { affectedRows: updatedCount } = await db.query(query, params);
 
-    return updatedCount === 1
-      ? { result: true, message: '댓글 수정 성공' }
-      : { result: false, message: '댓글 수정 실패' };
+    if (updatedCount === 0) throw new InternalServerError('댓글 수정 실패');
+
+    return { result: true, message: '댓글 수정 성공' };
   };
 
   // 댓글 삭제
@@ -173,9 +176,9 @@ export class commentService {
 
     const { affectedRows: deletedCount } = await db.query(query, params);
 
-    return deletedCount === 1
-      ? { result: true, message: '댓글 삭제 성공' }
-      : { result: false, message: '댓글 삭제 실패' };
+    if (deletedCount === 0) throw new InternalServerError('댓글 삭제 실패');
+
+    return { result: true, message: '댓글 삭제 성공' };
   };
 
   // 댓글 좋아요 또는 싫어요 추가
@@ -209,7 +212,7 @@ export class commentService {
         };
       }
 
-      return { result: false, message: '좋아요 추가 실패 ( 캐시 실패 )' };
+      throw new InternalServerError('좋아요 추가 실패 ( 캐시 실패 )');
     }
 
     if (Boolean(likedInDB[0].comment_like) === commentLikeDto.isLike) {
@@ -232,12 +235,7 @@ export class commentService {
 
     const { affectedRows: updatedLike } = await db.query(query, params);
 
-    if (updatedLike === 0) {
-      return {
-        result: false,
-        message: '댓글 좋아요 실패'
-      };
-    }
+    if (updatedLike === 0) throw new InternalServerError('댓글 좋아요 실패');
 
     const updateLikeQuery = commentLikeDto.isLike
       ? `UPDATE Comment SET comment_like = comment_like + 1, comment_dislike = comment_dislike - 1 WHERE comment_id = ?`
@@ -249,19 +247,17 @@ export class commentService {
       [commentLikeDto.commentId]
     );
 
-    return updatedLikeCounts > 0
-      ? {
-          result: true,
-          message: commentLikeDto.isLike
-            ? '댓글 좋아요 성공'
-            : '댓글 싫어요 성공'
-        }
-      : {
-          result: false,
-          message: commentLikeDto.isLike
-            ? '댓글 좋아요 실패'
-            : '댓글 싫어요 실패'
-        };
+    if (updatedLikeCounts === 0) {
+      throw new InternalServerError(
+        commentLikeDto.isLike
+          ? '댓글 좋아요 추가 실패'
+          : '댓글 싫어요 추가 실패'
+      );
+    }
+    return {
+      result: true,
+      message: commentLikeDto.isLike ? '댓글 좋아요 성공' : '댓글 싫어요 성공'
+    };
   };
 
   static unlike = async (commentIdDto: CommentIdDto) => {
@@ -283,12 +279,11 @@ export class commentService {
 
     const { affectedRows: deletedLikeCount } = await db.query(query, params);
 
-    if (deletedLikeCount === 0) {
-      return {
-        result: false,
-        message: '데이터 베이스의 댓글 좋아요/싫어요 삭제 실패'
-      };
-    }
+    if (deletedLikeCount === 0)
+      throw new InternalServerError(
+        '데이터 베이스의 댓글 좋아요/싫어요 삭제 실패'
+      );
+
     // 방금 업데이트된 레코드 조회
     const [{ comment_like: isLiked }] = await db.query(
       `SELECT comment_like 
@@ -305,8 +300,9 @@ export class commentService {
       params
     );
 
-    return updatedLikeCount > 0
-      ? { result: true, message: '댓글 좋아요/싫어요 삭제 성공' }
-      : { result: false, message: '댓글 좋아요/싫어요 삭제 실패' };
+    if (updatedLikeCount === 0) {
+      throw new InternalServerError('댓글 좋아요/싫어요 삭제 실패');
+    }
+    return { result: true, message: '댓글 좋아요/싫어요 삭제 성공' };
   };
 }
