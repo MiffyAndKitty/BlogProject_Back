@@ -13,6 +13,7 @@ import {
   BOARD_PAGESIZE_LIMIT,
   NOTIFICATION_PAGESIZE_LIMIT
 } from '../../constants/pageSizeLimit';
+import { NotFoundError } from '../../errors/notFoundError';
 
 export class NotificationService {
   static async getAll(listDto: NotificationListDto): Promise<ListResponse> {
@@ -80,26 +81,31 @@ export class NotificationService {
     userId: string,
     sortQuery: string
   ): Promise<number> {
-    const [countResult] = await db.query(
-      `SELECT COUNT(*) AS totalCount 
+    try {
+      const [countResult] = await db.query(
+        `SELECT COUNT(*) AS totalCount 
        FROM Notifications 
        WHERE notification_recipient = ? 
          ${sortQuery}
          AND deleted_at IS NULL;`,
-      [userId]
-    );
-    return Number(countResult.totalCount.toString());
+        [userId]
+      );
+      return Number(countResult.totalCount.toString());
+    } catch (err) {
+      throw ensureError(err, '총 알림 수 조회 중 에러 발생');
+    }
   }
   // 쿼리 및 파라미터 빌드
   private static async _buildQuery(
     listDto: NotificationListDto,
     sortQuery: string
   ) {
-    const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
-    const params: (string | number)[] = [listDto.userId];
-    let order = 'DESC';
+    try {
+      const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
+      const params: (string | number)[] = [listDto.userId];
+      let order = 'DESC';
 
-    let query = `
+      let query = `
       SELECT 
         Notifications.notification_id, 
         Notifications.notification_recipient, 
@@ -140,18 +146,24 @@ export class NotificationService {
         AND Notifications.deleted_at IS NULL
     `;
 
-    if (listDto.cursor) {
-      const cursorOrder = await this._getCursorOrder(listDto.cursor, sortQuery);
-      query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ?`;
-      params.push(cursorOrder);
+      if (listDto.cursor) {
+        const cursorOrder = await this._getCursorOrder(
+          listDto.cursor,
+          sortQuery
+        );
+        query += ` AND notification_order ${listDto.isBefore ? '>' : '<'} ?`;
+        params.push(cursorOrder);
 
-      if (listDto.isBefore) order = 'ASC';
+        if (listDto.isBefore) order = 'ASC';
+      }
+
+      query += ` ORDER BY notification_order ${order} LIMIT ?`;
+      params.push(pageSize);
+
+      return { query, params };
+    } catch (err) {
+      throw ensureError(err, '알림 쿼리 및 파라미터 빌드 중 에러 발생');
     }
-
-    query += ` ORDER BY notification_order ${order} LIMIT ?`;
-    params.push(pageSize);
-
-    return { query, params };
   }
 
   // 커서 정보 조회
@@ -159,14 +171,18 @@ export class NotificationService {
     cursor: string,
     sortQuery: string
   ): Promise<number> {
-    const [{ notification_order: cursorOrder }] = await db.query(
-      `SELECT notification_order 
+    try {
+      const [{ notification_order: cursorOrder }] = await db.query(
+        `SELECT notification_order 
        FROM Notifications 
        WHERE notification_id = ? ${sortQuery};`,
-      [cursor]
-    );
+        [cursor]
+      );
 
-    if (!cursorOrder) throw new Error('유효하지 않은 커서입니다.');
-    return cursorOrder;
+      if (!cursorOrder) throw new NotFoundError('유효하지 않은 커서입니다.');
+      return cursorOrder;
+    } catch (err) {
+      throw ensureError(err, '커서 정보 조회 중 에러 발생');
+    }
   }
 }

@@ -12,6 +12,8 @@ import { BasicResponse } from '../../interfaces/response';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { NotificationName } from '../../constants/notificationName';
 import { NotificationNameType } from '../../types/notification';
+import { InternalServerError } from '../../errors/internalServerError';
+import { NotFoundError } from '../../errors/notFoundError';
 
 export class SaveNotificationService {
   static async createSingleUserNotification(
@@ -77,7 +79,7 @@ export class SaveNotificationService {
   ): Promise<BasicResponse> {
     try {
       if (!notificationDto.recipient) {
-        throw new Error('알림 수신인이 정의되어 있지 않습니다');
+        throw new NotFoundError('알림 수신인이 정의되어 있지 않습니다');
       }
 
       // 클라이언트가 SSE로 연결되어 있는지 확인
@@ -101,9 +103,7 @@ export class SaveNotificationService {
         message: 'Redis에 알림 저장 완료'
       };
     } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
+      throw ensureError(err, 'Redis에 알림 저장 중 에러 발생');
     }
   }
 
@@ -111,18 +111,26 @@ export class SaveNotificationService {
     client: Response,
     notificationDto: NotificationDto
   ): void {
-    client.write(`data: ${JSON.stringify(notificationDto)}\n\n`);
+    try {
+      client.write(`data: ${JSON.stringify(notificationDto)}\n\n`);
+    } catch (err) {
+      throw ensureError(err, 'SSE 알림 전달 중 에러 발생');
+    }
   }
 
   private static async _cacheNotification(
     notificationDto: NotificationDto
   ): Promise<boolean> {
-    const cached = await redis.lpush(
-      // 추가 후 리스트의 새로운 길이 반환
-      `${CacheKeys.NOTIFICATION}${notificationDto.recipient}`,
-      JSON.stringify(notificationDto)
-    );
-    return cached > 0;
+    try {
+      const cached = await redis.lpush(
+        // 추가 후 리스트의 새로운 길이 반환
+        `${CacheKeys.NOTIFICATION}${notificationDto.recipient}`,
+        JSON.stringify(notificationDto)
+      );
+      return cached > 0;
+    } catch (err) {
+      throw ensureError(err, '전달하지 못한 알림 캐시 중 에러 발생');
+    }
   }
 
   private static _generateId(): string {
@@ -132,16 +140,20 @@ export class SaveNotificationService {
   private static async _getUserList(
     notificationDto: NotificationDto
   ): Promise<string[]> {
-    if (notificationDto.type === NotificationName.FOLLOWING_NEW_BOARD) {
-      const followers = await db.query(
-        `SELECT following_id FROM Follow WHERE followed_id = ? AND deleted_at IS NULL;`,
-        [notificationDto.trigger.id]
-      );
-      return followers.map(
-        (follower: { following_id: string }) => follower.following_id
-      );
+    try {
+      if (notificationDto.type === NotificationName.FOLLOWING_NEW_BOARD) {
+        const followers = await db.query(
+          `SELECT following_id FROM Follow WHERE followed_id = ? AND deleted_at IS NULL;`,
+          [notificationDto.trigger.id]
+        );
+        return followers.map(
+          (follower: { following_id: string }) => follower.following_id
+        );
+      }
+      return [];
+    } catch (err) {
+      throw ensureError(err, '팔로워 리스트 조회 중 에러 발생');
     }
-    return [];
   }
 
   private static async _notifyMultipleUsers(
@@ -149,54 +161,62 @@ export class SaveNotificationService {
     notificationDto: NotificationDto,
     location?: string
   ) {
-    const dbSaveFailedUserIds: string[] = [];
-    const notificationFailedUserIds: string[] = [];
+    try {
+      const dbSaveFailedUserIds: string[] = [];
+      const notificationFailedUserIds: string[] = [];
 
-    for (const user of userList) {
-      if (!user) continue;
+      for (const user of userList) {
+        if (!user) continue;
 
-      const userNotificationDto: NotificationDto = {
-        recipient: user,
-        ...notificationDto,
-        id: uuidv4().replace(/-/g, '')
-      };
+        const userNotificationDto: NotificationDto = {
+          recipient: user,
+          ...notificationDto,
+          id: uuidv4().replace(/-/g, '')
+        };
 
-      const savedCount = await this._saveNotificationToDb(
-        userNotificationDto,
-        location
-      );
+        const savedCount = await this._saveNotificationToDb(
+          userNotificationDto,
+          location
+        );
 
-      if (savedCount === 0) {
-        dbSaveFailedUserIds.push(user);
-        continue;
+        if (savedCount === 0) {
+          dbSaveFailedUserIds.push(user);
+          continue;
+        }
+
+        const sent = await this._sendNotification(userNotificationDto);
+
+        if (!sent.result) {
+          notificationFailedUserIds.push(user);
+        }
       }
 
-      const sent = await this._sendNotification(userNotificationDto);
-
-      if (!sent.result) {
-        notificationFailedUserIds.push(user);
-      }
+      return { dbSaveFailedUserIds, notificationFailedUserIds };
+    } catch (err) {
+      throw ensureError(err, '다수의 유저에게 알림 전송 중 에러 발생');
     }
-
-    return { dbSaveFailedUserIds, notificationFailedUserIds };
   }
 
   private static async _saveNotificationToDb(
     notificationDto: NotificationDto,
     location?: string
   ): Promise<number> {
-    const { affectedRows } = await db.query(
-      `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
+    try {
+      const { affectedRows } = await db.query(
+        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location)
        VALUES (?, ?, ?, ?, ?)`,
-      [
-        notificationDto.id,
-        notificationDto.recipient,
-        notificationDto.trigger.id,
-        notificationDto.type,
-        location
-      ]
-    );
-    return affectedRows;
+        [
+          notificationDto.id,
+          notificationDto.recipient,
+          notificationDto.trigger.id,
+          notificationDto.type,
+          location
+        ]
+      );
+      return affectedRows;
+    } catch (err) {
+      throw ensureError(err, '데이터 베이스에 알림 저장 중 에러 발생');
+    }
   }
 
   private static _selectLocation(
@@ -227,86 +247,98 @@ export class SaveNotificationService {
     dbSaveFailedUserIds: string[],
     notificationFailedUserIds: string[]
   ): Promise<boolean> {
-    const retryResult: RetryFailedUsersResult = {
-      dbSaveFails: await this._retryDbSave(
-        notificationDto,
-        dbSaveFailedUserIds
-      ),
-      notifyFails: await this._retryNotify(
-        notificationDto,
-        notificationFailedUserIds
-      )
-    };
+    try {
+      const retryResult: RetryFailedUsersResult = {
+        dbSaveFails: await this._retryDbSave(
+          notificationDto,
+          dbSaveFailedUserIds
+        ),
+        notifyFails: await this._retryNotify(
+          notificationDto,
+          notificationFailedUserIds
+        )
+      };
 
-    if (retryResult.dbSaveFails.length || retryResult.notifyFails.length) {
-      console.log(
-        '[알림 전달 재시도] DB 알림 저장 실패한 유저 : ',
-        retryResult.dbSaveFails
-      );
-      console.log(
-        '[알림 전달 재시도] 알림을 전달 받지 못한 유저 : ',
-        retryResult.notifyFails
-      );
-      return false;
+      if (retryResult.dbSaveFails.length || retryResult.notifyFails.length) {
+        console.log(
+          '[알림 전달 재시도] DB 알림 저장 실패한 유저 : ',
+          retryResult.dbSaveFails
+        );
+        console.log(
+          '[알림 전달 재시도] 알림을 전달 받지 못한 유저 : ',
+          retryResult.notifyFails
+        );
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      throw ensureError(err, '유저에게 알림 재전송 중 에러 발생');
     }
-
-    return true;
   }
 
   private static async _retryDbSave(
     notificationDto: NotificationDto,
     dbSaveFailedUserIds: string[]
   ): Promise<string[]> {
-    const dbSaveFails: string[] = [];
-    const location = this._selectLocation(
-      notificationDto.type,
-      notificationDto.location
-    );
-
-    for (const failedUser of dbSaveFailedUserIds) {
-      const retryNotificationDto = this._createRetryNotification(
-        notificationDto,
-        failedUser
+    try {
+      const dbSaveFails: string[] = [];
+      const location = this._selectLocation(
+        notificationDto.type,
+        notificationDto.location
       );
 
-      const { affectedRows: retrySavedCount } = await db.query(
-        `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location) 
+      for (const failedUser of dbSaveFailedUserIds) {
+        const retryNotificationDto = this._createRetryNotification(
+          notificationDto,
+          failedUser
+        );
+
+        const { affectedRows: retrySavedCount } = await db.query(
+          `INSERT INTO Notifications (notification_id, notification_recipient, notification_trigger, notification_type, notification_location) 
            VALUES (?, ?, ?, ?, ?);`,
-        [
-          retryNotificationDto.id,
-          retryNotificationDto.recipient,
-          retryNotificationDto.trigger.id,
-          retryNotificationDto.type,
-          location
-        ]
-      );
+          [
+            retryNotificationDto.id,
+            retryNotificationDto.recipient,
+            retryNotificationDto.trigger.id,
+            retryNotificationDto.type,
+            location
+          ]
+        );
 
-      if (retrySavedCount === 0) {
-        dbSaveFails.push(failedUser);
+        if (retrySavedCount === 0) {
+          dbSaveFails.push(failedUser);
+        }
       }
+      return dbSaveFails;
+    } catch (err) {
+      throw ensureError(err, '데이터베이스에 알림 재저장 중 에러 발생');
     }
-    return dbSaveFails;
   }
 
   private static async _retryNotify(
     notificationDto: NotificationDto,
     FailedUserIds: string[]
   ): Promise<string[]> {
-    const notifyFails: string[] = [];
+    try {
+      const notifyFails: string[] = [];
 
-    for (const failedUser of FailedUserIds) {
-      const retryNotificationDto = this._createRetryNotification(
-        notificationDto,
-        failedUser
-      );
+      for (const failedUser of FailedUserIds) {
+        const retryNotificationDto = this._createRetryNotification(
+          notificationDto,
+          failedUser
+        );
 
-      const retrySent = await this._sendNotification(retryNotificationDto);
+        const retrySent = await this._sendNotification(retryNotificationDto);
 
-      if (!retrySent.result) {
-        notifyFails.push(failedUser);
+        if (!retrySent.result) {
+          notifyFails.push(failedUser);
+        }
       }
+      return notifyFails;
+    } catch (err) {
+      throw ensureError(err, '유저에게 알림 재전송 중 에러 발생');
     }
-    return notifyFails;
   }
 
   private static _createRetryNotification(
