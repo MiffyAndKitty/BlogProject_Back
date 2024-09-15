@@ -12,38 +12,37 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class categoryService {
   static getAllList = async (categoryDto: CategoryListDto) => {
-    try {
-      const [user] = await db.query(
-        `SELECT user_id FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`,
-        [categoryDto.nickname]
-      );
+    const [user] = await db.query(
+      `SELECT user_id FROM User WHERE user_nickname = ? AND deleted_at IS NULL LIMIT 1;`,
+      [categoryDto.nickname]
+    );
 
-      if (!user) {
-        throw new Error('해당 닉네임을 가진 유저가 존재하지 않습니다.');
-      }
+    if (!user) {
+      throw new Error('해당 닉네임을 가진 유저가 존재하지 않습니다.');
+    }
 
-      // 카테고리 ID가 없는 게시글의 개수 조회
-      const [uncategorizedCountResult] = await db.query(
-        `SELECT CAST(COUNT(board_id) AS CHAR) AS uncategorized_count
+    // 카테고리 ID가 없는 게시글의 개수 조회
+    const [uncategorizedCountResult] = await db.query(
+      `SELECT CAST(COUNT(board_id) AS CHAR) AS uncategorized_count
        FROM Board
        WHERE (category_id IS NULL OR category_id = '') AND user_id = ? AND deleted_at IS NULL;`,
-        [user.user_id]
-      );
-      const uncategorizedCount = parseInt(
-        uncategorizedCountResult.uncategorized_count
-      );
+      [user.user_id]
+    );
+    const uncategorizedCount = parseInt(
+      uncategorizedCountResult.uncategorized_count
+    );
 
-      // 유저가 작성한 전체 게시글의 개수 조회
-      const [totalPostCountResult] = await db.query(
-        `SELECT CAST(COUNT(board_id) AS CHAR) AS total_post_count
+    // 유저가 작성한 전체 게시글의 개수 조회
+    const [totalPostCountResult] = await db.query(
+      `SELECT CAST(COUNT(board_id) AS CHAR) AS total_post_count
        FROM Board
        WHERE user_id = ? AND deleted_at IS NULL;`,
-        [user.user_id]
-      );
-      const totalPostCount = parseInt(totalPostCountResult.total_post_count);
+      [user.user_id]
+    );
+    const totalPostCount = parseInt(totalPostCountResult.total_post_count);
 
-      const categories = await db.query(
-        `SELECT 
+    const categories = await db.query(
+      `SELECT 
           C.topcategory_id, C.category_id, C.category_name, CAST(COUNT(B.board_id) AS CHAR) AS board_count
         FROM 
           Board_Category C
@@ -55,50 +54,39 @@ export class categoryService {
           C.category_id, C.category_name, C.topcategory_id
         ORDER BY 
           C.created_at ASC;`,
-        [user.user_id, user.user_id]
-      );
+      [user.user_id, user.user_id]
+    );
 
-      const parsedCategories = categories.map(
-        (row: {
-          category_id: string;
-          category_name: string;
-          category_topcategory: string | null;
-          board_count: string;
-        }) => ({
-          ...row,
-          category_topcategory: row.category_topcategory || 'root',
-          board_count: parseInt(row.board_count, 10)
-        })
-      );
+    const parsedCategories = categories.map(
+      (row: {
+        category_id: string;
+        category_name: string;
+        category_topcategory: string | null;
+        board_count: string;
+      }) => ({
+        ...row,
+        category_topcategory: row.category_topcategory || 'root',
+        board_count: parseInt(row.board_count, 10)
+      })
+    );
 
-      // 상위 카테고리와 그 하위 카테고리들을 포함하여 트리 구조로 변환
-      const hierarchicalCategory =
-        await categoryService._getHierarchicalCategory(
-          parsedCategories,
-          categoryDto.topcategoryId
-        );
-      const owner = user.user_id === categoryDto.userId; // 카테고리 소유자 여부
+    // 상위 카테고리와 그 하위 카테고리들을 포함하여 트리 구조로 변환
+    const hierarchicalCategory = await categoryService._getHierarchicalCategory(
+      parsedCategories,
+      categoryDto.topcategoryId
+    );
+    const owner = user.user_id === categoryDto.userId; // 카테고리 소유자 여부
 
-      return {
-        result: true,
-        data: {
-          totalPostCount, // 유저가 작성한 전체 게시글의 개수 추가
-          uncategorizedCount, // 카테고리 ID가 없는 게시글의 개수 추가
-          hierarchicalCategory
-        },
-        owner: owner,
-        message: '사용자의 전체 게시글 카테고리 리스트 조회 성공'
-      };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return {
-        result: false,
-        data: null,
-        owner: false,
-        message: error.message
-      };
-    }
+    return {
+      result: true,
+      data: {
+        totalPostCount, // 유저가 작성한 전체 게시글의 개수 추가
+        uncategorizedCount, // 카테고리 ID가 없는 게시글의 개수 추가
+        hierarchicalCategory
+      },
+      owner: owner,
+      message: '사용자의 전체 게시글 카테고리 리스트 조회 성공'
+    };
   };
 
   private static _getHierarchicalCategory = async (
@@ -231,76 +219,57 @@ export class categoryService {
   };
 
   static modifyName = async (categoryDto: UpdateCategoryNameDto) => {
-    try {
-      const updated = await db.query(
-        `UPDATE Board_Category SET category_name = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
-        [categoryDto.categoryName, categoryDto.categoryId, categoryDto.userId]
-      );
-      return updated.affectedRows === 1
-        ? { result: true, message: '카테고리명 업데이트 성공' }
-        : {
-            result: false,
-            message:
-              '카테고리명 업데이트 실패 ( 예시 : 카테고리가 삭제된 경우 )'
-          };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
-    }
+    const updated = await db.query(
+      `UPDATE Board_Category SET category_name = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
+      [categoryDto.categoryName, categoryDto.categoryId, categoryDto.userId]
+    );
+    return updated.affectedRows === 1
+      ? { result: true, message: '카테고리명 업데이트 성공' }
+      : {
+          result: false,
+          message: '카테고리명 업데이트 실패 ( 예시 : 카테고리가 삭제된 경우 )'
+        };
   };
 
   static modifyLevel = async (categoryDto: UpdateCategoryLevelDto) => {
-    try {
-      const updated = await db.query(
-        `UPDATE Board_Category SET topcategory_id = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
-        [
-          categoryDto.topcategoryId ?? null,
-          categoryDto.categoryId,
-          categoryDto.userId
-        ]
-      );
+    const updated = await db.query(
+      `UPDATE Board_Category SET topcategory_id = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
+      [
+        categoryDto.topcategoryId ?? null,
+        categoryDto.categoryId,
+        categoryDto.userId
+      ]
+    );
 
-      return updated.affectedRows === 1
-        ? { result: true, message: '카테고리 레벨 업데이트 성공' }
-        : {
-            result: false,
-            message: '카테고리 레벨 업데이트 실패'
-          };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
-    }
+    return updated.affectedRows === 1
+      ? { result: true, message: '카테고리 레벨 업데이트 성공' }
+      : {
+          result: false,
+          message: '카테고리 레벨 업데이트 실패'
+        };
   };
 
   static delete = async (categoryDto: CategoryDto) => {
-    try {
-      // 삭제하려는 카테고리를 상위 카테고리로 가지는지 확인
-      const [subcategories] = await db.query(
-        `SELECT COUNT(*) AS subcategoryCount FROM Board_Category WHERE topcategory_id = ? AND user_id= ? AND deleted_at IS NULL`,
-        [categoryDto.categoryId, categoryDto.userId]
-      );
+    // 삭제하려는 카테고리를 상위 카테고리로 가지는지 확인
+    const [subcategories] = await db.query(
+      `SELECT COUNT(*) AS subcategoryCount FROM Board_Category WHERE topcategory_id = ? AND user_id= ? AND deleted_at IS NULL`,
+      [categoryDto.categoryId, categoryDto.userId]
+    );
 
-      if (subcategories.subcategoryCount > 0) {
-        return {
-          result: false,
-          message: '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
-        };
-      }
-
-      const { affectedRows: deletedCount } = await db.query(
-        `UPDATE Board_Category SET deleted_at = CURRENT_TIMESTAMP WHERE category_id = ? AND user_id= ? AND deleted_at IS NULL`,
-        [categoryDto.categoryId, categoryDto.userId]
-      );
-
-      return deletedCount === 1
-        ? { result: true, message: '카테고리 삭제 성공' }
-        : { result: false, message: '카테고리 삭제 실패' };
-    } catch (err) {
-      const error = ensureError(err);
-      console.log(error.message);
-      return { result: false, message: error.message };
+    if (subcategories.subcategoryCount > 0) {
+      return {
+        result: false,
+        message: '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
+      };
     }
+
+    const { affectedRows: deletedCount } = await db.query(
+      `UPDATE Board_Category SET deleted_at = CURRENT_TIMESTAMP WHERE category_id = ? AND user_id= ? AND deleted_at IS NULL`,
+      [categoryDto.categoryId, categoryDto.userId]
+    );
+
+    return deletedCount === 1
+      ? { result: true, message: '카테고리 삭제 성공' }
+      : { result: false, message: '카테고리 삭제 실패' };
   };
 }
