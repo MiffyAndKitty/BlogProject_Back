@@ -8,11 +8,7 @@ import { upload } from '../middleware/multer';
 import { checkWriter } from '../middleware/checkWriter';
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
-import {
-  DraftDto,
-  DraftIdDto,
-  UpdateDraftDto
-} from '../interfaces/board/draft';
+import { DraftDto, DraftIdDto, UpdateDraftDto } from '../interfaces/draft';
 import { ForbiddenError } from '../errors/forbiddenError';
 
 export const draftRouter = Router();

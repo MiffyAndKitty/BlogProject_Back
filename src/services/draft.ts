@@ -3,11 +3,7 @@ import { InternalServerError } from '../errors/internalServerError';
 import { mongodb } from '../loaders/mongodb';
 import { ObjectId } from 'mongodb';
 import { BasicResponse } from '../interfaces/response';
-import {
-  DraftDto,
-  DraftIdDto,
-  UpdateDraftDto
-} from '../interfaces/board/draft';
+import { DraftDto, DraftIdDto, UpdateDraftDto } from '../interfaces/draft';
 import { NotFoundError } from '../errors/notFoundError';
 import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWithS3Links';
 
