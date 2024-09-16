@@ -9,7 +9,11 @@ import {
   BasicResponse,
   MultipleUserDataResponse
 } from '../interfaces/response';
-import { LoginUserDto, LoginServiceDto, SignUpDto } from '../interfaces/auth';
+import {
+  GoogleUserLoginDto,
+  LoginServiceDto,
+  SignUpDto
+} from '../interfaces/auth';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 import { USER_NICKNAME_MAX } from '../constants/validation';
@@ -78,7 +82,7 @@ authRouter.get(
   }),
   async (req: Request, res: Response) => {
     try {
-      const googleUser = req.user as LoginUserDto;
+      const googleUser = req.user as GoogleUserLoginDto;
 
       let result: MultipleUserDataResponse = {
         result: false,

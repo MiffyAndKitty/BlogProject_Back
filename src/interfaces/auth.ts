@@ -1,10 +1,13 @@
-export interface LoginUserDto {
+export interface GoogleUserLoginDto {
   userId?: string;
   userEmail: string;
+  accessToken: string;
+  refreshToken?: string;
 }
 
-export interface LoginServiceDto extends LoginUserDto {
+export interface LoginServiceDto {
   userId: string;
+  userEmail: string;
 }
 
 export interface SignUpDto {
