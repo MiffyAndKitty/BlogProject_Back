@@ -5,6 +5,7 @@ import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { AccountService } from '../services/account';
 import { BasicResponse, SingleDataResponse } from '../interfaces/response';
 import {
+  EmailVerificationDto,
   PasswordResetLinkDto,
   UserEmailInfoDto,
   UserIdDto
@@ -48,6 +49,40 @@ accountRouter.post(
       AccountService.sendPasswordResetLink(passwordResetLinkDto)
         .then((sentResult) => {
           console.log(`${sentResult.message} : ${passwordResetLinkDto.email}`);
+        })
+        .catch((err) => {
+          console.error(`이메일 전송 오류: ${err.message}`);
+        });
+    } catch (err) {
+      handleError(err, res);
+    }
+  }
+);
+
+// 이메일 유효성 확인을 위한 메일 전송
+accountRouter.post(
+  '/email-validation',
+  validate([
+    body('email').isEmail().withMessage('유효한 이메일을 입력하세요.')
+  ]),
+  async (req: Request, res: Response) => {
+    try {
+      const getTemporaryCode = AccountService.setTemporaryCode();
+
+      res.status(200).send({
+        result: true,
+        data: getTemporaryCode.data,
+        message: '이메일 유효성 확인을 위한 이메일이 전송되었습니다.'
+      });
+
+      const emailVerificationDto: EmailVerificationDto = {
+        email: req.body.email,
+        verificationCode: getTemporaryCode.data
+      };
+
+      AccountService.sendEmailVerification(emailVerificationDto)
+        .then((sentResult) => {
+          console.log(`${sentResult.message} : ${emailVerificationDto.email}`);
         })
         .catch((err) => {
           console.error(`이메일 전송 오류: ${err.message}`);

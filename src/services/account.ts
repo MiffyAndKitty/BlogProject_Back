@@ -4,6 +4,7 @@ import { getHashed } from '../utils/getHashed';
 import { generatePassword } from '../utils/passwordGenerator';
 import { sendEMail } from '../utils/sendEmail';
 import {
+  EmailVerificationDto,
   PasswordResetLinkDto,
   UserEmailInfoDto,
   UserIdDto
@@ -11,6 +12,7 @@ import {
 import { NotFoundError } from '../errors/notFoundError';
 import { InternalServerError } from '../errors/internalServerError';
 import { BadRequestError } from '../errors/badRequestError';
+import { generateSixDigitNumber } from '../utils/tempCodeGenerator';
 export class AccountService {
   static async setTemporaryPassword(
     userEmailInfoDto: UserEmailInfoDto
@@ -70,6 +72,39 @@ export class AccountService {
     return {
       result: true,
       message: '비밀번호 재설정 메일 전송 성공'
+    };
+  }
+
+  static setTemporaryCode() {
+    const tempCode = generateSixDigitNumber();
+
+    return {
+      result: true,
+      data: tempCode,
+      message: '이메일 유효성 확인을 위한 임시 코드 발급 성공'
+    };
+  }
+
+  // 이메일 유효성 확인을 위한 이메일 전송
+  static async sendEmailVerification(
+    emailVerificationDto: EmailVerificationDto
+  ): Promise<BasicResponse> {
+    const sent: boolean = await sendEMail(
+      emailVerificationDto.email,
+      '이메일 유효성 확인을 위한 링크 전송',
+      'emailVerificationTemplate',
+      {
+        verificationCode: String(emailVerificationDto.verificationCode)
+      }
+    );
+
+    if (!sent) {
+      throw new InternalServerError('이메일 유효성 확인을 위한 메일 전송 실패');
+    }
+
+    return {
+      result: true,
+      message: '이메일 유효성 확인을 위한 메일 전송 성공'
     };
   }
 
