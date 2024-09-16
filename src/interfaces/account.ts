@@ -9,6 +9,7 @@ export interface PasswordResetLinkDto {
 
 export interface EmailVerificationDto {
   email: string;
+  verificationCode: number;
 }
 
 export interface UserIdDto {

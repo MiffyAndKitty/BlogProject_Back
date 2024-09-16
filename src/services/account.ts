@@ -12,6 +12,7 @@ import {
 import { NotFoundError } from '../errors/notFoundError';
 import { InternalServerError } from '../errors/internalServerError';
 import { BadRequestError } from '../errors/badRequestError';
+import { generateSixDigitNumber } from '../utils/tempCodeGenerator';
 export class AccountService {
   static async setTemporaryPassword(
     userEmailInfoDto: UserEmailInfoDto
@@ -74,6 +75,16 @@ export class AccountService {
     };
   }
 
+  static setTemporaryCode() {
+    const tempCode = generateSixDigitNumber();
+
+    return {
+      result: true,
+      data: tempCode,
+      message: '이메일 유효성 확인을 위한 임시 코드 발급 성공'
+    };
+  }
+
   // 이메일 유효성 확인을 위한 이메일 전송
   static async sendEmailVerification(
     emailVerificationDto: EmailVerificationDto
@@ -83,7 +94,7 @@ export class AccountService {
       '이메일 유효성 확인을 위한 링크 전송',
       'emailVerificationTemplate',
       {
-        validationUrl: `${process.env.ORIGIN_URL}localsignup?email=${emailVerificationDto.email}`
+        verificationCode: String(emailVerificationDto.verificationCode)
       }
     );
 
