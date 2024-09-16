@@ -19,6 +19,7 @@ import { userIdentifier } from './middleware/userIdentifier';
 import { notificationsRouter } from './routes/notifications';
 import { accountRouter } from './routes/account';
 import { loadAllSchedules } from './loaders/scheduler';
+import { draftRouter } from './routes/draft';
 
 export const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api', userIdentifier());
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/board', boardRouter);
+app.use('/api/draft', draftRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/tag', tagRouter);
 app.use('/api/notifications', notificationsRouter);

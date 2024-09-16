@@ -4,19 +4,8 @@ import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationName } from '../../constants/notificationName';
 import { InternalServerError } from '../../errors/internalServerError';
-import { mongodb } from '../../loaders/mongodb';
-import { ObjectId } from 'mongodb';
-import { ensureError } from '../../errors/ensureError';
-import {
-  BasicResponse,
-  SingleNotificationResponse
-} from '../../interfaces/response';
-import {
-  DraftDto,
-  DraftIdDto,
-  UpdateDraftDto
-} from '../../interfaces/board/draft';
-import { NotFoundError } from '../../errors/notFoundError';
+import { SingleNotificationResponse } from '../../interfaces/response';
+import { replaceImageUrlsWithS3Links } from '../../utils/string/replaceImageUrlsWithS3Links';
 
 export class saveBoardService {
   static modifyBoard = async (
@@ -39,7 +28,7 @@ export class saveBoardService {
     if (boardDto.content !== original.board_content) {
       let content: string = boardDto.content;
       if (boardDto.fileUrls) {
-        const urlReplaced: false | string = await saveBoardService._savedImage(
+        const urlReplaced: false | string = replaceImageUrlsWithS3Links(
           boardDto.content,
           boardDto.fileUrls
         );
@@ -86,7 +75,7 @@ export class saveBoardService {
     // content의 사진 url를 s3에 저장된 url로 변경
     let content: string = boardDto.content;
     if (boardDto.fileUrls) {
-      const urlReplaced = await saveBoardService._savedImage(
+      const urlReplaced = replaceImageUrlsWithS3Links(
         boardDto.content,
         boardDto.fileUrls
       );
@@ -136,109 +125,6 @@ export class saveBoardService {
     };
   };
 
-  static saveDraft = async (draftDto: DraftDto): Promise<BasicResponse> => {
-    const draftCollection = mongodb.db('board_db').collection('drafts');
-    const draftId = new ObjectId();
-
-    let content = draftDto.content;
-    if (draftDto.fileUrls && draftDto.fileUrls.length > 0 && content) {
-      const urlReplaced: false | string = await saveBoardService._savedImage(
-        content,
-        draftDto.fileUrls
-      );
-      if (urlReplaced) content = urlReplaced;
-    }
-
-    const result = await draftCollection.insertOne({
-      _id: draftId,
-      userId: draftDto.userId,
-      title: draftDto.title,
-      content: content,
-      public: draftDto.public,
-      categoryId: draftDto.categoryId,
-      tagNames: draftDto.tagNames || [],
-      updatedAt: new Date()
-    });
-
-    if (!result.acknowledged) {
-      throw new InternalServerError('임시 저장 중 오류가 발생하였습니다.');
-    }
-    return { result: true, message: '임시 저장에 성공하였습니다.' };
-  };
-
-  static modifyDraft = async (
-    updateDraftDto: UpdateDraftDto
-  ): Promise<BasicResponse> => {
-    const draftCollection = mongodb.db('board_db').collection('drafts');
-    const draftId = new ObjectId(updateDraftDto.draftId);
-
-    const existingDraftCount = await draftCollection.countDocuments({
-      _id: draftId
-    });
-    if (existingDraftCount === 0)
-      throw new NotFoundError(
-        '해당 ID의 임시 저장된 게시글을 찾을 수 없습니다.'
-      );
-
-    let content = updateDraftDto.content;
-    if (
-      updateDraftDto.fileUrls &&
-      updateDraftDto.fileUrls.length > 0 &&
-      content
-    ) {
-      const urlReplaced: false | string = await saveBoardService._savedImage(
-        content,
-        updateDraftDto.fileUrls
-      );
-      if (urlReplaced) content = urlReplaced;
-    }
-
-    const result = await draftCollection.updateOne(
-      { _id: draftId },
-      {
-        $set: {
-          userId: updateDraftDto.userId,
-          title: updateDraftDto.title,
-          content: content,
-          public: updateDraftDto.public,
-          categoryId: updateDraftDto.categoryId,
-          tagNames: updateDraftDto.tagNames || [],
-          updatedAt: new Date()
-        }
-      }
-    );
-
-    if (result.modifiedCount === 0)
-      throw new InternalServerError(
-        '임시 저장된 게시글이 수정되지 않았습니다.'
-      );
-
-    return {
-      result: true,
-      message: '임시 저장된 게시글 수정에 성공하였습니다.'
-    };
-  };
-
-  static getDraft = async (draftIdDto: DraftIdDto) => {
-    const objectId = new ObjectId(draftIdDto.draftId);
-    const draftCollection = mongodb.db('board_db').collection('drafts');
-
-    const draft = await draftCollection.findOne({
-      _id: objectId
-    });
-
-    if (!draft)
-      throw new NotFoundError(
-        '해당 id의 임시 저장된 게시글을 찾지 못하였습니다.'
-      );
-
-    return {
-      result: true,
-      data: draft,
-      message: '임시 저장된 게시글 반환에 성공하였습니다.'
-    };
-  };
-
   private static _savedTags = async (
     boardId: string,
     tagNames: Array<string>
@@ -260,37 +146,6 @@ export class saveBoardService {
     } catch (err: any) {
       throw new InternalServerError(
         `게시글 태그를 데이터 베이스에 저장 중 에러 발생 : ${err.message}`
-      );
-    }
-  };
-
-  private static _savedImage = async (
-    content: string,
-    fileUrls: Array<string>
-  ) => {
-    try {
-      const pattern = /(<img[^>]*src=['"])([^'"]+)(['"][^>]*>)/g; // p1, p2, p3
-      const skipUrlPrefix = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com`;
-
-      let index = 0;
-      let replacedContent = content;
-
-      replacedContent = replacedContent.replace(
-        pattern,
-        (match, p1, p2, p3) => {
-          if (p2.startsWith(skipUrlPrefix)) {
-            return match;
-          }
-          const imageUrl = fileUrls[index];
-          index++;
-          return `${p1}${imageUrl}${p3}`;
-        }
-      );
-
-      return replacedContent;
-    } catch (err: any) {
-      throw new InternalServerError(
-        `게시글 이미지 저장 중 에러 발생 : ${err.message}`
       );
     }
   };
