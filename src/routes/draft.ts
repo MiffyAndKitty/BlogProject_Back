@@ -8,10 +8,44 @@ import { upload } from '../middleware/multer';
 import { checkWriter } from '../middleware/checkWriter';
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
-import { DraftDto, DraftIdDto, UpdateDraftDto } from '../interfaces/draft';
+import {
+  DraftDto,
+  DraftIdDto,
+  DraftListDto,
+  UpdateDraftDto
+} from '../interfaces/draft';
 import { ForbiddenError } from '../errors/forbiddenError';
 
 export const draftRouter = Router();
+
+// 임시 저장 게시글 목록 조회 (GET: /draft/list)
+draftRouter.get(
+  '/list',
+  validate([
+    header('Authorization')
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id)
+        throw new UnauthorizedError(
+          '로그인된 유저만 임시 저장된 게시글 목록을 조회할 수 있습니다.'
+        );
+
+      const draftListDto: DraftListDto = {
+        userId: req.id
+      };
+
+      const result = await DraftService.getDraftList(draftListDto);
+
+      return res.status(result.result ? 200 : 500).send(result);
+    } catch (err) {
+      handleError(err, res);
+    }
+  }
+);
 
 // 게시글 임시 저장 (POST: /draft)
 draftRouter.post(

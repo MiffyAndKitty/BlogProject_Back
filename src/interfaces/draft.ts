@@ -17,3 +17,7 @@ export interface DraftIdDto {
   userId: string;
   draftId: string;
 }
+
+export interface DraftListDto {
+  userId: string;
+}

@@ -3,7 +3,12 @@ import { InternalServerError } from '../errors/internalServerError';
 import { mongodb } from '../loaders/mongodb';
 import { ObjectId } from 'mongodb';
 import { BasicResponse } from '../interfaces/response';
-import { DraftDto, DraftIdDto, UpdateDraftDto } from '../interfaces/draft';
+import {
+  DraftDto,
+  DraftIdDto,
+  DraftListDto,
+  UpdateDraftDto
+} from '../interfaces/draft';
 import { NotFoundError } from '../errors/notFoundError';
 import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWithS3Links';
 
@@ -108,6 +113,26 @@ export class DraftService {
       result: true,
       data: draft,
       message: '임시 저장된 게시글 반환에 성공하였습니다.'
+    };
+  };
+
+  static getDraftList = async (draftListDto: DraftListDto) => {
+    const draftCollection = mongodb.db('board_db').collection('drafts');
+
+    // 최신순으로 정렬하여 임시 저장된 게시글 목록을 조회
+    const draftList = await draftCollection
+      .find({ userId: draftListDto.userId })
+      .sort({ updatedAt: -1 }) // 최신순 정렬
+      .toArray();
+
+    if (!draftList || draftList.length === 0) {
+      throw new NotFoundError('저장된 게시글 목록이 없습니다.');
+    }
+
+    return {
+      result: true,
+      data: draftList,
+      message: '임시 저장된 게시글 목록을 반환 성공했습니다.'
     };
   };
 }
