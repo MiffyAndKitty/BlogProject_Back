@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import passport from 'passport';
 import { reissueToken } from '../utils/token/reissueToken';
+import { verifyToken } from '../utils/token/verifyToken';
+import { UnauthorizedError } from '../errors/unauthorizedError';
 
 export async function jwtAuth(req: Request, res: Response, next: NextFunction) {
   passport.authenticate(
@@ -19,21 +21,30 @@ export async function jwtAuth(req: Request, res: Response, next: NextFunction) {
 
       const accessToken = req.header('Authorization')?.split('Bearer ')[1];
 
-      !accessToken
-        ? next()
-        : (async () => {
-            const reissued = await reissueToken(accessToken); // refresh 토큰의 유효성을 따져서 재발급
-            req.tokenMessage = '[만료된 access토큰]' + reissued.message;
+      if (!accessToken) return next();
 
-            if (!reissued.result) return next();
+      try {
+        const decoded = verifyToken.access(accessToken);
+        console.log(decoded);
+        req.id = decoded as string;
+        next();
+      } catch (err) {
+        console.log(err);
+        if (!(err instanceof UnauthorizedError)) next();
 
-            if ('data' in reissued) {
-              req.id = reissued.data[0];
-              req.newAccessToken = reissued.data[1];
-            }
+        (async () => {
+          const reissued = await reissueToken(accessToken); // refresh 토큰의 유효성을 따져서 재발급
+          req.tokenMessage = '[만료된 access토큰]' + reissued.message;
 
-            next();
-          })();
+          if ('data' in reissued) {
+            req.id = reissued.data[0];
+            req.newAccessToken = reissued.data[1];
+          }
+          console.log('존맛탱 전략 reissued ', reissued);
+
+          next();
+        })();
+      }
     }
   )(req, res, next);
 }

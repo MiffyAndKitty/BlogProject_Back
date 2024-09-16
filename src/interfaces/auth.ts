@@ -5,6 +5,11 @@ export interface GoogleUserLoginDto {
   refreshToken?: string;
 }
 
+export interface GoogleLoginServiceDto extends GoogleUserLoginDto {
+  userId: string;
+  refreshToken: string;
+}
+
 export interface LoginServiceDto {
   userId: string;
   userEmail: string;

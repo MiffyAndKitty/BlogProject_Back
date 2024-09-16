@@ -52,7 +52,9 @@ const passportVerify = async (
 
     done(null, {
       userId: exUser[0].user_id,
-      userEmail: exUser[0].user_email
+      userEmail: exUser[0].user_email,
+      accessToken: accessToken,
+      refreshToken: refreshToken
     } as GoogleUserLoginDto);
     return;
   } catch (err) {
