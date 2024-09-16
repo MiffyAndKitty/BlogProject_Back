@@ -2,10 +2,18 @@ import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { ensureError } from '../../errors/ensureError';
 
-export async function setRefreshToken(userId: string, refreshToken: string) {
+export async function setRefreshToken(
+  userId: string,
+  refreshToken: string,
+  isGoogle: boolean = false
+) {
   try {
+    const cacheKey = isGoogle
+      ? CacheKeys.GOOGLE_REFRESHTOKEN
+      : CacheKeys.REFRESHTOKEN;
+
     return await redis.set(
-      `${CacheKeys.REFRESHTOKEN}${userId}`,
+      `${cacheKey}${userId}`,
       refreshToken,
       'EX',
       7 * 24 * 60 * 60 // 7주일 뒤 만료

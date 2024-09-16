@@ -5,5 +5,6 @@ export const CacheKeys = {
   BOARD_LIKE: 'board_like:',
   BOARD_VIEW: 'board_view:',
   COMMENT_LIKE: 'comment_like:',
-  REFRESHTOKEN: 'refreshToken:'
+  REFRESHTOKEN: 'refreshToken:',
+  GOOGLE_REFRESHTOKEN: 'google-refreshToken:'
 } as const;
