@@ -70,7 +70,11 @@ authRouter.post(
 //구글 로그인 라우터, 실행 시 구글 로그인 페이지로 redirect
 authRouter.get(
   '/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    accessType: 'offline', // 서버에서 구글 refresh 토큰을 통해 구글 access 토큰 재발급하는 경우
+    prompt: 'select_account' // 사용자에게 계정을 선택하라는 메시지를 표시
+  })
 );
 
 // 구글에서 넘겨받은 사용자 정보를 이용하여 회원가입 및 로그인 진행

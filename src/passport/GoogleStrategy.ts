@@ -34,7 +34,9 @@ const passportVerify = async (
     if (!exUser) {
       done(null, {
         userId: undefined,
-        userEmail: googleEmail
+        userEmail: googleEmail,
+        accessToken: accessToken,
+        refreshToken: refreshToken
       } as GoogleUserLoginDto);
       return;
     }
