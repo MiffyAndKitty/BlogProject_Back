@@ -78,25 +78,23 @@ draftRouter.post(
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
-      .withMessage(
-        '올바른 토큰 형식이 아닙니다. Bearer <token> 형식으로 입력해주세요.'
-      ),
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
     body('title').optional({ checkFalsy: true }),
     body('content').optional({ checkFalsy: true }),
     body('public')
       .optional({ checkFalsy: true })
-      .isString()
-      .withMessage('공개 여부는 문자열 형태로 입력해야 합니다.'),
+      .isBoolean()
+      .withMessage('공개 여부는 불린값의 형태로 입력해야 합니다.'),
     body('tagNames')
       .optional({ checkFalsy: true })
       .custom((tags) => {
         if (typeof tags === 'string') tags = [tags];
 
         if (!Array.isArray(tags))
-          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
+          throw new BadRequestError('태그는 문자열 또는 배열 형태여야 합니다.');
 
         if (tags.length > 10)
-          throw new Error('태그는 최대 10개까지 허용됩니다.');
+          throw new BadRequestError('태그는 최대 10개까지 허용됩니다.');
 
         return true;
       })
