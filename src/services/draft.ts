@@ -144,8 +144,8 @@ export class DraftService {
       query.$or = [
         {
           updatedAt: isBefore
-            ? { $gt: cursorBoard.updatedAt } // 커서가 가리키는 문서 이후에 업데이트된 데이터
-            : { $lt: cursorBoard.updatedAt }
+            ? { $lt: cursorBoard.updatedAt }
+            : { $gt: cursorBoard.updatedAt }
         },
         {
           updatedAt: cursorBoard.updatedAt, // 같은 updatedAt을 가진 경우
@@ -154,12 +154,22 @@ export class DraftService {
       ];
     }
 
-    // 페이지 크기만큼 데이터 가져오기
-    const draftList = await draftCollection
-      .find(query)
-      .sort({ updatedAt: -1, _id: 1 }) // updatedAt은 내림차순, updatedAt이 동일할 때는 _id를 기준으로 오름차순 정렬
-      .limit(pageSize)
-      .toArray();
+    let draftList;
+
+    if (cursor && isBefore == true) {
+      draftList = await draftCollection
+        .find(query)
+        .sort({ updatedAt: 1, _id: -1 })
+        .toArray();
+
+      draftList = draftList.slice(-pageSize);
+    } else {
+      draftList = await draftCollection
+        .find(query)
+        .sort({ updatedAt: 1, _id: -1 }) // updatedAt은 내림차순, updatedAt이 동일할 때는 _id를 기준으로 오름차순 정렬
+        .limit(pageSize)
+        .toArray();
+    }
 
     if (!draftList || draftList.length === 0) {
       throw new NotFoundError('저장된 게시글 목록이 없습니다.');
