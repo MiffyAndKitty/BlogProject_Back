@@ -12,9 +12,22 @@ import {
 } from '../interfaces/draft';
 import { NotFoundError } from '../errors/notFoundError';
 import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWithS3Links';
+import { BadRequestError } from '../errors/badRequestError';
 
 export class DraftService {
   static saveDraft = async (draftDto: DraftDto): Promise<BasicResponse> => {
+    if (
+      !draftDto.title ||
+      !draftDto.content ||
+      draftDto.public === undefined ||
+      !draftDto.categoryId ||
+      !draftDto.tagNames
+    ) {
+      throw new BadRequestError(
+        '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
+      );
+    }
+
     const draftCollection = mongodb.db('board_db').collection('drafts');
     const draftId = new ObjectId();
 
@@ -39,7 +52,9 @@ export class DraftService {
     });
 
     if (!result.acknowledged) {
-      throw new InternalServerError('임시 저장 중 오류가 발생하였습니다.');
+      throw new InternalServerError(
+        '임시 저장된 게시글 저장 중 오류가 발생하였습니다.'
+      );
     }
     return { result: true, message: '임시 저장에 성공하였습니다.' };
   };
@@ -47,6 +62,18 @@ export class DraftService {
   static modifyDraft = async (
     updateDraftDto: UpdateDraftDto
   ): Promise<BasicResponse> => {
+    if (
+      !updateDraftDto.title ||
+      !updateDraftDto.content ||
+      updateDraftDto.public === undefined ||
+      !updateDraftDto.categoryId ||
+      !updateDraftDto.tagNames
+    ) {
+      throw new BadRequestError(
+        '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
+      );
+    }
+
     const draftCollection = mongodb.db('board_db').collection('drafts');
     const draftId = new ObjectId(updateDraftDto.draftId);
 
@@ -102,12 +129,13 @@ export class DraftService {
     const draftCollection = mongodb.db('board_db').collection('drafts');
 
     const draft = await draftCollection.findOne({
-      _id: objectId
+      _id: objectId,
+      userId: draftIdDto.userId
     });
 
     if (!draft)
       throw new NotFoundError(
-        '해당 id의 임시 저장된 게시글을 찾지 못하였습니다.'
+        '현재 로그인한 유저가 작성한 해당 id의 임시 저장된 게시글을 찾지 못하였습니다.'
       );
 
     return {
