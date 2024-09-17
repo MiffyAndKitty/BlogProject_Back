@@ -1,13 +1,14 @@
 import '../config/env';
 import { InternalServerError } from '../errors/internalServerError';
 import { mongodb } from '../loaders/mongodb';
-import { ObjectId } from 'mongodb';
+import { ObjectId, Filter } from 'mongodb';
 import { BasicResponse } from '../interfaces/response';
 import {
   DraftDto,
   DraftIdDto,
   DraftListDto,
-  UpdateDraftDto
+  UpdateDraftDto,
+  DraftFilterDto
 } from '../interfaces/draft';
 import { NotFoundError } from '../errors/notFoundError';
 import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWithS3Links';
@@ -119,10 +120,45 @@ export class DraftService {
   static getDraftList = async (draftListDto: DraftListDto) => {
     const draftCollection = mongodb.db('board_db').collection('drafts');
 
-    // 최신순으로 정렬하여 임시 저장된 게시글 목록을 조회
+    const { userId, cursor, isBefore } = draftListDto;
+    const pageSize = draftListDto.pageSize ?? 100;
+
+    // 기본 검색 조건: 유저 ID
+    const query: Filter<DraftFilterDto> = { userId };
+
+    let cursorBoard = null;
+
+    if (cursor) {
+      cursorBoard = await draftCollection.findOne(
+        { _id: new ObjectId(cursor), userId: userId },
+        { projection: { updatedAt: 1, _id: 1 } } // updatedAt과 _id만 가져오기
+      );
+
+      if (!cursorBoard)
+        throw new NotFoundError(
+          '해당 커서에 해당하는 게시글을 찾을 수 없습니다.'
+        );
+    }
+
+    if (cursorBoard) {
+      query.$or = [
+        {
+          updatedAt: isBefore
+            ? { $gt: cursorBoard.updatedAt } // 커서가 가리키는 문서 이후에 업데이트된 데이터
+            : { $lt: cursorBoard.updatedAt }
+        },
+        {
+          updatedAt: cursorBoard.updatedAt, // 같은 updatedAt을 가진 경우
+          _id: isBefore ? { $lt: cursorBoard._id } : { $gt: cursorBoard._id }
+        }
+      ];
+    }
+
+    // 페이지 크기만큼 데이터 가져오기
     const draftList = await draftCollection
-      .find({ userId: draftListDto.userId })
-      .sort({ updatedAt: -1 }) // 최신순 정렬
+      .find(query)
+      .sort({ updatedAt: -1, _id: 1 }) // updatedAt은 내림차순, updatedAt이 동일할 때는 _id를 기준으로 오름차순 정렬
+      .limit(pageSize)
       .toArray();
 
     if (!draftList || draftList.length === 0) {

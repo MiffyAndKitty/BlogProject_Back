@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { ObjectId } from 'mongodb';
 import { validate } from '../middleware/express-validation';
-import { header, body, param } from 'express-validator';
+import { header, body, param, query } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import { DraftService } from '../services/draft';
 import { upload } from '../middleware/multer';
@@ -15,6 +15,7 @@ import {
   UpdateDraftDto
 } from '../interfaces/draft';
 import { ForbiddenError } from '../errors/forbiddenError';
+import { BadRequestError } from '../errors/badRequestError';
 
 export const draftRouter = Router();
 
@@ -24,7 +25,25 @@ draftRouter.get(
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
-      .withMessage('올바른 토큰 형식이 아닙니다.')
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('page-size')
+      .optional({ checkFalsy: true })
+      .toInt()
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
+    query('is-before')
+      .optional({ checkFalsy: true })
+      .custom((value) => {
+        if (value !== 'true' && value !== 'false') {
+          throw new BadRequestError(
+            'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
+          );
+        }
+        return true;
+      })
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -35,7 +54,12 @@ draftRouter.get(
         );
 
       const draftListDto: DraftListDto = {
-        userId: req.id
+        userId: req.id,
+        cursor: (req.query.cursor as string) || undefined,
+        pageSize: req.query['page-size']
+          ? parseInt(req.query['page-size'] as string, 10)
+          : undefined,
+        isBefore: req.query['is-before'] === 'true'
       };
 
       const result = await DraftService.getDraftList(draftListDto);
