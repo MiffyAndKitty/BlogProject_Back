@@ -254,3 +254,36 @@ draftRouter.get(
     }
   }
 );
+
+// 임시 저장된 게시글 삭제 (DELETE: /draft/:draftId)
+draftRouter.delete(
+  '/:draftId',
+  validate([
+    header('Authorization')
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    param('draftId')
+      .matches(/^:[0-9a-f]{24}$/i)
+      .withMessage('올바른 형식의 임시 저장 게시글 id는 24글자의 문자열입니다.')
+  ]),
+  jwtAuth,
+  checkWriter(true),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.isWriter)
+        throw new ForbiddenError('해당 유저가 임시 저장한 게시글이 아닙니다.');
+
+      const draftIdDto: DraftIdDto = {
+        userId: req.id as string,
+        draftId: req.params.draftId.split(':')[1]
+      };
+
+      console.log('draftIdDto', draftIdDto);
+      const result = await DraftService.deleteDraft(draftIdDto);
+
+      return res.status(result.result ? 200 : 500).send(result);
+    } catch (err) {
+      handleError(err, res);
+    }
+  }
+);

@@ -209,4 +209,22 @@ export class DraftService {
       message: '임시 저장된 게시글 목록을 반환 성공했습니다.'
     };
   };
+
+  static deleteDraft = async (
+    draftIdDto: DraftIdDto
+  ): Promise<BasicResponse> => {
+    const objectId = new ObjectId(draftIdDto.draftId);
+    const draftCollection = mongodb.db('board_db').collection('drafts');
+
+    const result = await draftCollection.deleteOne({
+      _id: objectId,
+      userId: draftIdDto.userId
+    });
+
+    if (result.deletedCount === 0) {
+      throw new NotFoundError('임시 저장된 게시글을 찾을 수 없습니다.');
+    }
+
+    return { result: true, message: '임시 저장된 게시글이 삭제되었습니다.' };
+  };
 }
