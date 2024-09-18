@@ -20,10 +20,11 @@ export class BoardListService {
       listDto.query,
       listDto.tag
     );
+    const listQuery = query + ` AND Board.board_public = TRUE`;
 
     const [countResult] = await db.query(
       `SELECT COUNT(*) AS totalCount FROM (SELECT DISTINCT Board.board_id FROM Board ` +
-        query +
+        listQuery +
         ` ) AS distinctBoards`,
       params
     );
@@ -38,11 +39,11 @@ export class BoardListService {
 
     const sortedList =
       listDto.sort === 'view' || listDto.sort === 'like'
-        ? await this._sortByViewOrLike(query, params, {
+        ? await this._sortByViewOrLike(listQuery, params, {
             ...sortOptions,
             sort: listDto.sort
           } as ViewOrLikeSortOptions)
-        : await this._sortByASC(query, params, sortOptions);
+        : await this._sortByASC(listQuery, params, sortOptions);
 
     const totalCount = Number(countResult.totalCount.toString());
     const totalPageCount = Math.ceil(totalCount / pageSize);
@@ -167,13 +168,9 @@ export class BoardListService {
         queryParts.push(tagCondition.query);
         params.push(...tagCondition.params);
 
-        queryParts.push(
-          'AND Board.deleted_at IS NULL AND Board.board_public = TRUE'
-        );
+        queryParts.push('AND Board.deleted_at IS NULL');
       } else {
-        queryParts.push(
-          'WHERE Board.deleted_at IS NULL AND Board.board_public = TRUE'
-        );
+        queryParts.push('WHERE Board.deleted_at IS NULL');
       }
 
       if (queryValue) {
