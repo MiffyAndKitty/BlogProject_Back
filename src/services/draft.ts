@@ -89,17 +89,7 @@ export class DraftService {
   };
 
   static saveDraft = async (draftDto: DraftDto): Promise<BasicResponse> => {
-    if (
-      !draftDto.title ||
-      !draftDto.content ||
-      draftDto.public === undefined ||
-      !draftDto.categoryId ||
-      !draftDto.tagNames
-    ) {
-      throw new BadRequestError(
-        '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
-      );
-    }
+    this._validateDraftFields(draftDto);
 
     const draftCollection = mongodb.db('board_db').collection('drafts');
     const draftId = new ObjectId();
@@ -135,17 +125,7 @@ export class DraftService {
   static modifyDraft = async (
     updateDraftDto: UpdateDraftDto
   ): Promise<BasicResponse> => {
-    if (
-      !updateDraftDto.title ||
-      !updateDraftDto.content ||
-      updateDraftDto.public === undefined ||
-      !updateDraftDto.categoryId ||
-      !updateDraftDto.tagNames
-    ) {
-      throw new BadRequestError(
-        '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
-      );
-    }
+    this._validateDraftFields(updateDraftDto);
 
     const draftCollection = mongodb.db('board_db').collection('drafts');
     const draftId = new ObjectId(updateDraftDto.draftId);
@@ -196,6 +176,30 @@ export class DraftService {
       message: '임시 저장된 게시글 수정에 성공하였습니다.'
     };
   };
+
+  private static _validateDraftFields(
+    draftData: DraftDto | UpdateDraftDto
+  ): void {
+    const {
+      title,
+      content,
+      public: isPublic,
+      categoryId,
+      tagNames
+    } = draftData;
+
+    if (
+      !title ||
+      !content ||
+      isPublic === undefined ||
+      !categoryId ||
+      !tagNames
+    ) {
+      throw new BadRequestError(
+        '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
+      );
+    }
+  }
 
   static getDraft = async (draftIdDto: DraftIdDto) => {
     const objectId = new ObjectId(draftIdDto.draftId);
