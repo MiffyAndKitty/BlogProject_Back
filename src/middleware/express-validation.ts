@@ -1,5 +1,6 @@
 import express from 'express';
 import { ContextRunner } from 'express-validator';
+import { BadRequestError } from '../errors/badRequestError';
 
 export const validate = (validations: ContextRunner[]) => {
   return async (
@@ -14,10 +15,7 @@ export const validate = (validations: ContextRunner[]) => {
           .array()
           .map((error) => error.msg)
           .join(', ');
-        return res.status(400).send({
-          result: false,
-          message: `데이터 유효성 검증 실패: ${errors}`
-        });
+        return new BadRequestError(`데이터 유효성 검증 실패: ${errors}`);
       }
     }
 
