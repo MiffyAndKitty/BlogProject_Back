@@ -75,7 +75,14 @@ export class AccountService {
     };
   }
 
-  static setTemporaryCode() {
+  static async setTemporaryCode(userEmailInfoDto: UserEmailInfoDto) {
+    const [existedUser] = await db.query(
+      `SELECT 1 FROM User WHERE user_email = ?`,
+      [userEmailInfoDto.email]
+    );
+
+    if (existedUser) throw new BadRequestError('사용할 수 없는 이메일입니다.');
+
     const tempCode = generateSixDigitNumber();
 
     return {

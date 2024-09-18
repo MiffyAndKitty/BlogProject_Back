@@ -67,7 +67,12 @@ accountRouter.post(
   ]),
   async (req: Request, res: Response) => {
     try {
-      const getTemporaryCode = AccountService.setTemporaryCode();
+      const userEmailInfoDto: UserEmailInfoDto = {
+        email: req.body.email
+      };
+
+      const getTemporaryCode =
+        await AccountService.setTemporaryCode(userEmailInfoDto);
 
       res.status(200).send({
         result: true,
