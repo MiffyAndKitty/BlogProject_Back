@@ -43,7 +43,7 @@ export class UsersService {
   static getUserInfoByEmail = async (
     userEmailLookupDto: UserEmailLookupDto
   ) => {
-    const query = `SELECT * FROM User WHERE user_email = ? AND  deleted_at IS NULL LIMIT 1;`;
+    const query = `SELECT * FROM User WHERE user_email = ? LIMIT 1;`;
     const values = [userEmailLookupDto.email];
     const [userInfo] = await db.query(query, values);
 
@@ -95,15 +95,13 @@ export class UsersService {
 
     const [userInfo] = await db.query(query, params);
 
-    if (!userInfo)
-      throw new InternalServerError(
-        '존재하지 않는 회원입니다.'
-      ); /*throw new NotFoundError('존재하지 않는 회원입니다.');*/
+    if (!userInfo) throw new InternalServerError('존재하지 않는 회원입니다.');
+    /*throw new NotFoundError('존재하지 않는 회원입니다.');*/
 
-    if (userInfo.deleted_at)
-      throw new InternalServerError(
-        '탈퇴한 회원입니다'
-      ); /*throw new NotFoundError('탈퇴한 회원입니다');*/
+    //if (userInfo.deleted_at)
+    //  throw new InternalServerError(
+    //    '탈퇴한 회원입니다'
+    //  ); /*throw new NotFoundError('탈퇴한 회원입니다');*/
 
     return {
       result: true,
