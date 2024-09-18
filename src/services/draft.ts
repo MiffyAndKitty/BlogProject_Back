@@ -182,6 +182,10 @@ export class DraftService {
       ];
     }
 
+    // 전체 글 개수 계산
+    const totalCount = await draftCollection.countDocuments(query);
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     let draftList;
 
     if (cursor && isBefore == true) {
@@ -205,7 +209,11 @@ export class DraftService {
 
     return {
       result: true,
-      data: draftList,
+      data: {
+        list: draftList,
+        totalCount: totalCount, // 전체 글 개수
+        totalPages: totalPages // 페이지 개수
+      },
       message: '임시 저장된 게시글 목록을 반환 성공했습니다.'
     };
   };
