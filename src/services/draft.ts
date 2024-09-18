@@ -8,6 +8,7 @@ import {
   DraftIdDto,
   DraftListDto,
   UpdateDraftDto,
+  DraftSortQueryDto,
   DraftFilterDto
 } from '../interfaces/draft';
 import { NotFoundError } from '../errors/notFoundError';
@@ -43,8 +44,8 @@ export class DraftService {
       query.$or = [
         {
           updatedAt: isBefore
-            ? { $lt: cursorBoard.updatedAt }
-            : { $gt: cursorBoard.updatedAt }
+            ? { $gt: cursorBoard.updatedAt }
+            : { $lt: cursorBoard.updatedAt }
         },
         {
           updatedAt: cursorBoard.updatedAt, // 같은 updatedAt을 가진 경우
@@ -57,22 +58,18 @@ export class DraftService {
     const totalCount = await draftCollection.countDocuments(query);
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    let draftList;
+    const sortQuery: Filter<DraftSortQueryDto> =
+      cursor && isBefore == true
+        ? { updatedAt: 1, _id: -1 }
+        : { updatedAt: -1, _id: 1 };
 
-    if (cursor && isBefore == true) {
-      draftList = await draftCollection
-        .find(query)
-        .sort({ updatedAt: 1, _id: -1 })
-        .toArray();
+    let draftList = await draftCollection
+      .find(query)
+      .sort(sortQuery)
+      .limit(pageSize)
+      .toArray();
 
-      draftList = draftList.slice(-pageSize);
-    } else {
-      draftList = await draftCollection
-        .find(query)
-        .sort({ updatedAt: 1, _id: -1 }) // updatedAt은 내림차순, updatedAt이 동일할 때는 _id를 기준으로 오름차순 정렬
-        .limit(pageSize)
-        .toArray();
-    }
+    if (cursor && isBefore == true) draftList = draftList.reverse();
 
     if (!draftList || draftList.length === 0) {
       throw new NotFoundError('저장된 게시글 목록이 없습니다.');
