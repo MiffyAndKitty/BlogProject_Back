@@ -2,9 +2,10 @@ import '../../config/env';
 import { db } from '../../loaders/mariadb';
 import { boardDto, modifiedBoardDto } from '../../interfaces/board/board';
 import { v4 as uuidv4 } from 'uuid';
-import { SingleNotificationResponse } from '../../interfaces/response';
 import { NotificationName } from '../../constants/notificationName';
 import { InternalServerError } from '../../errors/internalServerError';
+import { SingleNotificationResponse } from '../../interfaces/response';
+import { replaceImageUrlsWithS3Links } from '../../utils/string/replaceImageUrlsWithS3Links';
 
 export class saveBoardService {
   static modifyBoard = async (
@@ -27,7 +28,7 @@ export class saveBoardService {
     if (boardDto.content !== original.board_content) {
       let content: string = boardDto.content;
       if (boardDto.fileUrls) {
-        const urlReplaced: false | string = await saveBoardService._savedImage(
+        const urlReplaced: false | string = replaceImageUrlsWithS3Links(
           boardDto.content,
           boardDto.fileUrls
         );
@@ -74,7 +75,7 @@ export class saveBoardService {
     // content의 사진 url를 s3에 저장된 url로 변경
     let content: string = boardDto.content;
     if (boardDto.fileUrls) {
-      const urlReplaced = await saveBoardService._savedImage(
+      const urlReplaced = replaceImageUrlsWithS3Links(
         boardDto.content,
         boardDto.fileUrls
       );
@@ -145,37 +146,6 @@ export class saveBoardService {
     } catch (err: any) {
       throw new InternalServerError(
         `게시글 태그를 데이터 베이스에 저장 중 에러 발생 : ${err.message}`
-      );
-    }
-  };
-
-  private static _savedImage = async (
-    content: string,
-    fileUrls: Array<string>
-  ) => {
-    try {
-      const pattern = /(<img[^>]*src=['"])([^'"]+)(['"][^>]*>)/g; // p1, p2, p3
-      const skipUrlPrefix = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com`;
-
-      let index = 0;
-      let replacedContent = content;
-
-      replacedContent = replacedContent.replace(
-        pattern,
-        (match, p1, p2, p3) => {
-          if (p2.startsWith(skipUrlPrefix)) {
-            return match;
-          }
-          const imageUrl = fileUrls[index];
-          index++;
-          return `${p1}${imageUrl}${p3}`;
-        }
-      );
-
-      return replacedContent;
-    } catch (err: any) {
-      throw new InternalServerError(
-        `게시글 이미지 저장 중 에러 발생 : ${err.message}`
       );
     }
   };

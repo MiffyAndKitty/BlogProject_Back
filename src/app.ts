@@ -4,6 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { dbConnector } from './loaders/mariadb';
+import { mongoDbConnector } from './loaders/mongodb';
 import { redisConnector } from './loaders/redis';
 import { swaggerConnector } from './loaders/swagger';
 import passport from 'passport';
@@ -18,6 +19,7 @@ import { userIdentifier } from './middleware/userIdentifier';
 import { notificationsRouter } from './routes/notifications';
 import { accountRouter } from './routes/account';
 import { loadAllSchedules } from './loaders/scheduler';
+import { draftRouter } from './routes/draft';
 
 export const app = express();
 
@@ -33,6 +35,7 @@ app.use(morgan('dev'));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
 redisConnector;
+await mongoDbConnector();
 await dbConnector();
 
 loadAllSchedules();
@@ -46,6 +49,7 @@ app.use('/api', userIdentifier());
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/board', boardRouter);
+app.use('/api/draft', draftRouter);
 app.use('/api/category', categoryRouter);
 app.use('/api/tag', tagRouter);
 app.use('/api/notifications', notificationsRouter);
