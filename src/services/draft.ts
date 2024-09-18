@@ -13,6 +13,7 @@ import {
 import { NotFoundError } from '../errors/notFoundError';
 import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWithS3Links';
 import { BadRequestError } from '../errors/badRequestError';
+import { db } from '../loaders/mariadb';
 
 export class DraftService {
   static getDraftList = async (draftListDto: DraftListDto) => {
@@ -100,6 +101,9 @@ export class DraftService {
         replaceImageUrlsWithS3Links(content, draftDto.fileUrls) || content;
     }
 
+    if (draftDto.categoryId)
+      this._validateCategoryOwnership(draftDto.categoryId, draftDto.userId);
+
     const result = await draftCollection.insertOne({
       _id: draftId,
       userId: draftDto.userId,
@@ -141,6 +145,12 @@ export class DraftService {
         replaceImageUrlsWithS3Links(content, updateDraftDto.fileUrls) ||
         content;
     }
+
+    if (updateDraftDto.categoryId)
+      this._validateCategoryOwnership(
+        updateDraftDto.categoryId,
+        updateDraftDto.userId
+      );
 
     const result = await draftCollection.updateOne(
       { _id: draftId },
@@ -189,6 +199,19 @@ export class DraftService {
       throw new BadRequestError(
         '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
       );
+    }
+  }
+
+  private static async _validateCategoryOwnership(
+    categoryId: string,
+    userId: string
+  ): Promise<void> {
+    const category = await db.query(
+      `SELECT 1 FROM Board_Category WHERE category_id = ? AND user_id = ?`,
+      [categoryId, userId]
+    );
+    if (!category) {
+      throw new BadRequestError('해당 유저가 소유한 카테고리 id가 아닙니다.');
     }
   }
 
