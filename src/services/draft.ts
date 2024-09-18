@@ -95,12 +95,9 @@ export class DraftService {
     const draftId = new ObjectId();
 
     let content = draftDto.content;
-    if (draftDto.fileUrls && draftDto.fileUrls.length > 0 && content) {
-      const urlReplaced: false | string = replaceImageUrlsWithS3Links(
-        content,
-        draftDto.fileUrls
-      );
-      if (urlReplaced) content = urlReplaced;
+    if (draftDto.fileUrls?.length && content) {
+      content =
+        replaceImageUrlsWithS3Links(content, draftDto.fileUrls) || content;
     }
 
     const result = await draftCollection.insertOne({
@@ -139,16 +136,10 @@ export class DraftService {
       );
 
     let content = updateDraftDto.content;
-    if (
-      updateDraftDto.fileUrls &&
-      updateDraftDto.fileUrls.length > 0 &&
-      content
-    ) {
-      const urlReplaced: false | string = replaceImageUrlsWithS3Links(
-        content,
-        updateDraftDto.fileUrls
-      );
-      if (urlReplaced) content = urlReplaced;
+    if (updateDraftDto.fileUrls?.length && content) {
+      content =
+        replaceImageUrlsWithS3Links(content, updateDraftDto.fileUrls) ||
+        content;
     }
 
     const result = await draftCollection.updateOne(
