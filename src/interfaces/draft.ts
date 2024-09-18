@@ -32,3 +32,8 @@ export interface DraftFilterDto {
   updatedAt?: Date;
   _id?: ObjectId;
 }
+
+export interface DraftSortQueryDto {
+  updatedAt?: number;
+  _id?: number;
+}
