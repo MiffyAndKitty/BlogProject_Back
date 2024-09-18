@@ -11,7 +11,7 @@ export class BoardCommentListService {
   static getTopLevelCommentsByPostId = async (
     commentDto: BoardCommentListDto
   ) => {
-    const sort = 'ASC'; // 작성된 순서
+    const sort = 'DESC'; // 작성된 순서
     const query = `
         SELECT
           c.comment_id,
