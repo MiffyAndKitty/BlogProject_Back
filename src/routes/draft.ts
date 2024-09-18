@@ -15,7 +15,6 @@ import {
   UpdateDraftDto
 } from '../interfaces/draft';
 import { ForbiddenError } from '../errors/forbiddenError';
-import { BadRequestError } from '../errors/badRequestError';
 
 export const draftRouter = Router();
 
@@ -26,7 +25,16 @@ draftRouter.get(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
-    query('cursor').optional({ checkFalsy: true }).isString(),
+    query('cursor')
+      .optional({ checkFalsy: true })
+      .custom((value) => {
+        if (!ObjectId.isValid(value)) {
+          throw new Error(
+            'cursor의 값인 임시 저장된 게시글 id는 24 길이의 문자열입니다.'
+          );
+        }
+        return true;
+      }),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt()
@@ -38,7 +46,7 @@ draftRouter.get(
       .optional({ checkFalsy: true })
       .custom((value) => {
         if (value !== 'true' && value !== 'false') {
-          throw new BadRequestError(
+          throw new Error(
             'is-before 값이 존재한다면 true/false의 문자열이어야합니다.'
           );
         }
@@ -50,7 +58,8 @@ draftRouter.get(
     try {
       if (!req.id)
         throw new UnauthorizedError(
-          '로그인된 유저만 임시 저장된 게시글 목록을 조회할 수 있습니다.'
+          req.tokenMessage ||
+            '로그인한 유저만 임시 저장된 게시글 목록을 조회할 수 있습니다.'
         );
 
       const draftListDto: DraftListDto = {
@@ -91,10 +100,10 @@ draftRouter.post(
         if (typeof tags === 'string') tags = [tags];
 
         if (!Array.isArray(tags))
-          throw new BadRequestError('태그는 문자열 또는 배열 형태여야 합니다.');
+          throw new Error('태그는 문자열 또는 배열 형태여야 합니다.');
 
         if (tags.length > 10)
-          throw new BadRequestError('태그는 최대 10개까지 허용됩니다.');
+          throw new Error('태그는 최대 10개까지 허용됩니다.');
 
         return true;
       })
@@ -109,7 +118,7 @@ draftRouter.post(
     try {
       if (!req.id)
         throw new UnauthorizedError(
-          req.tokenMessage || '로그인된 유저만 게시글 임시 저장이 가능합니다.'
+          req.tokenMessage || '로그인한 유저만 게시글 임시 저장이 가능합니다.'
         );
 
       const fileUrls: Array<string> = [];
@@ -239,7 +248,7 @@ draftRouter.get(
   async (req: Request, res: Response) => {
     try {
       if (!req.isWriter)
-        throw new ForbiddenError('해당 유저가 작성한 게시글이 아닙니다.');
+        throw new ForbiddenError('해당 유저가 임시 저장한 게시글이 아닙니다.');
 
       const draftIdDto: DraftIdDto = {
         userId: req.id as string,
