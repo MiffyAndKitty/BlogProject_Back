@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 /*import { NotFoundError } from '../errors/notFoundError';*/
 import { InternalServerError } from '../errors/internalServerError';
 import { ConflictError } from '../errors/conflictError';
-/*import { BadRequestError } from '../errors/badRequestError';*/
+import { BadRequestError } from '../errors/badRequestError';
 
 export class categoryService {
   static getAllList = async (categoryDto: CategoryListDto) => {
@@ -155,19 +155,10 @@ export class categoryService {
   static create = async (categoryDto: NewCategoryDto) => {
     try {
       if (categoryDto.topcategoryId) {
-        const [topcategory] = await db.query(
-          `SELECT 1 FROM Board_Category WHERE category_id = ? AND deleted_at IS NULL;`,
-          [categoryDto.topcategoryId]
+        await this._checkTopCategoryValidity(
+          categoryDto.topcategoryId,
+          categoryDto.userId
         );
-        if (!topcategory)
-          throw new InternalServerError(
-            '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
-          );
-        /*
-          throw new BadRequestError(
-            '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
-          );
-          */
       }
 
       const categoryId = uuidv4().replace(/-/g, '');
@@ -241,6 +232,8 @@ export class categoryService {
       throw new InternalServerError('수정 대상 카테고리를 찾을 수 없습니다.');
     }
 
+    await this._checkTopCategoryValidity(newTopCategoryId, userId);
+
     // 중복된 카테고리 이름이 있는지 확인
     const [duplicatedName] = await db.query(
       `SELECT 1 FROM Board_Category 
@@ -313,5 +306,46 @@ export class categoryService {
       result: true,
       message: '카테고리 및 카테고리에 속한 게시글 삭제 성공'
     };
+  };
+
+  // 새로운 상위 카테고리가 이미 다른 상위 카테고리를 가지고 있는지 확인하는 private 메서드
+  private static _checkTopCategoryValidity = async (
+    topcategoryId: string,
+    userId: string
+  ) => {
+    try {
+      // 상위 카테고리가 존재하는지 확인
+      const [topcategory] = await db.query(
+        `SELECT 1 FROM Board_Category 
+          WHERE category_id = ? 
+          AND user_id = ? 
+          AND deleted_at IS NULL;`,
+        [topcategoryId, userId]
+      );
+
+      if (!topcategory)
+        throw new InternalServerError(
+          '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
+        );
+
+      // 상위 카테고리가 이미 다른 상위 카테고리를 가지고 있는지 확인
+      const [topCategoryCheck] = await db.query(
+        `SELECT 1 FROM Board_Category 
+          WHERE category_id = ? 
+          AND user_id = ? 
+          AND topcategory_id IS NOT NULL 
+          AND deleted_at IS NULL;`,
+        [topcategoryId, userId]
+      );
+
+      if (topCategoryCheck)
+        throw new BadRequestError(
+          '이미 상위 카테고리를 가진 카테고리는 다른 카테고리의 상위 카테고리가 될 수 없습니다.'
+        );
+
+      return true;
+    } catch (err) {
+      throw ensureError(err);
+    }
   };
 }
