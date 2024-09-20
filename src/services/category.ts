@@ -20,9 +20,13 @@ export class categoryService {
       [categoryDto.nickname]
     );
 
-    //if (!user) {
-    // throw new NotFoundError('해당 닉네임을 가진 유저가 존재하지 않습니다.');
-    //}
+    if (!user) {
+      return {
+        result: false,
+        message: '해당 닉네임을 가진 유저가 존재하지 않습니다.'
+      };
+      //  throw new NotFoundError('해당 닉네임을 가진 유저가 존재하지 않습니다.');
+    }
 
     // 카테고리 ID가 없는 게시글의 개수 조회
     const [uncategorizedCountResult] = await db.query(
