@@ -62,9 +62,12 @@ categoryRouter.post(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
-    body('categoryName').custom((categoryName) =>
-      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
-    ),
+    body('categoryName')
+      .trim()
+      .notEmpty()
+      .custom((categoryName) =>
+        validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+      ),
     body('topcategoryId')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
@@ -105,9 +108,12 @@ categoryRouter.put(
     body('categoryId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 카테고리 id 형식이 아닙니다.'),
-    body('categoryName').custom((categoryName) =>
-      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
-    )
+    body('categoryName')
+      .trim()
+      .notEmpty()
+      .custom((categoryName) =>
+        validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+      )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
