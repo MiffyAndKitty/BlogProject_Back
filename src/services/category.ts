@@ -1,7 +1,7 @@
 import { db } from '../loaders/mariadb';
 import { ensureError } from '../errors/ensureError';
 import {
-  CategoryDto,
+  CategoryIdDto,
   CategoryListDto,
   HierarchicalCategoryDto,
   NewCategoryDto,
@@ -277,7 +277,7 @@ export class categoryService {
     };
   };
 
-  static delete = async (categoryDto: CategoryDto) => {
+  static delete = async (categoryDto: CategoryIdDto) => {
     // 삭제하려는 카테고리를 상위 카테고리로 가지는지 확인
     const [subcategories] = await db.query(
       `SELECT COUNT(*) AS subcategoryCount FROM Board_Category WHERE topcategory_id = ? AND user_id= ? AND deleted_at IS NULL`,
