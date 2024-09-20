@@ -1,6 +1,6 @@
-export interface CategoryDto {
+export interface CategoryIdDto {
   userId: string;
-  categoryId?: string;
+  categoryId: string;
 }
 
 export interface CategoryListDto {
@@ -17,12 +17,12 @@ export interface HierarchicalCategoryDto {
   board_count: number;
 }
 
-export interface UpdateCategoryNameDto extends CategoryDto {
+export interface UpdateCategoryNameDto extends CategoryIdDto {
   categoryName: string;
 }
 
-export interface UpdateCategoryLevelDto extends CategoryDto {
-  topcategoryId: string;
+export interface UpdateCategoryLevelDto extends CategoryIdDto {
+  newTopCategoryId: string;
 }
 
 export interface NewCategoryDto {

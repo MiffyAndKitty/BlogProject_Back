@@ -3,7 +3,7 @@ import { validate } from '../middleware/express-validation';
 import { header, body, query, param } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import {
-  CategoryDto,
+  CategoryIdDto,
   CategoryListDto,
   NewCategoryDto,
   UpdateCategoryLevelDto,
@@ -170,7 +170,7 @@ categoryRouter.put(
       const categoryDto: UpdateCategoryLevelDto = {
         userId: req.id,
         categoryId: req.body.categoryId,
-        topcategoryId: req.body.topcategoryId
+        newTopCategoryId: req.body.topcategoryId
       };
 
       const result = await categoryService.modifyLevel(categoryDto);
@@ -204,7 +204,7 @@ categoryRouter.delete(
         );
       }
 
-      const categoryDto: CategoryDto = {
+      const categoryDto: CategoryIdDto = {
         userId: req.id,
         categoryId: req.body.categoryId
       };
