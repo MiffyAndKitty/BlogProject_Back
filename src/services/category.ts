@@ -11,6 +11,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 /*import { NotFoundError } from '../errors/notFoundError';*/
 import { InternalServerError } from '../errors/internalServerError';
+import { ConflictError } from '../errors/conflictError';
 /*import { BadRequestError } from '../errors/badRequestError';*/
 
 export class categoryService {
@@ -228,18 +229,52 @@ export class categoryService {
   };
 
   static modifyLevel = async (categoryDto: UpdateCategoryLevelDto) => {
-    const updated = await db.query(
-      `UPDATE Board_Category SET topcategory_id = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
-      [
-        categoryDto.topcategoryId ?? null,
-        categoryDto.categoryId,
-        categoryDto.userId
-      ]
+    const { userId, categoryId, newTopCategoryId } = categoryDto;
+
+    const [currentCategory] = await db.query(
+      `SELECT category_name FROM Board_Category 
+       WHERE categoryId = ?`,
+      [categoryId]
     );
-    if (updated.affectedRows === 0) {
+
+    if (!currentCategory) {
+      throw new InternalServerError('수정 대상 카테고리를 찾을 수 없습니다.');
+    }
+
+    // 중복된 카테고리 이름이 있는지 확인
+    const [duplicatedName] = await db.query(
+      `SELECT 1 FROM Board_Category 
+          WHERE  user_id = ? 
+            AND category_name = ?
+            AND topcategory_id = ?
+            AND deleted_at IS NULL`,
+      [userId, currentCategory.name, newTopCategoryId ?? null]
+    );
+
+    if (duplicatedName) {
+      return {
+        result: false,
+        message: '같은 위치에 동일한 카테고리 이름이 존재합니다.'
+      };
+    }
+
+    const { affectedRows: modifiedCount } = await db.query(
+      `UPDATE Board_Category 
+         SET topcategory_id = ? 
+         WHERE category_id = ? AND user_id = ?`,
+      [newTopCategoryId ?? null, categoryId, userId]
+    );
+
+    if (modifiedCount === 0) {
       throw new InternalServerError('카테고리 레벨 업데이트 실패');
     }
-    return { result: true, message: '카테고리 레벨 업데이트 성공' };
+
+    return {
+      result: true,
+      message: newTopCategoryId
+        ? '카테고리를 하위 카테고리로 업데이트 성공'
+        : '카테고리를 최상위 카테고리로 업데이트 성공'
+    };
   };
 
   static delete = async (categoryDto: CategoryDto) => {
