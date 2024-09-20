@@ -163,28 +163,11 @@ export class categoryService {
 
       const categoryId = uuidv4().replace(/-/g, '');
 
-      const existQuery = `SELECT EXISTS (
-                      SELECT 1 
-                      FROM Board_Category
-                      WHERE category_name = ?
-                        AND user_id = ? 
-                        AND topcategory_id = ? 
-                        AND deleted_at IS NULL
-                    ) AS isExists;`;
-
-      const existParams = [
-        categoryDto.categoryName,
+      await this._checkDuplicatedCategoryName(
         categoryDto.userId,
+        categoryDto.categoryName,
         categoryDto.topcategoryId ?? null
-      ];
-
-      const [{ isExists: isExists }] = await db.query(existQuery, existParams);
-
-      if (isExists) {
-        throw new ConflictError(
-          '중복된 이름의 카테고리 입니다. 다른 이름으로 변경해주세요.'
-        );
-      }
+      );
 
       const query = `INSERT INTO Board_Category (user_id, category_id, category_name, topcategory_id ) VALUES (?,?,?,?);`;
       const params = [
@@ -207,6 +190,12 @@ export class categoryService {
   };
 
   static modifyName = async (categoryDto: UpdateCategoryNameDto) => {
+    await this._checkDuplicatedCategoryName(
+      categoryDto.userId,
+      categoryDto.categoryName,
+      categoryDto.categoryId
+    );
+
     const updated = await db.query(
       `UPDATE Board_Category SET category_name = ? WHERE category_id =? AND user_id = ? AND deleted_at IS NULL `,
       [categoryDto.categoryName, categoryDto.categoryId, categoryDto.userId]
@@ -234,22 +223,11 @@ export class categoryService {
 
     await this._checkTopCategoryValidity(newTopCategoryId, userId);
 
-    // 중복된 카테고리 이름이 있는지 확인
-    const [duplicatedName] = await db.query(
-      `SELECT 1 FROM Board_Category 
-          WHERE  user_id = ? 
-            AND category_name = ?
-            AND topcategory_id = ?
-            AND deleted_at IS NULL`,
-      [userId, currentCategory.name, newTopCategoryId ?? null]
+    await this._checkDuplicatedCategoryName(
+      userId,
+      currentCategory.category_name,
+      categoryId
     );
-
-    if (duplicatedName) {
-      return {
-        result: false,
-        message: '같은 위치에 동일한 카테고리 이름이 존재합니다.'
-      };
-    }
 
     const { affectedRows: modifiedCount } = await db.query(
       `UPDATE Board_Category 
@@ -341,6 +319,32 @@ export class categoryService {
       if (topCategoryCheck)
         throw new BadRequestError(
           '이미 상위 카테고리를 가진 카테고리는 다른 카테고리의 상위 카테고리가 될 수 없습니다.'
+        );
+
+      return true;
+    } catch (err) {
+      throw ensureError(err);
+    }
+  };
+
+  private static _checkDuplicatedCategoryName = async (
+    userId: string,
+    categoryName: string,
+    topcategoryId: string | null
+  ) => {
+    try {
+      const [duplicatedName] = await db.query(
+        `SELECT 1 FROM Board_Category 
+          WHERE user_id = ? 
+            AND category_name = ? 
+            AND topcategory_id = ? 
+            AND deleted_at IS NULL`,
+        [userId, categoryName, topcategoryId]
+      );
+
+      if (duplicatedName)
+        throw new ConflictError(
+          '같은 위치에 동일한 카테고리 이름이 존재합니다.'
         );
 
       return true;
