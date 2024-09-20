@@ -296,13 +296,22 @@ export class categoryService {
     }
 
     const { affectedRows: deletedCount } = await db.query(
-      `UPDATE Board_Category SET deleted_at = CURRENT_TIMESTAMP WHERE category_id = ? AND user_id= ? AND deleted_at IS NULL`,
-      [categoryDto.categoryId, categoryDto.userId]
+      `UPDATE Board_Category AS C
+        LEFT JOIN Board AS B ON B.category_id = C.category_id 
+        SET B.deleted_at = CURRENT_TIMESTAMP, C.deleted_at = CURRENT_TIMESTAMP, C.topcategory_id = NULL
+        WHERE C.category_id = ? 
+          AND C.deleted_at IS NULL 
+          AND B.deleted_at IS NULL;`,
+      [categoryDto.categoryId]
     );
 
     if (deletedCount === 0) {
       throw new InternalServerError('카테고리 삭제 실패');
     }
-    return { result: true, message: '카테고리 삭제 성공' };
+
+    return {
+      result: true,
+      message: '카테고리 및 카테고리에 속한 게시글 삭제 성공'
+    };
   };
 }
