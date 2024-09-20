@@ -233,7 +233,7 @@ export class categoryService {
 
     const [currentCategory] = await db.query(
       `SELECT category_name FROM Board_Category 
-       WHERE categoryId = ?`,
+       WHERE category_id = ?`,
       [categoryId]
     );
 
