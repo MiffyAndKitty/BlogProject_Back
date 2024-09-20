@@ -280,33 +280,20 @@ export class categoryService {
     userId: string
   ) => {
     try {
-      // 상위 카테고리가 존재하는지 확인
-      const [topcategory] = await db.query(
-        `SELECT 1 FROM Board_Category 
-          WHERE category_id = ? 
-          AND user_id = ? 
-          AND deleted_at IS NULL;`,
-        [topcategoryId, userId]
-      );
-
-      if (!topcategory)
-        throw new InternalServerError(
-          '상위 카테고리로 지정한 카테고리가 존재하지 않습니다'
-        );
-
       // 상위 카테고리가 이미 다른 상위 카테고리를 가지고 있는지 확인
       const [topCategoryCheck] = await db.query(
         `SELECT 1 FROM Board_Category 
           WHERE category_id = ? 
           AND user_id = ? 
           AND topcategory_id IS NOT NULL 
+          AND topcategory_id != '' 
           AND deleted_at IS NULL;`,
         [topcategoryId, userId]
       );
 
       if (topCategoryCheck)
         throw new BadRequestError(
-          '이미 상위 카테고리를 가진 카테고리는 다른 카테고리의 상위 카테고리가 될 수 없습니다.'
+          '상위 카테고리로 지정한 카테고리가 존재하지 않거나, 이미 상위 카테고리를 갖고 있습니다.'
         );
 
       return true;
