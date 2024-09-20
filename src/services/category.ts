@@ -249,22 +249,10 @@ export class categoryService {
   };
 
   static delete = async (categoryDto: CategoryIdDto) => {
-    // 삭제하려는 카테고리를 상위 카테고리로 가지는지 확인
-    const [subcategories] = await db.query(
-      `SELECT COUNT(*) AS subcategoryCount FROM Board_Category WHERE topcategory_id = ? AND user_id= ? AND deleted_at IS NULL`,
-      [categoryDto.categoryId, categoryDto.userId]
+    await this._checkSubcategoriesExist(
+      categoryDto.categoryId,
+      categoryDto.userId
     );
-
-    if (subcategories.subcategoryCount > 0) {
-      throw new InternalServerError(
-        '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
-      );
-      /*
-      throw new BadRequestError(
-        '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
-      );
-      */
-    }
 
     const { affectedRows: deletedCount } = await db.query(
       `UPDATE Board_Category AS C
@@ -346,6 +334,32 @@ export class categoryService {
         throw new ConflictError(
           '같은 위치에 동일한 카테고리 이름이 존재합니다.'
         );
+
+      return true;
+    } catch (err) {
+      throw ensureError(err);
+    }
+  };
+
+  private static _checkSubcategoriesExist = async (
+    categoryId: string,
+    userId: string
+  ) => {
+    try {
+      const [subcategories] = await db.query(
+        `SELECT COUNT(*) AS subcategoryCount 
+       FROM Board_Category 
+       WHERE topcategory_id = ? 
+       AND user_id = ? 
+       AND deleted_at IS NULL`,
+        [categoryId, userId]
+      );
+
+      if (subcategories.subcategoryCount > 0) {
+        throw new BadRequestError(
+          '삭제할 수 없는 카테고리: 하위 카테고리가 존재합니다.'
+        );
+      }
 
       return true;
     } catch (err) {
