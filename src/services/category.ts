@@ -171,6 +171,29 @@ export class categoryService {
 
       const categoryId = uuidv4().replace(/-/g, '');
 
+      const existQuery = `SELECT EXISTS (
+                      SELECT 1 
+                      FROM Board_Category
+                      WHERE category_name = ?
+                        AND user_id = ? 
+                        AND topcategory_id = ? 
+                        AND deleted_at IS NULL
+                    ) AS isExists;`;
+
+      const existParams = [
+        categoryDto.categoryName,
+        categoryDto.userId,
+        categoryDto.topcategoryId ?? null
+      ];
+
+      const [{ isExists: isExists }] = await db.query(existQuery, existParams);
+
+      if (isExists) {
+        throw new ConflictError(
+          '중복된 이름의 카테고리 입니다. 다른 이름으로 변경해주세요.'
+        );
+      }
+
       const query = `INSERT INTO Board_Category (user_id, category_id, category_name, topcategory_id ) VALUES (?,?,?,?);`;
       const params = [
         categoryDto.userId,
@@ -187,51 +210,7 @@ export class categoryService {
 
       return { result: true, message: '카테고리 저장 성공' };
     } catch (err) {
-      const error = ensureError(err);
-      const isDuplicated = Boolean(
-        error.message.match(/Duplicate entry '(.+)' for key/)
-      );
-      if (isDuplicated) {
-        return await categoryService._restore(categoryDto);
-      }
       throw ensureError(err, '카테고리 생성 중 에러 발생');
-    }
-  };
-
-  private static _restore = async (categoryDto: NewCategoryDto) => {
-    try {
-      const topCategory = categoryDto.topcategoryId ?? null;
-
-      const query = `SELECT category_id FROM Board_Category WHERE user_id = ? AND category_name = ? AND deleted_at IS NOT NULL AND topcategory_id = ? `; // 삭제된 카테고리
-      const params = [
-        categoryDto.userId,
-        categoryDto.categoryName,
-        topCategory
-      ];
-
-      const [origin] = await db.query(query, params);
-
-      if (!origin) {
-        throw new InternalServerError(
-          '카테고리 복원 에러 발생 ( 예시 : 삭제된 카테고리가 존재하지 않는 경우, 동일 레벨&이름의 카테고리가 이미 존재 )'
-        );
-        /*
-        throw new BadRequestError(
-          '카테고리 복원 에러 발생 ( 예시 : 삭제된 카테고리가 존재하지 않는 경우, 동일 레벨&이름의 카테고리가 이미 존재 )'
-        );
-        */
-      }
-      const restored = await db.query(
-        `UPDATE Board_Category SET deleted_at = NULL, updated_at = CURRENT_TIMESTAMP WHERE category_id = ? `,
-        [origin.category_id]
-      );
-
-      if (restored.affectedRows === 0) {
-        throw new InternalServerError('카테고리 복원 실패');
-      }
-      return { result: true, message: '카테고리 복원 성공' };
-    } catch (err) {
-      throw ensureError(err, '카테고리 복원 에러 발생');
     }
   };
 
