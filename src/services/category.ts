@@ -226,7 +226,7 @@ export class categoryService {
     await this._checkDuplicatedCategoryName(
       userId,
       currentCategory.category_name,
-      categoryId
+      newTopCategoryId
     );
 
     const { affectedRows: modifiedCount } = await db.query(
