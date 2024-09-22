@@ -212,13 +212,19 @@ export class categoryService {
     const { userId, categoryId, newTopCategoryId } = categoryDto;
 
     const [currentCategory] = await db.query(
-      `SELECT category_name FROM Board_Category 
+      `SELECT category_name, topcategory_id FROM Board_Category 
        WHERE category_id = ?`,
       [categoryId]
     );
 
     if (!currentCategory) {
       throw new InternalServerError('수정 대상 카테고리를 찾을 수 없습니다.');
+    }
+
+    if (!currentCategory.topcategory_id && newTopCategoryId) {
+      throw new BadRequestError(
+        '최상위 카테고리를 다른 레벨로 이동시킬 수 없습니다. '
+      );
     }
 
     await this._checkTopCategoryValidity(newTopCategoryId, userId);
