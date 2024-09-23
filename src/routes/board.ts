@@ -51,6 +51,13 @@ boardRouter.get(
     query('cursor')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i),
+    query('page')
+      .optional({ checkFalsy: true })
+      .toInt() // 숫자로 전환
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -76,6 +83,7 @@ boardRouter.get(
         sort: req.query.sort as string,
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
+        page: req.query.page as unknown as number,
         pageSize: req.query['page-size'] as unknown as number,
         isBefore: req.query['is-before'] === 'true' ? true : false
       };
@@ -114,6 +122,13 @@ boardRouter.get(
     query('cursor')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i),
+    query('page')
+      .optional({ checkFalsy: true })
+      .toInt() // 숫자로 전환
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt() // 숫자로 전환
@@ -146,6 +161,7 @@ boardRouter.get(
         sort: req.query.sort as string,
         tag: req.query.tag as string,
         cursor: req.query.cursor as string,
+        page: req.query.page as unknown as number,
         pageSize: req.query['page-size'] as unknown as number,
         nickname: req.params.nickname.split(':')[1],
         userId: req.id,
