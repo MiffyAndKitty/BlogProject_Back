@@ -35,6 +35,13 @@ draftRouter.get(
         }
         return true;
       }),
+    query('page')
+      .optional({ checkFalsy: true })
+      .toInt()
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt()
@@ -65,6 +72,9 @@ draftRouter.get(
       const draftListDto: DraftListDto = {
         userId: req.id,
         cursor: (req.query.cursor as string) || undefined,
+        page: req.query.page
+          ? parseInt(req.query.page as string, 10)
+          : undefined,
         pageSize: req.query['page-size']
           ? parseInt(req.query['page-size'] as string, 10)
           : undefined,
@@ -264,9 +274,9 @@ draftRouter.get(
   }
 );
 
-// 임시 저장된 게시글 삭제 (DELETE: /draft/:draftId)
-draftRouter.delete(
-  '/:draftId',
+// 임시 저장된 게시글 확인 (GET: /draft/:draftId/user-check)
+draftRouter.get(
+  '/:draftId/user-check',
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
@@ -282,12 +292,39 @@ draftRouter.delete(
       if (!req.isWriter)
         throw new ForbiddenError('해당 유저가 임시 저장한 게시글이 아닙니다.');
 
+      return res.status(200).send({
+        result: true,
+        message: '해당 유저가 임시 저장한 게시글입니다.'
+      });
+    } catch (err) {
+      handleError(err, res);
+    }
+  }
+);
+
+// 임시 저장된 게시글 삭제 (DELETE: /draft/:draftId)
+draftRouter.delete(
+  '/',
+  validate([
+    header('Authorization')
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.'),
+    body('draftId')
+      .matches(/^[0-9a-f]{24}$/i)
+      .withMessage('올바른 형식의 임시 저장 게시글 id는 24글자의 문자열입니다.')
+  ]),
+  jwtAuth,
+  checkWriter(true),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.isWriter)
+        throw new ForbiddenError('해당 유저가 임시 저장한 게시글이 아닙니다.');
+
       const draftIdDto: DraftIdDto = {
         userId: req.id as string,
-        draftId: req.params.draftId.split(':')[1]
+        draftId: req.body.draftId
       };
 
-      console.log('draftIdDto', draftIdDto);
       const result = await DraftService.deleteDraft(draftIdDto);
 
       return res.status(result.result ? 200 : 500).send(result);

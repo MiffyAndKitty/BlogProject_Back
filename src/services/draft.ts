@@ -15,13 +15,14 @@ import { NotFoundError } from '../errors/notFoundError';
 import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWithS3Links';
 import { BadRequestError } from '../errors/badRequestError';
 import { db } from '../loaders/mariadb';
+import { DRAFT_PAGESIZE_LIMIT } from '../constants/pageSizeLimit';
 
 export class DraftService {
   static getDraftList = async (draftListDto: DraftListDto) => {
     const draftCollection = mongodb.db('board_db').collection('drafts');
 
     const { userId, cursor, isBefore } = draftListDto;
-    const pageSize = draftListDto.pageSize ?? 100;
+    const pageSize = draftListDto.pageSize ?? DRAFT_PAGESIZE_LIMIT;
 
     // 기본 검색 조건: 유저 ID
     const query: Filter<DraftFilterDto> = { userId };
@@ -63,16 +64,31 @@ export class DraftService {
         ? { updatedAt: 1, _id: -1 }
         : { updatedAt: -1, _id: 1 };
 
+    const page = draftListDto.page ?? 1;
+
     let draftList = await draftCollection
       .find(query)
       .sort(sortQuery)
-      .limit(pageSize)
+      .limit(pageSize * page)
       .toArray();
 
-    if (cursor && isBefore == true) draftList = draftList.reverse();
+    const listLength = draftList.length % pageSize || pageSize;
+
+    draftList =
+      cursor && isBefore
+        ? draftList.reverse().slice(0, listLength)
+        : draftList.slice(-listLength);
 
     if (!draftList || draftList.length === 0) {
-      throw new NotFoundError('저장된 게시글 목록이 없습니다.');
+      return {
+        result: true,
+        data: {
+          list: null,
+          totalCount: 0,
+          totalPages: 0
+        },
+        message: '저장된 게시글 목록이 없습니다.'
+      };
     }
 
     return {
@@ -178,23 +194,11 @@ export class DraftService {
   private static _validateDraftFields(
     draftData: DraftDto | UpdateDraftDto
   ): void {
-    const {
-      title,
-      content,
-      public: isPublic,
-      categoryId,
-      tagNames
-    } = draftData;
+    const { title, content } = draftData;
 
-    if (
-      !title ||
-      !content ||
-      isPublic === undefined ||
-      !categoryId ||
-      !tagNames
-    ) {
+    if (!title && !content) {
       throw new BadRequestError(
-        '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
+        '저장할 제목/내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
       );
     }
   }
