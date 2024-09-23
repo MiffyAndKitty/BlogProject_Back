@@ -73,7 +73,15 @@ export class DraftService {
     if (cursor && isBefore == true) draftList = draftList.reverse();
 
     if (!draftList || draftList.length === 0) {
-      throw new NotFoundError('저장된 게시글 목록이 없습니다.');
+      return {
+        result: true,
+        data: {
+          list: null,
+          totalCount: 0,
+          totalPages: 0
+        },
+        message: '저장된 게시글 목록이 없습니다.'
+      };
     }
 
     return {
