@@ -15,13 +15,14 @@ import { NotFoundError } from '../errors/notFoundError';
 import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWithS3Links';
 import { BadRequestError } from '../errors/badRequestError';
 import { db } from '../loaders/mariadb';
+import { DRAFT_PAGESIZE_LIMIT } from '../constants/pageSizeLimit';
 
 export class DraftService {
   static getDraftList = async (draftListDto: DraftListDto) => {
     const draftCollection = mongodb.db('board_db').collection('drafts');
 
     const { userId, cursor, isBefore } = draftListDto;
-    const pageSize = draftListDto.pageSize ?? 100;
+    const pageSize = draftListDto.pageSize ?? DRAFT_PAGESIZE_LIMIT;
 
     // 기본 검색 조건: 유저 ID
     const query: Filter<DraftFilterDto> = { userId };

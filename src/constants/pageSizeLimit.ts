@@ -5,3 +5,5 @@ export const FOLLOW_PAGESIZE_LIMIT = 10;
 export const TOP_COMMENT_PAGESIZE_LIMIT = 10;
 
 export const NOTIFICATION_PAGESIZE_LIMIT = 10;
+
+export const DRAFT_PAGESIZE_LIMIT = 10;
