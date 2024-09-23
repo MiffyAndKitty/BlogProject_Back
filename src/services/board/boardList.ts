@@ -32,6 +32,7 @@ export class BoardListService {
     const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
 
     const sortOptions: SortOptions = {
+      page: listDto.page,
       pageSize: pageSize,
       cursor: listDto.cursor,
       isBefore: listDto.isBefore
@@ -122,6 +123,7 @@ export class BoardListService {
     const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
 
     const sortOptions: SortOptions = {
+      page: listDto.page,
       pageSize: pageSize,
       cursor: listDto.cursor,
       isBefore: listDto.isBefore
@@ -293,9 +295,28 @@ export class BoardListService {
       if (cursorIndex === -1)
         throw new InternalServerError(`유효하지 않은 커서 : ${cursorIndex}`);
 
-      return options.isBefore
-        ? data.slice(Math.max(0, cursorIndex - options.pageSize), cursorIndex) // 커서 이전의 데이터만 잘라서 반환
-        : data.slice(cursorIndex + 1, cursorIndex + 1 + options.pageSize);
+      const page = options.page || 1;
+
+      if (options.isBefore) {
+        const start = Math.max(0, cursorIndex - options.pageSize * page);
+        const end = cursorIndex - options.pageSize * (page - 1);
+
+        return start - end >= 0
+          ? []
+          : data.slice(
+              Math.max(0, cursorIndex - options.pageSize * page),
+              cursorIndex - options.pageSize * (page - 1)
+            );
+      }
+      const isLast =
+        cursorIndex + 1 + options.pageSize * (page - 1) >= data.length;
+
+      return isLast
+        ? []
+        : data.slice(
+            cursorIndex + 1 + options.pageSize * (page - 1),
+            Math.min(data.length, cursorIndex + 1 + options.pageSize * page)
+          );
     } catch (err: any) {
       throw new InternalServerError(
         `게시글 좋아요/조회수순 정렬 중 에러 발생 (_sortByASC) : ${err.message}`
@@ -309,6 +330,8 @@ export class BoardListService {
     options: SortOptions
   ): Promise<BoardInDBDto[]> {
     try {
+      const page = options.page || 1;
+
       if (!options.cursor) {
         // 커서가 없는 경우 : 최신순으로 정렬
         query += ` ORDER BY Board.board_order DESC, Board.created_at DESC LIMIT ?`;
@@ -332,7 +355,7 @@ export class BoardListService {
           boardByCursor.created_at,
           boardByCursor.created_at,
           boardByCursor.board_order,
-          options.pageSize
+          options.pageSize * page
         );
       }
 
@@ -348,7 +371,15 @@ export class BoardListService {
 
       data = parseFieldToNumber(data, 'board_comment');
 
-      //커서가 있고, 이전 페이지를 조회하는 경우
+      if (data.length <= (page - 1) * options.pageSize) return [];
+
+      const listLength = data.length % options.pageSize || options.pageSize;
+
+      data =
+        options.cursor && options.isBefore
+          ? data.reverse().slice(0, listLength).reverse()
+          : data.slice(-listLength);
+
       if (options.cursor && options.isBefore === true) data = data.reverse();
 
       return await this._reflectCashed(data);
