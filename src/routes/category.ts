@@ -3,7 +3,7 @@ import { validate } from '../middleware/express-validation';
 import { header, body, query, param } from 'express-validator';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
 import {
-  CategoryDto,
+  CategoryIdDto,
   CategoryListDto,
   NewCategoryDto,
   UpdateCategoryLevelDto,
@@ -62,9 +62,12 @@ categoryRouter.post(
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('토큰이 없습니다.'),
-    body('categoryName').custom((categoryName) =>
-      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
-    ),
+    body('categoryName')
+      .trim()
+      .notEmpty()
+      .custom((categoryName) =>
+        validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+      ),
     body('topcategoryId')
       .optional({ checkFalsy: true })
       .matches(/^[0-9a-f]{32}$/i)
@@ -105,9 +108,12 @@ categoryRouter.put(
     body('categoryId')
       .matches(/^[0-9a-f]{32}$/i)
       .withMessage('올바른 카테고리 id 형식이 아닙니다.'),
-    body('categoryName').custom((categoryName) =>
-      validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
-    )
+    body('categoryName')
+      .trim()
+      .notEmpty()
+      .custom((categoryName) =>
+        validateFieldByteLength('categoryName', categoryName, CATEGORY_NAME_MAX)
+      )
   ]),
   jwtAuth,
   async (req: Request, res: Response) => {
@@ -164,7 +170,7 @@ categoryRouter.put(
       const categoryDto: UpdateCategoryLevelDto = {
         userId: req.id,
         categoryId: req.body.categoryId,
-        topcategoryId: req.body.topcategoryId
+        newTopCategoryId: req.body.topcategoryId
       };
 
       const result = await categoryService.modifyLevel(categoryDto);
@@ -198,7 +204,7 @@ categoryRouter.delete(
         );
       }
 
-      const categoryDto: CategoryDto = {
+      const categoryDto: CategoryIdDto = {
         userId: req.id,
         categoryId: req.body.categoryId
       };
