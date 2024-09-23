@@ -41,6 +41,10 @@ export class DraftService {
         );
     }
 
+    // 전체 글 개수 계산
+    const totalCount = await draftCollection.countDocuments(query);
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     if (cursorBoard) {
       query.$or = [
         {
@@ -54,10 +58,6 @@ export class DraftService {
         }
       ];
     }
-
-    // 전체 글 개수 계산
-    const totalCount = await draftCollection.countDocuments(query);
-    const totalPages = Math.ceil(totalCount / pageSize);
 
     const sortQuery: Filter<DraftSortQueryDto> =
       cursor && isBefore == true
