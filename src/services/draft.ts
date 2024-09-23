@@ -179,23 +179,11 @@ export class DraftService {
   private static _validateDraftFields(
     draftData: DraftDto | UpdateDraftDto
   ): void {
-    const {
-      title,
-      content,
-      public: isPublic,
-      categoryId,
-      tagNames
-    } = draftData;
+    const { title, content } = draftData;
 
-    if (
-      !title ||
-      !content ||
-      isPublic === undefined ||
-      !categoryId ||
-      !tagNames
-    ) {
+    if (!title && !content) {
       throw new BadRequestError(
-        '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
+        '저장할 제목/내용이 없습니다. 최소 하나의 필드를 입력해주세요.'
       );
     }
   }
