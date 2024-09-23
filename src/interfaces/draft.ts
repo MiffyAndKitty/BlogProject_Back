@@ -23,6 +23,7 @@ export interface DraftIdDto {
 export interface DraftListDto {
   userId: string;
   cursor?: string;
+  page?: number;
   pageSize?: number;
   isBefore?: boolean;
 }

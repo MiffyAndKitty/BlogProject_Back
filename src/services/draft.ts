@@ -64,13 +64,20 @@ export class DraftService {
         ? { updatedAt: 1, _id: -1 }
         : { updatedAt: -1, _id: 1 };
 
+    const page = draftListDto.page ?? 1;
+
     let draftList = await draftCollection
       .find(query)
       .sort(sortQuery)
-      .limit(pageSize)
+      .limit(pageSize * page)
       .toArray();
 
-    if (cursor && isBefore == true) draftList = draftList.reverse();
+    const listLength = draftList.length % pageSize || pageSize;
+
+    draftList =
+      cursor && isBefore
+        ? draftList.reverse().slice(0, listLength)
+        : draftList.slice(-listLength);
 
     if (!draftList || draftList.length === 0) {
       return {

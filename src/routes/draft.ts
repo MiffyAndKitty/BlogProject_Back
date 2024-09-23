@@ -35,6 +35,13 @@ draftRouter.get(
         }
         return true;
       }),
+    query('page')
+      .optional({ checkFalsy: true })
+      .toInt()
+      .isInt({ min: 1 })
+      .withMessage(
+        'pageSize의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt()
@@ -65,6 +72,9 @@ draftRouter.get(
       const draftListDto: DraftListDto = {
         userId: req.id,
         cursor: (req.query.cursor as string) || undefined,
+        page: req.query.page
+          ? parseInt(req.query.page as string, 10)
+          : undefined,
         pageSize: req.query['page-size']
           ? parseInt(req.query['page-size'] as string, 10)
           : undefined,
