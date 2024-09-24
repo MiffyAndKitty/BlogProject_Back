@@ -29,26 +29,13 @@ export class NotificationService {
 
     if (listDto.cursor && listDto.isBefore) result.reverse();
 
-    if (
-      listDto.cursor &&
-      listDto.page &&
-      listDto.page > 1 &&
-      listDto.isBefore
-    ) {
-      // 커서가 있고 페이지가 있으며, 앞 페이지를 조회해야한다면
-      const startIndex = -pageSize * listDto.page;
-      const endIndex = -pageSize * (listDto.page - 1);
-      result = result.slice(startIndex, endIndex);
-    } else if (
-      listDto.cursor &&
-      listDto.page &&
-      listDto.page > 1 &&
-      !listDto.isBefore
-    ) {
-      // 커서가 있고 페이지가 있으며, 뒤 페이지를 조회해야한다면
-      const startIndex = pageSize * (listDto.page - 1);
-      const endIndex = pageSize * listDto.page;
-      result = result.slice(startIndex, endIndex);
+    if (listDto.cursor && listDto.page && listDto.page > 1) {
+      result = this._processPagination(
+        result,
+        listDto.page,
+        pageSize,
+        listDto.isBefore
+      );
     }
 
     return {
@@ -212,5 +199,19 @@ export class NotificationService {
     } catch (err) {
       throw ensureError(err, '커서 정보 조회 중 에러 발생');
     }
+  }
+
+  private static _processPagination(
+    result: any[],
+    page: number,
+    pageSize: number,
+    isBefore?: boolean
+  ): any[] {
+    const startIndex = isBefore ? -pageSize * page : pageSize * (page - 1);
+    const endIndex = isBefore ? -pageSize * (page - 1) : pageSize * page;
+
+    result = result.slice(startIndex, endIndex);
+
+    return result;
   }
 }
