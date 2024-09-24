@@ -27,6 +27,7 @@ export interface UserNotificationDto {
 
 export interface NotificationListDto {
   userId: string;
+  page?: number;
   pageSize: number;
   cursor: string;
   isBefore: boolean;

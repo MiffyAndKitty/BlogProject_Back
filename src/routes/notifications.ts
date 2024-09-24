@@ -73,6 +73,13 @@ notificationsRouter.get(
       .optional({ checkFalsy: true })
       .matches(/^Bearer\s[^\s]+$/)
       .withMessage('올바른 토큰 형식이 아닙니다.'),
+    query('page')
+      .optional({ checkFalsy: true })
+      .toInt()
+      .isInt({ min: 1 })
+      .withMessage(
+        'page의 값이 존재한다면 null이거나 0보다 큰 양수여야합니다.'
+      ),
     query('page-size')
       .optional({ checkFalsy: true })
       .toInt()
@@ -112,6 +119,7 @@ notificationsRouter.get(
 
       const listDto: NotificationListDto = {
         userId: req.id,
+        page: req.query.page ? Number(req.query.page) : undefined,
         pageSize: req.query['page-size'] as unknown as number,
         cursor: req.query.cursor as string,
         isBefore: req.query['is-before'] === 'true' ? true : false,
