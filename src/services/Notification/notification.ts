@@ -210,7 +210,10 @@ export class NotificationService {
     const startIndex = isBefore ? -pageSize * page : pageSize * (page - 1);
     const endIndex = isBefore ? -pageSize * (page - 1) : pageSize * page;
 
-    result = result.slice(startIndex, endIndex);
+    result =
+      isBefore && startIndex - endIndex < pageSize
+        ? result.slice(0, pageSize)
+        : result.slice(startIndex, endIndex);
 
     return result;
   }

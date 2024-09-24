@@ -301,12 +301,16 @@ export class BoardListService {
         const start = Math.max(0, cursorIndex - options.pageSize * page);
         const end = cursorIndex - options.pageSize * (page - 1);
 
-        return start - end >= 0
-          ? []
-          : data.slice(
-              Math.max(0, cursorIndex - options.pageSize * page),
-              cursorIndex - options.pageSize * (page - 1)
-            );
+        if (start - end >= 0) return [];
+
+        if (cursorIndex - options.pageSize * (page - 1) < options.pageSize) {
+          return data.slice(0, options.pageSize);
+        }
+
+        return data.slice(
+          Math.max(0, cursorIndex - options.pageSize * page),
+          cursorIndex - options.pageSize * (page - 1)
+        );
       }
       const isLast =
         cursorIndex + 1 + options.pageSize * (page - 1) >= data.length;
@@ -373,12 +377,12 @@ export class BoardListService {
 
       if (data.length <= (page - 1) * options.pageSize) return [];
 
-      const listLength = data.length % options.pageSize || options.pageSize;
-
-      data =
-        options.cursor && options.isBefore
-          ? data.reverse().slice(0, listLength).reverse()
-          : data.slice(-listLength);
+      if (options.cursor && options.isBefore) {
+        data = data.reverse().slice(0, options.pageSize).reverse();
+      } else {
+        const listLength = data.length % options.pageSize || options.pageSize;
+        data = data.slice(-listLength);
+      }
 
       if (options.cursor && options.isBefore === true) data = data.reverse();
 
