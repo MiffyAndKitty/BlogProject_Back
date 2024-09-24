@@ -120,10 +120,12 @@ notificationsRouter.get(
       const listDto: NotificationListDto = {
         userId: req.id,
         page: req.query.page ? Number(req.query.page) : undefined,
-        pageSize: req.query['page-size'] as unknown as number,
-        cursor: req.query.cursor as string,
+        pageSize: req.query['page-size']
+          ? Number(req.query['page-size'])
+          : undefined,
+        cursor: req.query.cursor ? String(req.query.cursor) : undefined,
         isBefore: req.query['is-before'] === 'true' ? true : false,
-        sort: req.query.sort as string
+        sort: req.query.sort ? String(req.query.sort) : undefined
       };
 
       const result = await NotificationService.getAll(listDto);
