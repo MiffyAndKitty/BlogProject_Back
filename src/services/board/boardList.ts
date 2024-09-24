@@ -296,29 +296,29 @@ export class BoardListService {
         throw new InternalServerError(`유효하지 않은 커서 : ${cursorIndex}`);
 
       const page = options.page || 1;
+      const pageOffset = options.pageSize * (page - 1);
 
       if (options.isBefore) {
         const start = Math.max(0, cursorIndex - options.pageSize * page);
-        const end = cursorIndex - options.pageSize * (page - 1);
+        const end = cursorIndex - pageOffset;
 
         if (start - end >= 0) return [];
 
-        if (cursorIndex - options.pageSize * (page - 1) < options.pageSize) {
+        if (cursorIndex - pageOffset < options.pageSize) {
           return data.slice(0, options.pageSize);
         }
 
         return data.slice(
           Math.max(0, cursorIndex - options.pageSize * page),
-          cursorIndex - options.pageSize * (page - 1)
+          cursorIndex - pageOffset
         );
       }
-      const isLast =
-        cursorIndex + 1 + options.pageSize * (page - 1) >= data.length;
+      const isLast = cursorIndex + 1 + pageOffset >= data.length;
 
       return isLast
         ? []
         : data.slice(
-            cursorIndex + 1 + options.pageSize * (page - 1),
+            cursorIndex + 1 + pageOffset,
             Math.min(data.length, cursorIndex + 1 + options.pageSize * page)
           );
     } catch (err: any) {
@@ -377,14 +377,11 @@ export class BoardListService {
 
       if (data.length <= (page - 1) * options.pageSize) return [];
 
-      if (options.cursor && options.isBefore) {
-        data = data.reverse().slice(0, options.pageSize).reverse();
-      } else {
-        const listLength = data.length % options.pageSize || options.pageSize;
-        data = data.slice(-listLength);
+      if (options.cursor) {
+        data = options.isBefore
+          ? data.slice(0, options.pageSize).reverse()
+          : data.slice(-data.length % options.pageSize || options.pageSize);
       }
-
-      if (options.cursor && options.isBefore === true) data = data.reverse();
 
       return await this._reflectCashed(data);
     } catch (err: any) {
