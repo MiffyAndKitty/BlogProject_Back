@@ -71,7 +71,7 @@ export class NotificationService {
   }
 
   // 정렬 쿼리 빌드
-  private static _buildSortQuery(sort: string): string {
+  private static _buildSortQuery(sort?: string): string {
     return isNotificationNameType(sort)
       ? `AND notification_type = '${sort}'`
       : '';
