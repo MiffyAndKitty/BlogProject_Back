@@ -25,9 +25,32 @@ export class NotificationService {
     const totalPageCount = Math.ceil(totalCount / pageSize);
 
     const { query, params } = await this._buildQuery(listDto, sortQuery);
-    const result = await db.query(query, params);
+    let result = await db.query(query, params);
 
     if (listDto.cursor && listDto.isBefore) result.reverse();
+
+    if (
+      listDto.cursor &&
+      listDto.page &&
+      listDto.page > 1 &&
+      listDto.isBefore
+    ) {
+      // 커서가 있고 페이지가 있으며, 앞 페이지를 조회해야한다면
+      const startIndex = -pageSize * listDto.page;
+      const endIndex = -pageSize * (listDto.page - 1);
+      result = result.slice(startIndex, endIndex);
+    } else if (
+      listDto.cursor &&
+      listDto.page &&
+      listDto.page > 1 &&
+      !listDto.isBefore
+    ) {
+      // 커서가 있고 페이지가 있으며, 뒤 페이지를 조회해야한다면
+      const startIndex = pageSize * (listDto.page - 1);
+      const endIndex = pageSize * listDto.page;
+      result = result.slice(startIndex, endIndex);
+    }
+
     return {
       result: true,
       data: result,
@@ -103,6 +126,8 @@ export class NotificationService {
   ) {
     try {
       const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
+      const page = listDto.page || 1;
+
       const params: (string | number)[] = [listDto.userId];
       let order = 'DESC';
 
@@ -159,7 +184,7 @@ export class NotificationService {
       }
 
       query += ` ORDER BY notification_order ${order} LIMIT ?`;
-      params.push(pageSize);
+      params.push(pageSize * page);
 
       return { query, params };
     } catch (err) {
