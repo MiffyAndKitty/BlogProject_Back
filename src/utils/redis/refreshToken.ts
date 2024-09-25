@@ -2,7 +2,7 @@ import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { ensureError } from '../../errors/ensureError';
 
-export async function setRefreshToken(
+export async function cacheToken(
   userId: string,
   refreshToken: string,
   cacheKey: string = CacheKeys.REFRESHTOKEN
@@ -19,7 +19,7 @@ export async function setRefreshToken(
   }
 }
 
-export async function getRefreshToken(
+export async function getCachedToken(
   userId: string,
   cacheKey: string = CacheKeys.REFRESHTOKEN
 ) {

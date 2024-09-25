@@ -14,7 +14,7 @@ import { InternalServerError } from '../errors/internalServerError';
 import { BadRequestError } from '../errors/badRequestError';
 import { generateSixDigitNumber } from '../utils/tempCodeGenerator';
 import { CacheKeys } from '../constants/cacheKeys';
-import { getRefreshToken } from '../utils/redis/refreshToken';
+import { getCachedToken } from '../utils/redis/refreshToken';
 import { ForbiddenError } from '../errors/forbiddenError';
 import axios from 'axios';
 
@@ -140,7 +140,7 @@ export class AccountService {
 
   // 구글 회원 탈퇴
   static async deleteGoogleUserAccount(userIdDto: UserIdDto) {
-    const googleAccessToken = await getRefreshToken(
+    const googleAccessToken = await getCachedToken(
       userIdDto.userId,
       CacheKeys.GOOGLE_ACCESSTOKEN
     );

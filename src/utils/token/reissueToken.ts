@@ -3,7 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { newToken } from './newToken';
 import { ensureError } from '../../errors/ensureError';
 import { BasicResponse, MultipleDataResponse } from '../../interfaces/response';
-import { getRefreshToken } from '../redis/refreshToken';
+import { getCachedToken } from '../redis/refreshToken';
 import { InternalServerError } from '../../errors/internalServerError';
 /*import { BadRequestError } from '../../errors/badRequestError';*/
 
@@ -17,7 +17,7 @@ export async function reissueToken(
     if (!decodedId) throw new InternalServerError('access 토큰 decode 실패');
 
     // access토큰은 유효x -> refresh토큰이 유효-> 재발급
-    const refreshToken = await getRefreshToken(decodedId);
+    const refreshToken = await getCachedToken(decodedId);
 
     // access토큰은 유효x -> refresh토큰이 유효x
     if (!refreshToken)
