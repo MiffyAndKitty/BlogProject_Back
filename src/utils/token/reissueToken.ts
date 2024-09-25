@@ -3,7 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import { newToken } from './newToken';
 import { ensureError } from '../../errors/ensureError';
 import { BasicResponse, MultipleDataResponse } from '../../interfaces/response';
-import { getCachedToken } from '../redis/refreshToken';
+import { getCachedToken } from '../redis/tokenCache';
 import { InternalServerError } from '../../errors/internalServerError';
 /*import { BadRequestError } from '../../errors/badRequestError';*/
 

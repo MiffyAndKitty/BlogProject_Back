@@ -14,7 +14,7 @@ import { InternalServerError } from '../errors/internalServerError';
 import { BadRequestError } from '../errors/badRequestError';
 import { generateSixDigitNumber } from '../utils/tempCodeGenerator';
 import { CacheKeys } from '../constants/cacheKeys';
-import { getCachedToken } from '../utils/redis/refreshToken';
+import { getCachedToken } from '../utils/redis/tokenCache';
 import { ForbiddenError } from '../errors/forbiddenError';
 import axios from 'axios';
 

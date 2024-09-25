@@ -1,5 +1,5 @@
 import { newToken } from '../../utils/token/newToken';
-import { cacheToken } from '../../utils/redis/refreshToken';
+import { cacheToken } from '../../utils/redis/tokenCache';
 import { MultipleUserDataResponse } from '../../interfaces/response';
 import { GoogleLoginServiceDto } from '../../interfaces/auth';
 import { InternalServerError } from '../../errors/internalServerError';

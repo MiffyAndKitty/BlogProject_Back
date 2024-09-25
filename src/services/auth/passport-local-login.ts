@@ -1,6 +1,6 @@
 import { newToken } from '../../utils/token/newToken';
 import { MultipleUserDataResponse } from '../../interfaces/response';
-import { cacheToken } from '../../utils/redis/refreshToken';
+import { cacheToken } from '../../utils/redis/tokenCache';
 import { LoginServiceDto } from '../../interfaces/auth';
 import { InternalServerError } from '../../errors/internalServerError';
 export const localAuthService = async (
