@@ -2,7 +2,7 @@ import '../config/env';
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { loadAndCombineYamlFiles } from '../utils/loadYamlFiles'; // 추가된 부분
+import { loadAndCombineYamlFiles } from '../utils/loadYamlFiles';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +26,15 @@ export const swaggerDefinition = {
       url: process.env.ORIGIN_URL
     }
   ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT'
+      }
+    }
+  },
   paths: combinedPaths
 };
 
