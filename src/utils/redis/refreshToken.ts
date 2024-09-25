@@ -2,10 +2,14 @@ import { redis } from '../../loaders/redis';
 import { CacheKeys } from '../../constants/cacheKeys';
 import { ensureError } from '../../errors/ensureError';
 
-export async function setRefreshToken(userId: string, refreshToken: string) {
+export async function setRefreshToken(
+  userId: string,
+  refreshToken: string,
+  cacheKey: string = CacheKeys.REFRESHTOKEN
+) {
   try {
     return await redis.set(
-      `${CacheKeys.REFRESHTOKEN}${userId}`,
+      `${cacheKey}${userId}`,
       refreshToken,
       'EX',
       7 * 24 * 60 * 60 // 7주일 뒤 만료
@@ -15,9 +19,12 @@ export async function setRefreshToken(userId: string, refreshToken: string) {
   }
 }
 
-export async function getRefreshToken(userId: string) {
+export async function getRefreshToken(
+  userId: string,
+  cacheKey: string = CacheKeys.REFRESHTOKEN
+) {
   try {
-    const key = `${CacheKeys.REFRESHTOKEN}${userId}`;
+    const key = `${cacheKey}${userId}`;
     return await redis.get(key);
   } catch (err) {
     throw ensureError(err, 'refresh 토큰 반환 오류');
