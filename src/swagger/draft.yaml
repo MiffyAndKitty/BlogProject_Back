@@ -1,0 +1,645 @@
+paths:
+  /api/draft:
+    post:
+      tags:
+        - 임시 저장
+      security:
+        - bearerAuth: []
+      summary: 게시글 임시 저장
+      description: 게시글을 임시 저장합니다. 최소 하나의 필드만 존재하면 저장 가능합니다.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 게시글 제목
+                  example: '임시 저장 제목'
+                content:
+                  type: string
+                  description: 게시글 내용
+                  example: '임시 저장된 게시글의 내용'
+                public:
+                  type: string
+                  description: 공개 여부 (true 또는 false)
+                  example: 'true'
+                tagNames:
+                  type: array
+                  items:
+                    type: string
+                  description: 게시글 태그
+                  example: ['tag1', 'tag2']
+                categoryId:
+                  type: string
+                  description: 카테고리 ID (32자 문자열)
+                  example: '1234567890abcdef1234567890abcdef'
+                uploaded_files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: 업로드된 파일들
+      responses:
+        200:
+          description: 임시 저장 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: true
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '임시 저장에 성공하였습니다.'
+        400:
+          description: 최소 하나 이상의 필드를 채우지 않은 경우 / 올바른 형식의 필드 값을 입력하지 않은 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요. / 데이터 유효성 검증 실패 메세지'
+        401:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '로그인된 유저만 게시글 임시 저장이 가능합니다'
+        500:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '서버 오류 메세지'
+    put:
+      tags:
+        - 임시 저장
+      security:
+        - bearerAuth: []
+      summary: 임시 저장된 게시글 수정
+      description: 게시글 임시 저장된 데이터를 수정합니다.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                draftId:
+                  type: string
+                  description: 임시 저장된 게시글 ID (24자 문자열)
+                  example: '60c72b2f9b1d8a001cf9d7b1'
+                title:
+                  type: string
+                  description: 게시글 제목
+                  example: '임시 저장 제목 수정'
+                content:
+                  type: string
+                  description: 게시글 내용
+                  example: '임시 저장된 게시글 내용 수정'
+                public:
+                  type: string
+                  description: 공개 여부 (true 또는 false)
+                  example: 'false'
+                tagNames:
+                  type: array
+                  items:
+                    type: string
+                  description: 게시글 태그
+                  example: ['tag1', 'tag2', 'tag3']
+                categoryId:
+                  type: string
+                  description: 카테고리 ID (32자 문자열)
+                  example: '1234567890abcdef1234567890abcdef'
+                uploaded_files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: 업로드된 파일들
+      responses:
+        200:
+          description: 임시 저장 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: true
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '임시 저장에 성공하였습니다.'
+        400:
+          description: 최소 하나 이상의 필드를 채우지 않은 경우 / 올바른 형식의 필드 값을 입력하지 않은 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '저장할 내용이 없습니다. 최소 하나의 필드를 입력해주세요. / 데이터 유효성 검증 실패 메세지'
+        401:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '로그인된 유저만 게시글 임시 저장이 가능합니다'
+        500:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '서버 오류 메세지'
+    delete:
+      tags:
+        - 임시 저장
+      security:
+        - bearerAuth: []
+      summary: 임시 저장된 게시글 삭제
+      description: 임시 저장된 게시글을 영구 삭제합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                draftId:
+                  type: string
+                  example: 60c72b2f9b1d8a001cf9d7b1
+              required:
+                - draftId
+      responses:
+        200:
+          description: 임시 저장된 게시글 삭제 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: true
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '임시 저장된 게시글이 삭제되었습니다.'
+        400:
+          description: 올바른 형식의 필드 값을 입력하지 않은 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: 데이터 유효성 검증 실패 메세지
+        403:
+          description: 해당 유저가 임시 저장한 게시글의 id가 아닌 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: 해당 유저가 임시 저장한 게시글이 아닙니다.
+        404:
+          description: 현재 로그인 한 유저가 작성한 게시글이 아니거나 존재하는 임시 저장 게시글 ID가 아닌 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '임시 저장된 게시글을 찾을 수 없습니다.'
+        500:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '서버 오류 메세지'
+  /api/draft/:{draftId}:
+    get:
+      tags:
+        - 임시 저장
+      security:
+        - bearerAuth: []
+      summary: 게시글 임시 저장 조회
+      description: 임시 저장된 게시글을 조회합니다.
+      parameters:
+        - in: path
+          name: draftId
+          required: true
+          schema:
+            type: string
+            example: '60c72b2f9b1d8a001cf9d7b1'
+          description: 조회할 임시 저장 게시글 ID
+      responses:
+        200:
+          description: 게시글 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        description: 게시글 ID
+                        example: '60c72b2f9b1d8a001cf9d7b1'
+                      title:
+                        type: string
+                        description: 게시글 제목
+                        example: '임시 저장된 게시글 제목'
+                      content:
+                        type: string
+                        description: 게시글 내용
+                        example: '임시 저장된 게시글 내용'
+                      public:
+                        type: boolean
+                        description: 공개 여부
+                        example: true
+                      tagNames:
+                        type: array
+                        items:
+                          type: string
+                        description: 게시글 태그 목록
+                        example: ['tag1', 'tag2']
+                      categoryId:
+                        type: string
+                        description: 카테고리 ID
+                        example: '1234567890abcdef1234567890abcdef'
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        description: 게시글 수정 날짜
+                        example: '2024-09-17T03:31:59.000Z'
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '임시 저장된 게시글 반환에 성공하였습니다.'
+        403:
+          description: 해당 유저가 임시 저장한 게시글의 id가 아닌 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: 해당 유저가 임시 저장한 게시글이 아닙니다.
+        400:
+          description: 올바른 형식의 필드 값을 입력하지 않은 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: 데이터 유효성 검증 실패 메세지
+        404:
+          description: 현재 로그인 한 유저가 작성한 게시글이 아니거나 존재하는 임시 저장 게시글 ID가 아닌 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '현재 로그인한 유저가 작성한 해당 id의 임시 저장된 게시글을 찾지 못하였습니다.'
+        500:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '서버 오류 메세지'
+  /api/draft/:{draftId}/user-check:
+    get:
+      tags:
+        - 임시 저장
+      security:
+        - bearerAuth: []
+      summary: 임시 저장된 게시글 작성자 확인
+      description: 해당 임시 저장된 게시글이 현재 로그인한 유저의 게시글인지 확인합니다.
+      parameters:
+        - in: path
+          name: draftId
+          required: true
+          schema:
+            type: string
+            example: '60c72b2f9b1d8a001cf9d7b1'
+          description: 확인할 임시 저장된 게시글 ID
+      responses:
+        200:
+          description: 해당 유저가 작성한 임시 저장된 게시글입니다.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: true
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '해당 유저가 임시 저장한 게시글입니다.'
+        400:
+          description: 잘못된 형식의 필드 값이 입력된 경우
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '올바른 형식의 임시 저장 게시글 id는 24글자의 문자열입니다.'
+        403:
+          description: 해당 유저가 임시 저장한 게시글이 아닙니다.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '해당 유저가 임시 저장한 게시글이 아닙니다.'
+        500:
+          description: 서버 오류 발생
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 서버 오류 메시지
+                    example: '서버 오류 메세지'
+  /api/draft/list:
+    get:
+      tags:
+        - 임시 저장
+      security:
+        - bearerAuth: []
+      summary: 임시 저장된 게시글 목록 조회
+      description: 최신순으로 임시 저장된 게시글 목록을 조회합니다.
+      parameters:
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+          description: 페이징을 위한 커서 ID
+        - in: query
+          name: page-size
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: 페이지당 가져올 게시글 수, 설정하지 않으면 기본값으로 10이 설정됩니다.
+        - in: query
+          name: is-before
+          required: false
+          schema:
+            type: boolean
+          description: true일 경우 커서 이전의 데이터를, false일 경우 커서 이후의 데이터를 가져옵니다. 기본값은 false입니다.
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: number
+          description: 기본값은 1입니다. 넘겨볼 페이지의 수를 의미합니다.
+      responses:
+        200:
+          description: 임시 저장된 게시글 목록 반환 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      list:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              description: 게시글 ID
+                              example: '60c72b2f9b1d8a001cf9d7b1'
+                            title:
+                              type: string
+                              description: 게시글 제목
+                              example: '임시 저장된 게시글 제목'
+                            content:
+                              type: string
+                              description: 게시글 내용
+                              example: '임시 저장된 게시글 내용'
+                            public:
+                              type: boolean
+                              description: 공개 여부
+                              example: true
+                            tagNames:
+                              type: array
+                              items:
+                                type: string
+                              description: 게시글 태그 목록
+                              example: ['tag1', 'tag2']
+                            categoryId:
+                              type: string
+                              description: 카테고리 ID
+                              example: '1234567890abcdef1234567890abcdef'
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              description: 게시글 수정 날짜
+                              example: '2024-09-17T03:31:59.000Z'
+                      totalCount:
+                        type: integer
+                        description: 전체 게시글 수
+                        example: 1
+                      totalPages:
+                        type: integer
+                        description: 전체 페이지 수
+                        example: 1
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '임시 저장된 게시글 목록을 반환 성공했습니다.'
+        400:
+          description: 올바른 형식의 필드 값을 입력하지 않은 경우 ( 토큰 형식이 유효하지 않은 경우 )
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: 데이터 유효성 검증 실패 메세지
+        404:
+          description: 저장된 게시글 목록이 없습니다.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '저장된 게시글 목록이 없습니다.'
+        500:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: 성공 여부
+                    example: false
+                  message:
+                    type: string
+                    description: 결과 메시지
+                    example: '서버 오류 메세지'
