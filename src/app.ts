@@ -1,8 +1,9 @@
 import './config/env';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import { logger } from './middleware/logger';
+import { userIdentifier } from './middleware/userIdentifier';
 import { dbConnector } from './loaders/mariadb';
 import { mongoDbConnector } from './loaders/mongodb';
 import { redisConnector } from './loaders/redis';
@@ -15,7 +16,6 @@ import { boardRouter } from './routes/board';
 import { categoryRouter } from './routes/category';
 import { tagRouter } from './routes/tag';
 import { commentRouter } from './routes/comment';
-import { userIdentifier } from './middleware/userIdentifier';
 import { notificationsRouter } from './routes/notifications';
 import { accountRouter } from './routes/account';
 import { loadAllSchedules } from './loaders/scheduler';
@@ -31,7 +31,7 @@ app.use(
   })
 );
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(logger);
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
 redisConnector;
