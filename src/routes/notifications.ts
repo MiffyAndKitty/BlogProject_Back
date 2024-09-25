@@ -1,10 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { jwtAuth } from '../middleware/passport-jwt-checker';
-import { redis } from '../loaders/redis';
 import { validate } from '../middleware/express-validation';
 import { header, query, body } from 'express-validator';
 import { clientsService } from '../utils/notification/clients';
-import { ensureError } from '../errors/ensureError';
 import { NotificationService } from '../services/Notification/notification';
 import {
   NotificationListDto,
