@@ -377,10 +377,14 @@ export class BoardListService {
 
       if (data.length <= (page - 1) * options.pageSize) return [];
 
-      data =
-        options.cursor && options.isBefore
-          ? data.reverse().slice(0, options.pageSize)
-          : data.slice(-data.length % options.pageSize || options.pageSize);
+      if (options.cursor && options.isBefore) {
+        data = data.reverse().slice(0, options.pageSize).reverse();
+      } else {
+        const listLength = data.length % options.pageSize || options.pageSize;
+        data = data.slice(-listLength);
+      }
+
+      if (options.cursor && options.isBefore === true) data = data.reverse();
 
       return await this._reflectCashed(data);
     } catch (err: any) {
