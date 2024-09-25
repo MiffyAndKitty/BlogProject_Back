@@ -25,9 +25,19 @@ export class NotificationService {
     const totalPageCount = Math.ceil(totalCount / pageSize);
 
     const { query, params } = await this._buildQuery(listDto, sortQuery);
-    const result = await db.query(query, params);
+    let result = await db.query(query, params);
 
     if (listDto.cursor && listDto.isBefore) result.reverse();
+
+    if (listDto.cursor && listDto.page && listDto.page > 1) {
+      result = this._processPagination(
+        result,
+        listDto.page,
+        pageSize,
+        listDto.isBefore
+      );
+    }
+
     return {
       result: true,
       data: result,
@@ -71,7 +81,7 @@ export class NotificationService {
   }
 
   // 정렬 쿼리 빌드
-  private static _buildSortQuery(sort: string): string {
+  private static _buildSortQuery(sort?: string): string {
     return isNotificationNameType(sort)
       ? `AND notification_type = '${sort}'`
       : '';
@@ -103,6 +113,8 @@ export class NotificationService {
   ) {
     try {
       const pageSize = listDto.pageSize || BOARD_PAGESIZE_LIMIT;
+      const page = listDto.page || 1;
+
       const params: (string | number)[] = [listDto.userId];
       let order = 'DESC';
 
@@ -159,7 +171,7 @@ export class NotificationService {
       }
 
       query += ` ORDER BY notification_order ${order} LIMIT ?`;
-      params.push(pageSize);
+      params.push(pageSize * page);
 
       return { query, params };
     } catch (err) {
@@ -187,5 +199,22 @@ export class NotificationService {
     } catch (err) {
       throw ensureError(err, '커서 정보 조회 중 에러 발생');
     }
+  }
+
+  private static _processPagination(
+    result: any[],
+    page: number,
+    pageSize: number,
+    isBefore?: boolean
+  ): any[] {
+    const startIndex = isBefore ? -pageSize * page : pageSize * (page - 1);
+    const endIndex = isBefore ? -pageSize * (page - 1) : pageSize * page;
+
+    result =
+      isBefore && startIndex - endIndex < pageSize
+        ? result.slice(0, pageSize)
+        : result.slice(startIndex, endIndex);
+
+    return result;
   }
 }

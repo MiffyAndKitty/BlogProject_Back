@@ -27,10 +27,11 @@ export interface UserNotificationDto {
 
 export interface NotificationListDto {
   userId: string;
-  pageSize: number;
-  cursor: string;
-  isBefore: boolean;
-  sort: string;
+  page?: number;
+  pageSize?: number;
+  cursor?: string;
+  isBefore?: boolean;
+  sort?: string;
 }
 
 export interface RetryFailedUsersResult {

@@ -1,4 +1,5 @@
 export interface SortOptions {
+  page?: number;
   pageSize: number;
   cursor?: string;
   isBefore?: boolean;
