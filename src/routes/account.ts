@@ -98,7 +98,7 @@ accountRouter.post(
   }
 );
 
-// 회원 탈퇴
+// 로컬 회원 탈퇴
 accountRouter.delete(
   '/',
   validate([
@@ -118,6 +118,38 @@ accountRouter.delete(
 
       const result: BasicResponse =
         await AccountService.deleteUserAccount(userIdDto);
+
+      return res.status(result.result ? 200 : 500).send({
+        result: result.result,
+        message: result.message
+      });
+    } catch (err) {
+      handleError(err, res);
+    }
+  }
+);
+
+// 구글 회원 탈퇴
+accountRouter.delete(
+  '/google',
+  validate([
+    header('Authorization')
+      .matches(/^Bearer\s[^\s]+$/)
+      .withMessage('올바른 토큰 형식이 아닙니다.')
+  ]),
+  jwtAuth,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.id) {
+        throw new UnauthorizedError(
+          req.tokenMessage || '현재 로그인 상태가 아닙니다'
+        );
+      }
+
+      const userIdDto: UserIdDto = { userId: req.id };
+
+      const result: BasicResponse =
+        await AccountService.deleteGoogleUserAccount(userIdDto);
 
       return res.status(result.result ? 200 : 500).send({
         result: result.result,

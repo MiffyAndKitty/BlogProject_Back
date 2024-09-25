@@ -1,6 +1,6 @@
 import { newToken } from '../../utils/token/newToken';
 import { MultipleUserDataResponse } from '../../interfaces/response';
-import { setRefreshToken } from '../../utils/redis/refreshToken';
+import { cacheToken } from '../../utils/redis/tokenCache';
 import { LoginServiceDto } from '../../interfaces/auth';
 import { InternalServerError } from '../../errors/internalServerError';
 export const localAuthService = async (
@@ -13,7 +13,7 @@ export const localAuthService = async (
     throw new InternalServerError('토큰 발급 실패');
   }
 
-  const savedRefresh = await setRefreshToken(user.userId, refreshToken);
+  const savedRefresh = await cacheToken(user.userId, refreshToken);
 
   if (savedRefresh === 'OK') {
     // savedRefresh에서 OK 혹은 err.name반환

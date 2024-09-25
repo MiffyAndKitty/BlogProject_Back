@@ -3,8 +3,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { PassportStatic } from 'passport';
 import { db } from '../loaders/mariadb';
 import { isGoogleProfile } from '../utils/typegaurd/isGoogleProfile';
-import { ensureError } from '../errors/ensureError';
-import { LoginUserDto } from '../interfaces/auth';
+import { GoogleLoginUserDto } from '../interfaces/auth';
 export const google = (passport: PassportStatic) => {
   passport.use('google', new GoogleStrategy(passportConfig, passportVerify));
 };
@@ -35,8 +34,9 @@ const passportVerify = async (
     if (!exUser) {
       done(null, {
         userId: undefined,
-        userEmail: googleEmail
-      } as LoginUserDto);
+        userEmail: googleEmail,
+        accessToken: undefined
+      });
       return;
     }
     if (exUser[0].deleted_at) {
@@ -51,8 +51,9 @@ const passportVerify = async (
 
     done(null, {
       userId: exUser[0].user_id,
-      userEmail: exUser[0].user_email
-    } as LoginUserDto);
+      userEmail: exUser[0].user_email,
+      accessToken: accessToken
+    } as GoogleLoginUserDto);
     return;
   } catch (err) {
     done(err);

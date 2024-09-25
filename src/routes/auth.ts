@@ -9,7 +9,12 @@ import {
   BasicResponse,
   MultipleUserDataResponse
 } from '../interfaces/response';
-import { LoginUserDto, LoginServiceDto, SignUpDto } from '../interfaces/auth';
+import {
+  LoginServiceDto,
+  SignUpDto,
+  GoogleLoginUserDto,
+  GoogleLoginServiceDto
+} from '../interfaces/auth';
 import { validate } from '../middleware/express-validation';
 import { body, header } from 'express-validator';
 import { USER_NICKNAME_MAX } from '../constants/validation';
@@ -66,7 +71,11 @@ authRouter.post(
 //구글 로그인 라우터, 실행 시 구글 로그인 페이지로 redirect
 authRouter.get(
   '/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    accessType: 'offline',
+    prompt: 'select_account' // 사용자에게 계정을 선택하라는 메시지를 표시
+  })
 );
 
 // 구글에서 넘겨받은 사용자 정보를 이용하여 회원가입 및 로그인 진행
@@ -78,7 +87,7 @@ authRouter.get(
   }),
   async (req: Request, res: Response) => {
     try {
-      const googleUser = req.user as LoginUserDto;
+      const googleUser = req.user as GoogleLoginUserDto;
 
       let result: MultipleUserDataResponse = {
         result: false,
@@ -86,12 +95,12 @@ authRouter.get(
         message: '유저 정보 확인 실패'
       };
 
-      if (googleUser.userId && typeof googleUser.userId === 'string') {
-        result = await googleAuthService(req.user as LoginServiceDto);
+      if (googleUser.userId && googleUser.accessToken) {
+        result = await googleAuthService(req.user as GoogleLoginServiceDto);
       } else if (googleUser.userEmail) {
         // !googleUser.userId
         result = {
-          result: true,
+          result: false,
           data: { accessToken: undefined, userEmail: googleUser.userEmail },
           message: '회원가입 되지 않은 구글 유저'
         };

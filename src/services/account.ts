@@ -13,6 +13,11 @@ import { NotFoundError } from '../errors/notFoundError';
 import { InternalServerError } from '../errors/internalServerError';
 import { BadRequestError } from '../errors/badRequestError';
 import { generateSixDigitNumber } from '../utils/tempCodeGenerator';
+import { CacheKeys } from '../constants/cacheKeys';
+import { getCachedToken } from '../utils/redis/tokenCache';
+import { ForbiddenError } from '../errors/forbiddenError';
+import axios from 'axios';
+
 export class AccountService {
   static async setTemporaryPassword(
     userEmailInfoDto: UserEmailInfoDto
@@ -115,7 +120,7 @@ export class AccountService {
     };
   }
 
-  // 회원 탈퇴
+  // 로컬 회원 탈퇴
   static async deleteUserAccount(userIdDto: UserIdDto): Promise<BasicResponse> {
     const query = `UPDATE User SET deleted_at = NOW() WHERE user_id = ? AND deleted_at IS NULL`;
     const result = await db.query(query, [userIdDto.userId]);
@@ -130,6 +135,47 @@ export class AccountService {
         throw new BadRequestError('이미 탈퇴된 회원입니다.');
       default:
         throw new InternalServerError('회원 탈퇴에 실패했습니다.');
+    }
+  }
+
+  // 구글 회원 탈퇴
+  static async deleteGoogleUserAccount(userIdDto: UserIdDto) {
+    const googleAccessToken = await getCachedToken(
+      userIdDto.userId,
+      CacheKeys.GOOGLE_ACCESSTOKEN
+    );
+
+    if (!googleAccessToken)
+      throw new ForbiddenError(
+        '인증 토큰이 유효하지 않습니다. 다시 로그인 해주세요.'
+      );
+
+    try {
+      const revokeUrl = `https://accounts.google.com/o/oauth2/revoke?token=${googleAccessToken}`;
+      const response = await axios.get(revokeUrl, { timeout: 10000 });
+
+      if (response.status === 200) {
+        // 구글 계정 연동 해제 성공 시 로컬 회원 탈퇴 진행
+        return await this.deleteUserAccount(userIdDto);
+      } else {
+        throw new InternalServerError(
+          `구글 계정 연동 해제 실패 : ${response.statusText}`
+        );
+      }
+    } catch (err: any) {
+      // 구글 API에서 400 응답이 왔을 때, 만료된 토큰 처리
+      if (
+        err.response.status === 400 &&
+        err.response.data.error === 'invalid_token'
+      ) {
+        throw new ForbiddenError(
+          '인증 토큰이 유효하지 않습니다. 다시 로그인 해주세요.'
+        );
+      }
+      throw new InternalServerError(
+        '구글 계정 연동 해제 중 오류가 발생했습니다.',
+        err.response.statusText
+      );
     }
   }
 }
