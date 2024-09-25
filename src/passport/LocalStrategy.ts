@@ -17,7 +17,8 @@ const passportVerify = async (
   done: Function
 ) => {
   try {
-    const sql = 'SELECT * FROM User WHERE user_email = ? LIMIT 1';
+    const sql =
+      'SELECT * FROM User WHERE user_email = ? AND deleted_at IS NULL LIMIT 1';
     const exUser = await db.query(sql, email);
 
     if (!exUser[0]) {
