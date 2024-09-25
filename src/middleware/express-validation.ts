@@ -15,7 +15,7 @@ export const validate = (validations: ContextRunner[]) => {
           .array()
           .map((error) => error.msg)
           .join(', ');
-        return new BadRequestError(`데이터 유효성 검증 실패: ${errors}`);
+        return next(new BadRequestError(`데이터 유효성 검증 실패: ${errors}`));
       }
     }
 
