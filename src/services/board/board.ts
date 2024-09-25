@@ -7,6 +7,7 @@ import { CacheKeys } from '../../constants/cacheKeys';
 import { NotificationName } from '../../constants/notificationName';
 import { InternalServerError } from '../../errors/internalServerError';
 import { NotFoundError } from '../../errors/notFoundError';
+import { ForbiddenError } from '../../errors/forbiddenError';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
@@ -20,6 +21,10 @@ export class BoardService {
       [boardIdInfoDto.boardId]
     );
     if (!data) throw new NotFoundError('존재하지 않는 게시글입니다.');
+
+    if (!data.board_public && data.user_id !== boardIdInfoDto.userId) {
+      throw new ForbiddenError('비공개 게시글 입니다.');
+    }
 
     data = parseFieldToNumber(data, 'board_comment');
 
