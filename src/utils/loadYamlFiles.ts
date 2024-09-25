@@ -16,9 +16,6 @@ export function loadAndCombineYamlFiles(
       return { ...acc, ...content.paths };
     }, {});
   } catch (err) {
-    throw ensureError(
-      err,
-      'YAML파일 파싱 중 에러 발생 : ${(err as Error).message}'
-    );
+    throw ensureError('YAML파일 파싱 중 에러 발생');
   }
 }
