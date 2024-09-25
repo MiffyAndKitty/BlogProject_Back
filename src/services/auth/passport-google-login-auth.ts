@@ -1,10 +1,10 @@
 import { newToken } from '../../utils/token/newToken';
 import { setRefreshToken } from '../../utils/redis/refreshToken';
 import { MultipleUserDataResponse } from '../../interfaces/response';
-import { LoginServiceDto } from '../../interfaces/auth';
+import { GoogleLoginServiceDto } from '../../interfaces/auth';
 import { InternalServerError } from '../../errors/internalServerError';
 export const googleAuthService = async (
-  user: LoginServiceDto
+  user: GoogleLoginServiceDto
 ): Promise<MultipleUserDataResponse> => {
   const accessToken = newToken.access(user.userId);
   const refreshToken = newToken.refresh();
