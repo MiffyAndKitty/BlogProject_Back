@@ -377,11 +377,10 @@ export class BoardListService {
 
       if (data.length <= (page - 1) * options.pageSize) return [];
 
-      if (options.cursor) {
-        data = options.isBefore
-          ? data.slice(0, options.pageSize).reverse()
+      data =
+        options.cursor && options.isBefore
+          ? data.reverse().slice(0, options.pageSize)
           : data.slice(-data.length % options.pageSize || options.pageSize);
-      }
 
       return await this._reflectCashed(data);
     } catch (err: any) {
