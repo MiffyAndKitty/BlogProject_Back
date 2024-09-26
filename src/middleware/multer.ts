@@ -23,7 +23,7 @@ export const upload = (folder: string) =>
       }
     }),
     limits: {
-      fileSize: 5 * 1024 * 1024, // 파일 사이즈 용량 제한: 5MB
+      fileSize: 20 * 1024 * 1024, // 파일 사이즈 용량 제한: 20MB
       files: 10, //  파일 필드 최대 갯수 :10개
       fieldSize: 2 * 1024 * 1024 // 필드값 제한 : 2MB (기본 1MB)
     }
