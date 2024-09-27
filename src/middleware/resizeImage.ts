@@ -18,6 +18,7 @@ import {
   QUALITY_DECREMENT,
   RESIZED_IMAGE_WIDTH
 } from '../constants/file';
+import { S3File } from '../interfaces/uploadedFile';
 
 export const resizeImage = () => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -26,7 +27,7 @@ export const resizeImage = () => {
 
       const resizedFileUrls: string[] = [];
 
-      const originalFiles = req.files as { [key: string]: any }[];
+      const originalFiles = req.files as S3File[];
 
       for (const file of originalFiles) {
         // S3에서 파일을 가져온 후 리사이징
