@@ -23,7 +23,8 @@ import { S3File } from '../interfaces/uploadedFile';
 export const resizeImage = () => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.files?.length) return next();
+      if (!req.files || !Array.isArray(req.files) || req.files.length === 0)
+        return next();
 
       const resizedFileUrls: string[] = [];
 
@@ -39,8 +40,9 @@ export const resizeImage = () => {
         const s3File = await s3.send(new GetObjectCommand(getObjectParams));
 
         if (!s3File.Body) {
-          console.error('S3 파일에서 Body를 찾을 수 없습니다.');
-          return next(); // 사진 파일 없이 게시글 저장
+          return next(
+            new InternalServerError('S3 파일에서 Body를 찾을 수 없습니다.')
+          );
         }
 
         const fileBuffer = await streamToBuffer(s3File.Body as Readable);
@@ -49,7 +51,10 @@ export const resizeImage = () => {
 
         const resizeImageBuffer = async (buffer: Buffer, quality: number) => {
           return await sharp(buffer)
-            .resize({ width: RESIZED_IMAGE_WIDTH })
+            .resize({
+              width: RESIZED_IMAGE_WIDTH,
+              withoutEnlargement: true // 원본보다 큰 이미지로 확대를 방지
+            })
             .jpeg({ quality }) // 초기 JPEG 품질 설정
             .toBuffer();
         };
