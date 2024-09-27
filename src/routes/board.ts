@@ -31,7 +31,7 @@ import { validateFieldByteLength } from '../utils/validation/validateFieldByteLe
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
 import { resizeImage } from '../middleware/resizeImage';
-import { S3DirectoryName } from '../constants/s3/s3DirectoryName';
+import { S3DirectoryName } from '../constants/s3DirectoryName';
 
 export const boardRouter = Router();
 

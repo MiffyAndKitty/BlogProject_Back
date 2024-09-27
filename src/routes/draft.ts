@@ -16,7 +16,7 @@ import {
 } from '../interfaces/draft';
 import { ForbiddenError } from '../errors/forbiddenError';
 import { resizeImage } from '../middleware/resizeImage';
-import { S3DirectoryName } from '../constants/s3/s3DirectoryName';
+import { S3DirectoryName } from '../constants/s3DirectoryName';
 
 export const draftRouter = Router();
 

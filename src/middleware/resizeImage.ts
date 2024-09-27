@@ -10,7 +10,7 @@ import {
 import { InternalServerError } from '../errors/internalServerError';
 import { streamToBuffer } from '../utils/streamToBuffer';
 import { Readable } from 'stream';
-import { S3DirectoryName } from '../constants/s3/s3DirectoryName';
+import { S3DirectoryName } from '../constants/s3DirectoryName';
 
 export const resizeImage = () => {
   return async (req: Request, res: Response, next: NextFunction) => {
