@@ -27,7 +27,7 @@ export const resizeImage = () => {
       const originalFiles = req.files as S3File[];
 
       await Promise.all(
-        originalFiles.map(async (file) => {
+        originalFiles.map(async (file, index) => {
           // 1. S3에서 파일 가져오기
           const fileBuffer = await getFileFromS3(file);
 
@@ -36,9 +36,11 @@ export const resizeImage = () => {
 
           // 3. 리사이즈된 이미지 업로드
           const resizedFileURL = await uploadResizedImage(file, resizedImage);
-          resizedFileUrls.push(resizedFileURL);
 
-          // 4. 원본 파일 삭제
+          // 4. 순서 보장을 위해 인덱스에 맞게 배열에 저장
+          resizedFileUrls[index] = resizedFileURL;
+
+          // 5. 원본 파일 삭제
           await deleteOriginalFile(file);
         })
       );
