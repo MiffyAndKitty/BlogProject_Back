@@ -24,11 +24,11 @@ export const resizeImage = () => {
     try {
       if (!req.files?.length) return next();
 
-      req.fileURL = [];
+      const resizedFileUrls: string[] = [];
 
-      const reqFiles = req.files as { [key: string]: any }[];
+      const originalFiles = req.files as { [key: string]: any }[];
 
-      for (const file of reqFiles) {
+      for (const file of originalFiles) {
         // S3에서 파일을 가져온 후 리사이징
         const getObjectParams = {
           Bucket: file.bucket,
@@ -46,18 +46,18 @@ export const resizeImage = () => {
 
         let quality = INITIAL_QUALITY;
 
-        const resizeImage = async (buffer: Buffer, quality: number) => {
+        const resizeImageBuffer = async (buffer: Buffer, quality: number) => {
           return await sharp(buffer)
             .resize({ width: RESIZED_IMAGE_WIDTH })
             .jpeg({ quality }) // 초기 JPEG 품질 설정
             .toBuffer();
         };
 
-        let resizedImage = await resizeImage(fileBuffer, quality);
+        let resizedImage = await resizeImageBuffer(fileBuffer, quality);
 
         while (resizedImage.length > MAX_FILE_SIZE && quality > MIN_QUALITY) {
           quality -= QUALITY_DECREMENT;
-          resizedImage = await resizeImage(fileBuffer, quality);
+          resizedImage = await resizeImageBuffer(fileBuffer, quality);
         }
 
         // 리사이징된 파일을 S3에 업로드
@@ -72,7 +72,7 @@ export const resizeImage = () => {
 
         // 리사이징된 파일의 URL을 생성하여 req.fileURL 배열에 추가
         const resizedFileURL = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${S3DirectoryName.RESIZED_IMAGE}/${file.key}`;
-        req.fileURL.push(resizedFileURL);
+        resizedFileUrls.push(resizedFileURL);
 
         // 원본 파일 삭제
         const deleteParams = {
@@ -81,6 +81,7 @@ export const resizeImage = () => {
         };
         await s3.send(new DeleteObjectCommand(deleteParams));
       }
+      req.fileURL = resizedFileUrls;
       next();
     } catch (err) {
       next(new InternalServerError('파일 처리 중 오류 발생'));
