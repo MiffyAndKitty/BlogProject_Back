@@ -125,7 +125,7 @@ export class UsersService {
       values.push(userProfileDto.statusMessage);
     }
 
-    if (userProfileDto.profilePicture) {
+    if (userProfileDto.profilePicture?.length) {
       setClauses.push(`user_image = ?`);
       values.push(userProfileDto.profilePicture);
     }

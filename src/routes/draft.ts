@@ -15,6 +15,7 @@ import {
   UpdateDraftDto
 } from '../interfaces/draft';
 import { ForbiddenError } from '../errors/forbiddenError';
+import { resizeImage } from '../middleware/resizeImage';
 
 export const draftRouter = Router();
 
@@ -94,6 +95,7 @@ draftRouter.get(
 draftRouter.post(
   '/',
   upload('board').array('uploaded_files', 10),
+  resizeImage(),
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
@@ -131,16 +133,6 @@ draftRouter.post(
           req.tokenMessage || '로그인한 유저만 게시글 임시 저장이 가능합니다.'
         );
 
-      const fileUrls: Array<string> = [];
-
-      if (Array.isArray(req.files) && req.files.length > 0) {
-        req.files.forEach((file) => {
-          if ('location' in file && typeof file.location === 'string') {
-            fileUrls.push(file.location);
-          }
-        });
-      }
-
       const draftDto: DraftDto = {
         userId: req.id as string,
         title: req.body.title,
@@ -148,7 +140,7 @@ draftRouter.post(
         public: req.body.public === 'false' ? false : true,
         tagNames: req.body.tagNames || [],
         categoryId: req.body.categoryId,
-        fileUrls: fileUrls
+        fileUrls: req.fileURL
       };
 
       const result = await DraftService.saveDraft(draftDto);
@@ -164,6 +156,7 @@ draftRouter.post(
 draftRouter.put(
   '/',
   upload('board').array('uploaded_files', 10),
+  resizeImage(),
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
@@ -212,16 +205,6 @@ draftRouter.put(
       if (!req.isWriter)
         throw new ForbiddenError('해당 유저가 임시 저장한 게시글이 아닙니다.');
 
-      const fileUrls: Array<string> = [];
-
-      if (Array.isArray(req.files) && req.files.length > 0) {
-        req.files.forEach((file) => {
-          if ('location' in file && typeof file.location === 'string') {
-            fileUrls.push(file.location);
-          }
-        });
-      }
-
       const updateDraftDto: UpdateDraftDto = {
         userId: req.id as string,
         draftId: req.body.draftId,
@@ -230,7 +213,7 @@ draftRouter.put(
         public: req.body.public === 'false' ? false : true,
         tagNames: req.body.tagNames || [],
         categoryId: req.body.categoryId,
-        fileUrls: fileUrls
+        fileUrls: req.fileURL
       };
 
       const result = await DraftService.modifyDraft(updateDraftDto);
