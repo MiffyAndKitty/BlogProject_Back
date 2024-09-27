@@ -1,16 +1,12 @@
 import '../config/env';
 import { Request, Response, NextFunction } from 'express';
 import sharp from 'sharp';
-import { s3 } from '../config/s3';
 import {
-  PutObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand
-} from '@aws-sdk/client-s3';
+  deleteOriginalFile,
+  getFileFromS3,
+  uploadResizedImage
+} from '../utils/s3';
 import { InternalServerError } from '../errors/internalServerError';
-import { streamToBuffer } from '../utils/streamToBuffer';
-import { Readable } from 'stream';
-import { S3DirectoryName } from '../constants/s3DirectoryName';
 import {
   INITIAL_QUALITY,
   MAX_FILE_SIZE,
@@ -32,21 +28,7 @@ export const resizeImage = () => {
 
       await Promise.all(
         originalFiles.map(async (file) => {
-          // S3에서 파일을 가져온 후 리사이징
-          const getObjectParams = {
-            Bucket: file.bucket,
-            Key: file.key
-          };
-
-          const s3File = await s3.send(new GetObjectCommand(getObjectParams));
-
-          if (!s3File.Body) {
-            return next(
-              new InternalServerError('S3 파일에서 Body를 찾을 수 없습니다.')
-            );
-          }
-
-          const fileBuffer = await streamToBuffer(s3File.Body as Readable);
+          const fileBuffer = await getFileFromS3(file);
 
           let quality = INITIAL_QUALITY;
 
@@ -70,26 +52,10 @@ export const resizeImage = () => {
             resizedImage = await resizeImageBuffer(fileBuffer, quality);
           }
 
-          // 리사이징된 파일을 S3에 업로드
-          const uploadParams = {
-            Bucket: process.env.S3_BUCKET,
-            Key: `${S3DirectoryName.RESIZED_IMAGE}/${file.key}`,
-            Body: resizedImage,
-            ContentType: file.mimetype
-          };
-
-          await s3.send(new PutObjectCommand(uploadParams));
-
-          // 리사이징된 파일의 URL을 생성하여 req.fileURL 배열에 추가
-          const resizedFileURL = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${S3DirectoryName.RESIZED_IMAGE}/${file.key}`;
+          const resizedFileURL = await uploadResizedImage(file, resizedImage);
           resizedFileUrls.push(resizedFileURL);
 
-          // 원본 파일 삭제
-          const deleteParams = {
-            Bucket: file.bucket,
-            Key: file.key
-          };
-          await s3.send(new DeleteObjectCommand(deleteParams));
+          await deleteOriginalFile(file);
         })
       );
       req.fileURL = resizedFileUrls;
