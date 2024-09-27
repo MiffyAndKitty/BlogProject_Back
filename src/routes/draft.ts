@@ -16,6 +16,7 @@ import {
 } from '../interfaces/draft';
 import { ForbiddenError } from '../errors/forbiddenError';
 import { resizeImage } from '../middleware/resizeImage';
+import { S3DirectoryName } from '../constants/s3/s3DirectoryName';
 
 export const draftRouter = Router();
 
@@ -94,7 +95,7 @@ draftRouter.get(
 // 게시글 임시 저장 (POST: /draft)
 draftRouter.post(
   '/',
-  upload('board').array('uploaded_files', 10),
+  upload(S3DirectoryName.DRAFT_IMAGE).array('uploaded_files', 10),
   resizeImage(),
   validate([
     header('Authorization')
@@ -155,7 +156,7 @@ draftRouter.post(
 // 임시 저장된 게시글 수정 (PUT: /draft)
 draftRouter.put(
   '/',
-  upload('board').array('uploaded_files', 10),
+  upload(S3DirectoryName.DRAFT_IMAGE).array('uploaded_files', 10),
   resizeImage(),
   validate([
     header('Authorization')

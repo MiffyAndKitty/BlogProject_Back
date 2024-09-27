@@ -31,6 +31,7 @@ import { validateFieldByteLength } from '../utils/validation/validateFieldByteLe
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
 import { resizeImage } from '../middleware/resizeImage';
+import { S3DirectoryName } from '../constants/s3/s3DirectoryName';
 
 export const boardRouter = Router();
 
@@ -277,7 +278,7 @@ boardRouter.get(
 // 게시글 저장 ( POST : /board/new )
 boardRouter.post(
   '/new',
-  upload('board').array('uploaded_files', 10),
+  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files', 10),
   resizeImage(),
   validate([
     header('Authorization')
@@ -360,7 +361,7 @@ boardRouter.post(
 // 게시글 수정 ( PUT : /board)
 boardRouter.put(
   '/',
-  upload('board').array('uploaded_files', 10),
+  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files', 10),
   resizeImage(),
   validate([
     header('Authorization')

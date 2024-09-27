@@ -10,6 +10,7 @@ import {
 import { InternalServerError } from '../errors/internalServerError';
 import { streamToBuffer } from '../utils/streamToBuffer';
 import { Readable } from 'stream';
+import { S3DirectoryName } from '../constants/s3/s3DirectoryName';
 
 export const resizeImage = () => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -56,7 +57,7 @@ export const resizeImage = () => {
         // 리사이징된 파일을 S3에 업로드
         const uploadParams = {
           Bucket: process.env.S3_BUCKET,
-          Key: `resized/${file.key}`,
+          Key: `${S3DirectoryName.RESIZED_IMAGE}/${file.key}`,
           Body: resizedImage,
           ContentType: file.mimetype
         };
@@ -64,7 +65,7 @@ export const resizeImage = () => {
         await s3.send(new PutObjectCommand(uploadParams));
 
         // 리사이징된 파일의 URL을 생성하여 req.fileURL 배열에 추가
-        const resizedFileURL = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/resized/${file.key}`;
+        const resizedFileURL = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${S3DirectoryName.RESIZED_IMAGE}/${file.key}`;
         req.fileURL.push(resizedFileURL);
 
         // 원본 파일 삭제
