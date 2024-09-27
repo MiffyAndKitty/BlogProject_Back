@@ -95,7 +95,7 @@ draftRouter.get(
 // 게시글 임시 저장 (POST: /draft)
 draftRouter.post(
   '/',
-  upload(S3DirectoryName.DRAFT_IMAGE).array('uploaded_files', 10),
+  upload(S3DirectoryName.DRAFT_IMAGE).array('uploaded_files'),
   resizeImage(),
   validate([
     header('Authorization')
@@ -156,7 +156,7 @@ draftRouter.post(
 // 임시 저장된 게시글 수정 (PUT: /draft)
 draftRouter.put(
   '/',
-  upload(S3DirectoryName.DRAFT_IMAGE).array('uploaded_files', 10),
+  upload(S3DirectoryName.DRAFT_IMAGE).array('uploaded_files'),
   resizeImage(),
   validate([
     header('Authorization')

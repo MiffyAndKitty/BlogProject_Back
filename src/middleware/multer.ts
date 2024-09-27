@@ -6,8 +6,7 @@ import { BadRequestError } from '../errors/badRequestError';
 import {
   ALLOWED_EXTENSIONS,
   UPLOAD_FIELD_SIZE_LIMIT,
-  UPLOAD_FILE_SIZE_LIMIT,
-  UPLOAD_FILES_LIMIT
+  UPLOAD_FILE_SIZE_LIMIT
 } from '../constants/file';
 
 export const upload = (folder: string) =>
@@ -30,7 +29,6 @@ export const upload = (folder: string) =>
     }),
     limits: {
       fileSize: UPLOAD_FILE_SIZE_LIMIT,
-      files: UPLOAD_FILES_LIMIT,
       fieldSize: UPLOAD_FIELD_SIZE_LIMIT
     }
   });

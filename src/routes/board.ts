@@ -278,7 +278,7 @@ boardRouter.get(
 // 게시글 저장 ( POST : /board/new )
 boardRouter.post(
   '/new',
-  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files', 10),
+  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files'),
   resizeImage(),
   validate([
     header('Authorization')
@@ -361,7 +361,7 @@ boardRouter.post(
 // 게시글 수정 ( PUT : /board)
 boardRouter.put(
   '/',
-  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files', 10),
+  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files'),
   resizeImage(),
   validate([
     header('Authorization')

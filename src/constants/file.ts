@@ -12,5 +12,4 @@ export const RESIZED_IMAGE_WIDTH = 640;
 export const ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif'];
 
 // 업로드 제한
-export const UPLOAD_FILES_LIMIT = 10;
 export const UPLOAD_FIELD_SIZE_LIMIT = 2 * 1024 * 1024; // 2MB
