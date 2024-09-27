@@ -30,63 +30,68 @@ export const resizeImage = () => {
 
       const originalFiles = req.files as S3File[];
 
-      for (const file of originalFiles) {
-        // S3에서 파일을 가져온 후 리사이징
-        const getObjectParams = {
-          Bucket: file.bucket,
-          Key: file.key
-        };
+      await Promise.all(
+        originalFiles.map(async (file) => {
+          // S3에서 파일을 가져온 후 리사이징
+          const getObjectParams = {
+            Bucket: file.bucket,
+            Key: file.key
+          };
 
-        const s3File = await s3.send(new GetObjectCommand(getObjectParams));
+          const s3File = await s3.send(new GetObjectCommand(getObjectParams));
 
-        if (!s3File.Body) {
-          return next(
-            new InternalServerError('S3 파일에서 Body를 찾을 수 없습니다.')
-          );
-        }
+          if (!s3File.Body) {
+            return next(
+              new InternalServerError('S3 파일에서 Body를 찾을 수 없습니다.')
+            );
+          }
 
-        const fileBuffer = await streamToBuffer(s3File.Body as Readable);
+          const fileBuffer = await streamToBuffer(s3File.Body as Readable);
 
-        let quality = INITIAL_QUALITY;
+          let quality = INITIAL_QUALITY;
 
-        const resizeImageBuffer = async (buffer: Buffer, quality: number) => {
-          return await sharp(buffer)
-            .resize({
-              width: RESIZED_IMAGE_WIDTH,
-              withoutEnlargement: true // 원본보다 큰 이미지로 확대를 방지
-            })
-            .jpeg({ quality }) // 초기 JPEG 품질 설정
-            .toBuffer();
-        };
+          const resizeImageBuffer = async (
+            buffer: Buffer,
+            quality: number
+          ): Promise<Buffer> => {
+            return sharp(buffer)
+              .resize({
+                width: RESIZED_IMAGE_WIDTH,
+                withoutEnlargement: true // 원본보다 큰 이미지로 확대를 방지
+              })
+              .jpeg({ quality })
+              .toBuffer();
+          };
 
-        let resizedImage = await resizeImageBuffer(fileBuffer, quality);
+          let resizedImage = await resizeImageBuffer(fileBuffer, quality);
 
-        while (resizedImage.length > MAX_FILE_SIZE && quality > MIN_QUALITY) {
-          quality -= QUALITY_DECREMENT;
-          resizedImage = await resizeImageBuffer(fileBuffer, quality);
-        }
+          while (resizedImage.length > MAX_FILE_SIZE && quality > MIN_QUALITY) {
+            quality -= QUALITY_DECREMENT;
+            resizedImage = await resizeImageBuffer(fileBuffer, quality);
+          }
 
-        // 리사이징된 파일을 S3에 업로드
-        const uploadParams = {
-          Bucket: process.env.S3_BUCKET,
-          Key: `${S3DirectoryName.RESIZED_IMAGE}/${file.key}`,
-          Body: resizedImage,
-          ContentType: file.mimetype
-        };
+          // 리사이징된 파일을 S3에 업로드
+          const uploadParams = {
+            Bucket: process.env.S3_BUCKET,
+            Key: `${S3DirectoryName.RESIZED_IMAGE}/${file.key}`,
+            Body: resizedImage,
+            ContentType: file.mimetype
+          };
 
-        await s3.send(new PutObjectCommand(uploadParams));
+          await s3.send(new PutObjectCommand(uploadParams));
 
-        // 리사이징된 파일의 URL을 생성하여 req.fileURL 배열에 추가
-        const resizedFileURL = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${S3DirectoryName.RESIZED_IMAGE}/${file.key}`;
-        resizedFileUrls.push(resizedFileURL);
+          // 리사이징된 파일의 URL을 생성하여 req.fileURL 배열에 추가
+          const resizedFileURL = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${S3DirectoryName.RESIZED_IMAGE}/${file.key}`;
+          resizedFileUrls.push(resizedFileURL);
 
-        // 원본 파일 삭제
-        const deleteParams = {
-          Bucket: file.bucket,
-          Key: file.key
-        };
-        await s3.send(new DeleteObjectCommand(deleteParams));
-      }
+          // 원본 파일 삭제
+          const deleteParams = {
+            Bucket: file.bucket,
+            Key: file.key
+          };
+          await s3.send(new DeleteObjectCommand(deleteParams));
+        })
+      );
       req.fileURL = resizedFileUrls;
       next();
     } catch (err) {
