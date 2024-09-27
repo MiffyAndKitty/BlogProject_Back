@@ -11,6 +11,13 @@ import { InternalServerError } from '../errors/internalServerError';
 import { streamToBuffer } from '../utils/streamToBuffer';
 import { Readable } from 'stream';
 import { S3DirectoryName } from '../constants/s3DirectoryName';
+import {
+  INITIAL_QUALITY,
+  MAX_FILE_SIZE,
+  MIN_QUALITY,
+  QUALITY_DECREMENT,
+  RESIZED_IMAGE_WIDTH
+} from '../constants/file';
 
 export const resizeImage = () => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -37,20 +44,19 @@ export const resizeImage = () => {
 
         const fileBuffer = await streamToBuffer(s3File.Body as Readable);
 
-        const maxFileSize = 2 * 1024 * 1024;
-        let quality = 80;
+        let quality = INITIAL_QUALITY;
 
         const resizeImage = async (buffer: Buffer, quality: number) => {
           return await sharp(buffer)
-            .resize({ width: 640 }) // 해상도 조정
+            .resize({ width: RESIZED_IMAGE_WIDTH })
             .jpeg({ quality }) // 초기 JPEG 품질 설정
             .toBuffer();
         };
 
         let resizedImage = await resizeImage(fileBuffer, quality);
 
-        while (resizedImage.length > maxFileSize && quality > 10) {
-          quality -= 10; // 품질을 10씩 낮춤
+        while (resizedImage.length > MAX_FILE_SIZE && quality > MIN_QUALITY) {
+          quality -= QUALITY_DECREMENT;
           resizedImage = await resizeImage(fileBuffer, quality);
         }
 
