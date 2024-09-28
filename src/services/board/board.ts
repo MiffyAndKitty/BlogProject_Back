@@ -8,6 +8,7 @@ import { NotificationName } from '../../constants/notificationName';
 import { InternalServerError } from '../../errors/internalServerError';
 import { NotFoundError } from '../../errors/notFoundError';
 import { ForbiddenError } from '../../errors/forbiddenError';
+import { getImageSizesFromS3 } from '../../utils/getImageSizesFromS3';
 
 export class BoardService {
   static getBoard = async (boardIdInfoDto: BoardIdInfoDto) => {
@@ -25,6 +26,9 @@ export class BoardService {
     if (!data.board_public && data.user_id !== boardIdInfoDto.userId) {
       throw new ForbiddenError('비공개 게시글 입니다.');
     }
+
+    const imageSizes = await getImageSizesFromS3(data.board_content);
+    data.imageSizes = imageSizes;
 
     data = parseFieldToNumber(data, 'board_comment');
 
