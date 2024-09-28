@@ -30,6 +30,8 @@ import {
 import { validateFieldByteLength } from '../utils/validation/validateFieldByteLength ';
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
+import { resizeImage } from '../middleware/resizeImage';
+import { S3DirectoryName } from '../constants/s3DirectoryName';
 
 export const boardRouter = Router();
 
@@ -276,7 +278,8 @@ boardRouter.get(
 // 게시글 저장 ( POST : /board/new )
 boardRouter.post(
   '/new',
-  upload('board').array('uploaded_files', 10),
+  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files'),
+  resizeImage(),
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
@@ -322,16 +325,6 @@ boardRouter.post(
           req.tokenMessage || '로그인된 유저만 게시글 작성이 가능합니다.'
         );
 
-      const fileUrls: Array<string> = [];
-
-      if (Array.isArray(req.files)) {
-        req.files.forEach((file) => {
-          if ('location' in file && typeof file.location === 'string') {
-            fileUrls.push(file.location);
-          }
-        });
-      }
-
       const boardDto: boardDto = {
         userId: req.id,
         title: req.body.title,
@@ -342,7 +335,7 @@ boardRouter.post(
             ? [req.body.tagNames]
             : req.body.tagNames,
         categoryId: req.body.categoryId,
-        fileUrls: fileUrls
+        fileUrls: req.fileURL
       };
 
       const result: SingleNotificationResponse =
@@ -368,7 +361,8 @@ boardRouter.post(
 // 게시글 수정 ( PUT : /board)
 boardRouter.put(
   '/',
-  upload('board').array('uploaded_files', 10),
+  upload(S3DirectoryName.BOARD_IMAGE).array('uploaded_files'),
+  resizeImage(),
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
@@ -419,15 +413,6 @@ boardRouter.put(
         });
       }
 
-      const fileUrls: Array<string> = [];
-
-      if (Array.isArray(req.files)) {
-        req.files.forEach((file) => {
-          if ('location' in file && typeof file.location === 'string') {
-            fileUrls.push(file.location);
-          }
-        });
-      }
       const boardDto: modifiedBoardDto = {
         userId: req.id,
         boardId: req.body.boardId,
@@ -439,7 +424,7 @@ boardRouter.put(
             ? [req.body.tagNames]
             : req.body.tagNames,
         categoryId: req.body.categoryId,
-        fileUrls: fileUrls
+        fileUrls: req.fileURL
       };
 
       const result = await saveBoardService.modifyBoard(boardDto);

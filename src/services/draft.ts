@@ -16,6 +16,7 @@ import { replaceImageUrlsWithS3Links } from '../utils/string/replaceImageUrlsWit
 import { BadRequestError } from '../errors/badRequestError';
 import { db } from '../loaders/mariadb';
 import { DRAFT_PAGESIZE_LIMIT } from '../constants/pageSizeLimit';
+import { getImageSizesFromS3 } from '../utils/getImageSizesFromS3';
 
 export class DraftService {
   static getDraftList = async (draftListDto: DraftListDto) => {
@@ -229,6 +230,9 @@ export class DraftService {
       throw new NotFoundError(
         '현재 로그인한 유저가 작성한 해당 id의 임시 저장된 게시글을 찾지 못하였습니다.'
       );
+
+    const imageSizes = await getImageSizesFromS3(draft.content);
+    draft.imageSizes = imageSizes;
 
     return {
       result: true,

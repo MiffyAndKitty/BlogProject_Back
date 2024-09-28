@@ -362,6 +362,24 @@ paths:
                         format: date-time
                         description: 게시글 수정 날짜
                         example: '2024-09-17T03:31:59.000Z'
+                      imageSizes:
+                        type: object
+                        description: 이미지 사이즈 정보
+                        properties:
+                          sizes:
+                            type: object
+                            description: 각 이미지의 사이즈
+                            additionalProperties:
+                              type: integer
+                            example:
+                              'https://aws-s3-bucket-connected-vultr-mkblog.s3.ap-northeast-2.amazonaws.com/resized/draft/image_3.png_1727411835671': 17080
+                              'https://aws-s3-bucket-connected-vultr-mkblog.s3.ap-northeast-2.amazonaws.com/resized/draft/image_2.png_1727411835663': 10666
+                              'https://aws-s3-bucket-connected-vultr-mkblog.s3.ap-northeast-2.amazonaws.com/resized/draft/image_0.png_1727411835645': 18635
+                              'https://aws-s3-bucket-connected-vultr-mkblog.s3.ap-northeast-2.amazonaws.com/resized/draft/image_1.png_1727411835646': 35689
+                          totalSize:
+                            type: integer
+                            description: 이미지 사이즈 총합
+                            example: 82070
                   message:
                     type: string
                     description: 결과 메시지

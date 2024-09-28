@@ -18,8 +18,10 @@ export interface UserPwDto {
   password: string;
 }
 
-export interface UserProfileDto extends UserPwDto {
-  nickname: string;
-  profilePicture: string;
-  statusMessage: string;
+export interface UserProfileDto {
+  userId: string;
+  nickname?: string;
+  password?: string;
+  profilePicture?: string;
+  statusMessage?: string;
 }

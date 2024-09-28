@@ -28,6 +28,8 @@ import {
 } from '../constants/validation';
 import { handleError } from '../utils/errHandler';
 import { UnauthorizedError } from '../errors/unauthorizedError';
+import { resizeImage } from '../middleware/resizeImage';
+import { S3DirectoryName } from '../constants/s3DirectoryName';
 export const usersRouter = Router();
 
 // 특정 이메일/닉네임의 중복 여부 확인 (POST : /users/duplication)
@@ -334,7 +336,8 @@ usersRouter.get(
 // 사용자 정보 수정 (PUT : /users)
 usersRouter.put(
   '/',
-  upload('user-profile-image').array('uploaded_files', 1),
+  upload(S3DirectoryName.USER_PROPILE_IMG).array('uploaded_files', 1),
+  resizeImage(),
   validate([
     header('Authorization')
       .matches(/^Bearer\s[^\s]+$/)
@@ -367,15 +370,8 @@ usersRouter.put(
           req.tokenMessage || '로그인된 사용자만 정보를 수정할 수 있습니다.'
         );
       }
-
-      let fileUrl = '';
-      if (Array.isArray(req.files)) {
-        req.files.forEach((file) => {
-          if ('location' in file && typeof file.location === 'string') {
-            fileUrl = file.location;
-          }
-        });
-      }
+      let fileUrl;
+      if (Array.isArray(req.fileURL)) fileUrl = req.fileURL[0];
 
       const userProfileDto: UserProfileDto = {
         userId: req.id,
