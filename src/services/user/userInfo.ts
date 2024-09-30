@@ -47,8 +47,13 @@ export class UsersService {
     const values = [userEmailLookupDto.email];
     const [userInfo] = await db.query(query, values);
 
-    if (!userInfo) throw new InternalServerError('존재하지 않는 사용자');
-    /*throw new NotFoundError('존재하지 않는 사용자');*/
+    if (!userInfo) {
+      return {
+        result: true,
+        data: null,
+        message: '존재하지 않는 사용자'
+      };
+    }
 
     userInfo.isSelf = false;
     if (userInfo.user_id === userEmailLookupDto.userId) {
