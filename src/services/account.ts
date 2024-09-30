@@ -66,7 +66,7 @@ export class AccountService {
       'passwordResetTemplate',
       {
         password: passwordResetLinkDto.password,
-        loginUrl: `${process.env.ORIGIN_URL}/locallogin`
+        loginUrl: `${process.env.ORIGIN_URL}locallogin`
       }
     );
 
