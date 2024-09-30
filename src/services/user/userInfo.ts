@@ -15,7 +15,7 @@ import { BadRequestError } from '../../errors/badRequestError';
 
 export class UsersService {
   static isDuplicated = async (existDto: DbColumnDto) => {
-    const query = `SELECT * FROM User WHERE ${existDto.column} = ?;`;
+    const query = `SELECT * FROM User WHERE ${existDto.column} = ? AND deleted_at IS NULL;`;
     const values = [existDto.data];
     const rows = await db.query(query, values);
 
@@ -43,7 +43,7 @@ export class UsersService {
   static getUserInfoByEmail = async (
     userEmailLookupDto: UserEmailLookupDto
   ) => {
-    const query = `SELECT * FROM User WHERE user_email = ? LIMIT 1;`;
+    const query = `SELECT * FROM User WHERE user_email = ? AND deleted_at IS NULL LIMIT 1;`;
     const values = [userEmailLookupDto.email];
     const [userInfo] = await db.query(query, values);
 

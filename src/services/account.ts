@@ -27,7 +27,7 @@ export class AccountService {
     const hashedPassword = await getHashed(temporaryPassword);
 
     const [user] = await db.query(
-      `SELECT deleted_at FROM User WHERE user_email = ? AND user_provider IS NULL;`,
+      `SELECT deleted_at FROM User WHERE user_email = ? AND deleted_at IS NULL AND user_provider IS NULL;`,
       [userEmailInfoDto.email]
     );
 
@@ -82,7 +82,7 @@ export class AccountService {
 
   static async setTemporaryCode(userEmailInfoDto: UserEmailInfoDto) {
     const [existedUser] = await db.query(
-      `SELECT 1 FROM User WHERE user_email = ?`,
+      `SELECT 1 FROM User WHERE user_email = ? AND deleted_at IS NULL;`,
       [userEmailInfoDto.email]
     );
 
