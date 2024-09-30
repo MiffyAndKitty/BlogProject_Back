@@ -100,7 +100,7 @@ authRouter.get(
       } else if (googleUser.userEmail) {
         // !googleUser.userId
         result = {
-          result: false,
+          result: true,
           data: { accessToken: undefined, userEmail: googleUser.userEmail },
           message: '회원가입 되지 않은 구글 유저'
         };
