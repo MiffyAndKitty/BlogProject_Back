@@ -150,17 +150,22 @@ authRouter.get(
 authRouter.post(
   '/sign',
   validate([
-    body('email').isEmail(),
+    body('email').notEmpty().withMessage('올바른 이메일 형식이 아닙니다.'),
     body('password')
       .if(body('provider').not().equals('google')) // 'provider'가 'google'이 아닌 경우에만 비밀번호 검증
       .isLength({ min: 8 })
       .matches(/(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*])/),
     body('nickname')
+      .trim()
       .notEmpty()
       .custom((nickname) =>
         validateFieldByteLength('nickname', nickname, USER_NICKNAME_MAX)
-      ),
-    body('provider').if(body('provider').exists()).isIn(['google']) // 'provider'가 존재하면 'google'인지 확인
+      )
+      .withMessage('올바른 닉네임 형식이 아닙니다.'),
+    body('provider')
+      .if(body('provider').exists())
+      .isIn(['google'])
+      .withMessage("provider'가 존재하면 'google'이어야합니다.")
   ]),
   async (req: Request, res: Response) => {
     try {
