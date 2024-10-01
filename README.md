@@ -36,13 +36,36 @@
 
 ## ⚙️ 기술 스택
 
-| **분류**     | **스택**                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend** | ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=white)                                                                                                                                                                                                                                                                                                                              |
-| **Backend**  | ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white) ![Express](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge&logo=express&logoColor=white)                                                                                                                                                                                                            |
-| **Database** | ![MariaDB](https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white) ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white) ![AWS S3](https://img.shields.io/badge/AWS%20S3-FF9900?style=for-the-badge&logo=amazon-s3&logoColor=white) |
-
----
+  <table>
+        <tr>
+            <th>분류</th>
+            <th>스택</th>
+        </tr>
+        <tr>
+            <td><strong>Frontend</strong></td>
+            <td>
+            <img src="https://img.shields.io/badge/TypeScript-3178C6?style=plastic&logo=typescript&logoColor=white" alt="TypeScript">
+                <img src="https://img.shields.io/badge/React-61DAFB?style=plastic&logo=react&logoColor=white" alt="React">
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Backend</strong></td>
+            <td>
+            <img src="https://img.shields.io/badge/TypeScript-3178C6?style=plastic&logo=typescript&logoColor=white" alt="TypeScript">
+                <img src="https://img.shields.io/badge/Node.js-43853D?style=plastic&logo=node.js&logoColor=white" alt="Node.js">
+                <img src="https://img.shields.io/badge/Express.js-404D59?style=plastic&logo=express&logoColor=white" alt="Express">
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Database</strong></td>
+            <td>
+                <img src="https://img.shields.io/badge/MariaDB-003545?style=plastic&logo=mariadb&logoColor=white" alt="MariaDB">
+                <img src="https://img.shields.io/badge/Redis-DC382D?style=plastic&logo=redis&logoColor=white" alt="Redis">
+                <img src="https://img.shields.io/badge/MongoDB-47A248?style=plastic&logo=mongodb&logoColor=white" alt="MongoDB">
+                <img src="https://img.shields.io/badge/AWS%20S3-FF9900?style=plastic&logo=amazon-s3&logoColor=white" alt="AWS S3">
+            </td>
+        </tr>
+  </table>
 
 ## 🛠️ 주요 기능 소개
 
@@ -85,7 +108,9 @@
 - **이미지 업로드**: **AWS S3**를 이용하여 게시글에 이미지를 포함시킬 수 있습니다.
   <details>
     <summary>S3를 통한 이미지 업로드 흐름 보기</summary>
-    ![s3](./misc/s3.png)
+    
+    ![s3](misc/s3.png)
+
   </details>
 
 - **캐시 처리**: **Redis**를 활용하여 조회수 및 좋아요 데이터를 효율적으로 처리합니다.
